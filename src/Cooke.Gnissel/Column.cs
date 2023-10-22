@@ -1,21 +1,24 @@
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
-using Npgsql;
 
 namespace Cooke.Gnissel;
 
 public class Column<TTable, TCol> : IColumn<TTable>
 {
-    public Column(ProviderAdapter ProviderAdapter, string Name, bool IsIdentity, MemberInfo Member)
+    private readonly DbAdapter _dbAdapter;
+    private readonly Func<TTable, TCol> _getter;
+
+    public Column(DbAdapter dbAdapter, string name, bool isIdentity, MemberInfo member)
     {
-        this.ProviderAdapter = ProviderAdapter;
-        this.Name = Name;
+        _dbAdapter = dbAdapter;
+        Name = name;
+        IsIdentity = isIdentity;
+        Member = member;
 
         var tableItemParameter = Expression.Parameter(typeof(TTable));
-
-        var propertyInfo = (PropertyInfo)Member;
-        Getter =
+        var propertyInfo = (PropertyInfo)member;
+        _getter =
             (Func<TTable, TCol>)
                 Expression
                     .Lambda(
@@ -24,16 +27,13 @@ public class Column<TTable, TCol> : IColumn<TTable>
                         tableItemParameter
                     )
                     .Compile();
-        this.IsIdentity = IsIdentity;
-        this.Member = Member;
     }
 
-    public DbParameter CreateParameter(TTable item) =>
-        ProviderAdapter.CreateParameter(Getter(item));
+    public DbParameter CreateParameter(TTable item) => _dbAdapter.CreateParameter(_getter(item));
 
-    public ProviderAdapter ProviderAdapter { get; init; }
-    public string Name { get; init; }
-    public Func<TTable, TCol> Getter { get; init; }
-    public bool IsIdentity { get; init; }
-    public MemberInfo Member { get; init; }
+    public string Name { get; }
+
+    public bool IsIdentity { get; }
+
+    public MemberInfo Member { get; }
 }

@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Cooke.Gnissel.Npgsql;
 using Npgsql;
 
 namespace Cooke.Gnissel.Test;
@@ -27,16 +28,16 @@ public class QueryTests
             .ExecuteNonQueryAsync();
     }
 
-    [TearDown]
-    public void TearDown()
-    {
-        _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
-    }
-
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
         _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
     [Test]
@@ -89,29 +90,33 @@ public class QueryTests
         CollectionAssert.AreEqual(new[] { (1, "Bob", 25) }, results);
     }
 
+    [Test]
+    [Timeout(1000)]
+    public async Task CancelOperations()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        for (var i = 0; i < 100; i++)
+        {
+            using var cts = new CancellationTokenSource();
+            var enumerator = _db.Query<(int, string, int)>($"SELECT * FROM users", cts.Token)
+                .GetAsyncEnumerator(cts.Token);
+            await enumerator.MoveNextAsync(cts.Token);
+            cts.Cancel();
+        }
+    }
+
     private class TestDbContext : DbContext
     {
         public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlProviderAdapter(dataSource)) { }
+            : base(new NpgsqlDbAdapter(dataSource)) { }
 
         public Table<User> Users => Table<User>();
-        //
-        // public Table<Device> Devices => Table<Device>();
-        //
-        // public Table<UserHistory> UserHistory => Table<UserHistory>();
-        //
-        // public Table<DeviceKey> DeviceKeys => Table<DeviceKey>();
     }
 
-    public record User(
+    private record User(
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age
     );
-
-    public record Device(string Id, string Name, int UserId);
-
-    public record DeviceKey(string DeviceId, string Key);
-
-    public record UserHistory(int UserId, string Event);
 }

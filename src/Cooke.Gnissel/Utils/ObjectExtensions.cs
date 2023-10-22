@@ -1,4 +1,4 @@
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Utils;
 
 public static class ObjectExtensions
 {

@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Common;
+using Cooke.Gnissel.Npgsql;
 using Npgsql;
 
 namespace Cooke.Gnissel.Test;
@@ -11,7 +13,7 @@ public class TransactionTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(_dataSource);
+        _db = new TestDbContext(new NpgsqlDbAdapter(_dataSource));
 
         await _dataSource
             .CreateCommand(
@@ -40,68 +42,40 @@ public class TransactionTests
     }
 
     [Test]
-    public async Task QueryParameters()
+    public async Task Transaction()
     {
-        const string name = "Bob";
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        
-        var results = await _db.Query<User>($"SELECT * FROM users WHERE name={name}")
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using (var trans = await connection.BeginTransactionAsync())
+        {
+            await _db.Users.Insert(new User(0, "Bob", 25)).ExecuteAsync(connection);
+            await trans.CommitAsync();
+        }
+
+        var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
     }
 
     [Test]
-    public async Task QueryCustomNameMapping()
+    public async Task TransactionAbort()
     {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query(
-                $"SELECT * FROM users",
-                x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
-            )
+        await using var connection = await _dataSource.OpenConnectionAsync();
+        await using (await connection.BeginTransactionAsync())
+        {
+            await _db.Users.Insert(new User(0, "Bob", 25)).ExecuteAsync(connection);
+        }
+
+        var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryCustomOrdinalMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query(
-                $"SELECT * FROM users",
-                x => new User(x.Get<int>(0), x.Get<string>(1), x.Get<int>(2))
-            )
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryClassMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryTupleMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<(int, string, int)>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { (1, "Bob", 25) }, results);
+        CollectionAssert.IsEmpty(results);
     }
 
     private class TestDbContext : DbContext
     {
-        public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlProviderAdapter(dataSource)) { }
+        public TestDbContext(DbAdapter dataDbAdapter)
+            : base(dataDbAdapter) { }
 
         public Table<User> Users => Table<User>();
-        //
-        // public Table<Device> Devices => Table<Device>();
-        //
-        // public Table<UserHistory> UserHistory => Table<UserHistory>();
-        //
-        // public Table<DeviceKey> DeviceKeys => Table<DeviceKey>();
     }
 
     public record User(
@@ -109,10 +83,4 @@ public class TransactionTests
         string Name,
         int Age
     );
-
-    public record Device(string Id, string Name, int UserId);
-
-    public record DeviceKey(string DeviceId, string Key);
-
-    public record UserHistory(int UserId, string Event);
 }

@@ -1,17 +1,20 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.Contracts;
-using System.Linq.Expressions;
 using System.Reflection;
+using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel;
 
-public record Table<T>(ProviderAdapter ProviderAdapter, ImmutableArray<IColumn<T>> Columns)
-    : QueryStatement<T>(null, Columns)
+public record Table<T>(DbContext DbContext, DbAdapter DbAdapter, ImmutableArray<IColumn<T>> Columns)
+    : QueryStatement<T>(DbContext, null, Columns)
 {
-    public Table(ProviderAdapter providerAdapter)
+    public string Name { get; } = typeof(T).Name.ToLower() + "s";
+
+    public Table(DbContext dbContext, DbAdapter dbAdapter)
         : this(
-            providerAdapter,
+            dbContext,
+            dbAdapter,
             typeof(T)
                 .GetProperties()
                 .Select(p =>
@@ -19,7 +22,7 @@ public record Table<T>(ProviderAdapter ProviderAdapter, ImmutableArray<IColumn<T
                     return (IColumn<T>)
                         Activator.CreateInstance(
                             typeof(Column<,>).MakeGenericType(typeof(T), p.PropertyType),
-                            providerAdapter,
+                            dbAdapter,
                             p.Name,
                             p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                                 ?.Let(
@@ -37,28 +40,12 @@ public record Table<T>(ProviderAdapter ProviderAdapter, ImmutableArray<IColumn<T
     public InsertStatement<T> Insert(T item)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity);
+
         return new InsertStatement<T>(
-            ProviderAdapter,
+            DbAdapter,
             this,
             insertColumns,
             insertColumns.Select(col => col.CreateParameter(item))
         );
     }
-
-    // public InsertStatement<T> Insert<T1, T2>(
-    //     Expression<Func<T, T1>> selector1,
-    //     Expression<Func<T, T2>> selector2,
-    //     ValueTuple<T1, T2> values
-    // )
-    // {
-    //     return new InsertStatement<T>(item, this);
-    // }
-
-
-    public string Name { get; } = typeof(T).Name.ToLower() + "s";
-
-    // private static class ColumnFactory<TTable, TCol>
-    // {
-    //     public Column<TTable, TCol> Create() => new Column<TTable, TCol>()
-    // }
 }

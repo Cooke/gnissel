@@ -21,6 +21,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Cooke.Gnissel.Npgsql\Cooke.Gnissel.Npgsql.csproj" />
       <ProjectReference Include="..\Cooke.Gnissel\Cooke.Gnissel.csproj" />
     </ItemGroup>
 

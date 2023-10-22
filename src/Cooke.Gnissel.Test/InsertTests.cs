@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using Cooke.Gnissel.Npgsql;
 using Dapper;
 using Npgsql;
 using Testcontainers.PostgreSql;
@@ -28,6 +29,18 @@ public class Tests
             )
             .ExecuteNonQueryAsync();
     }
+    
+    [OneTimeTearDown]
+    public async Task OneTimeTearDown()
+    {
+        _db = new TestDbContext(_dataSource);
+
+        await _dataSource
+            .CreateCommand(
+                "drop table users;"
+            )
+            .ExecuteNonQueryAsync();
+    }
 
     [TearDown]
     public void TearDown()
@@ -51,7 +64,7 @@ public class Tests
         await _db.Users.Insert(new User(0, "Alice", 30));
 
         var fetched = _dataSource.OpenConnection().Query<User>("SELECT * FROM users").ToArray();
-        Assert.That(2, Is.EqualTo(fetched.Length));
+        Assert.That(fetched.Length, Is.EqualTo(2));
         CollectionAssert.AreEqual(
             new[] { new User(1, "Bob", 25), new User(2, "Alice", 30) },
             fetched
@@ -61,7 +74,7 @@ public class Tests
     public class TestDbContext : DbContext
     {
         public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlProviderAdapter(dataSource)) { }
+            : base(new NpgsqlDbAdapter(dataSource)) { }
 
         public Table<User> Users => Table<User>();
         //

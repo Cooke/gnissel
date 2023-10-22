@@ -4,6 +4,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel", "Cooke.Gnis
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.Test", "Cooke.Gnissel.Test\Cooke.Gnissel.Test.csproj", "{BF3A2A33-3D90-45B0-AA82-408297920F6C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.Npgsql", "Cooke.Gnissel.Npgsql\Cooke.Gnissel.Npgsql.csproj", "{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -18,5 +20,9 @@ Global
 		{BF3A2A33-3D90-45B0-AA82-408297920F6C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{BF3A2A33-3D90-45B0-AA82-408297920F6C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{BF3A2A33-3D90-45B0-AA82-408297920F6C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

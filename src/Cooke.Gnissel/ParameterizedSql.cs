@@ -10,7 +10,7 @@ public class ParameterizedSql
     private readonly StringBuilder _builder;
 
     // TODO avoid boxing: https://github.com/dotnet/runtime/issues/28882
-    private readonly List<object?> parameters = new();
+    private readonly List<object?> _parameters = new();
 
     public ParameterizedSql(int literalLength, int formattedCount)
     {
@@ -25,11 +25,11 @@ public class ParameterizedSql
     public void AppendFormatted<T>(T t)
     {
         _builder.Append('$');
-        _builder.Append(parameters.Count + 1);
-        parameters.Add(t);
+        _builder.Append(_parameters.Count + 1);
+        _parameters.Add(t);
     }
 
     public string Sql => _builder.ToString();
 
-    public ImmutableArray<object?> Parameters => parameters.ToImmutableArray();
+    public ImmutableArray<object?> Parameters => _parameters.ToImmutableArray();
 }

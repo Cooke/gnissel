@@ -1,24 +1,33 @@
+using System.Collections.Concurrent;
 using System.Data;
 using System.Data.Common;
 using System.Linq.Expressions;
+using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
 
 public abstract class DbContext
 {
-    private readonly ProviderAdapter _dataProviderAdapter;
-    protected DbContext(ProviderAdapter dataProviderAdapter)
+    private readonly DbAdapter _dataDbAdapter;
+    private readonly ConcurrentDictionary<Type, object> _tables =
+        new ConcurrentDictionary<Type, object>();
+
+    protected DbContext(DbAdapter dataDbAdapter)
     {
-        _dataProviderAdapter = dataProviderAdapter;
+        _dataDbAdapter = dataDbAdapter;
     }
 
-    protected Table<T> Table<T>() => new Table<T>(_dataProviderAdapter);
+    protected Table<T> Table<T>() =>
+        (Table<T>)_tables.GetOrAdd(typeof(T), _ => new Table<T>(this, _dataDbAdapter));
 
-    public IAsyncEnumerable<TOut> Query<TOut>(ParameterizedSql parameterizedSql)
+    public IAsyncEnumerable<TOut> Query<TOut>(
+        ParameterizedSql parameterizedSql,
+        CancellationToken cancellationToken = default
+    )
     {
         // TODO probably a good idea to cache the mappers
         var mapper = CreateTypeMapper<TOut>();
-        return Query(parameterizedSql, mapper);
+        return Query(parameterizedSql, mapper, cancellationToken);
     }
 
     private static Func<Row, TOut> CreateTypeMapper<TOut>()
@@ -48,22 +57,24 @@ public abstract class DbContext
 
     public async IAsyncEnumerable<TOut> Query<TOut>(
         ParameterizedSql parameterizedSql,
-        Func<Row, TOut> mapper
+        Func<Row, TOut> mapper,
+        [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
-        await using var cmd = _dataProviderAdapter.CreateCommand();
+        await using var cmd = _dataDbAdapter.CreateCommand();
         cmd.CommandText = parameterizedSql.Sql;
         foreach (
             var parameter in parameterizedSql.Parameters.Select(
-                x => _dataProviderAdapter.CreateParameter(x)
+                x => _dataDbAdapter.CreateParameter(x)
             )
         )
         {
             cmd.Parameters.Add(parameter);
         }
 
-        var reader = await cmd.ExecuteReaderAsync();
-        while (await reader.ReadAsync())
+        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
+        cancellationToken.Register(reader.Close);
+        while (await reader.ReadAsync(cancellationToken))
         {
             yield return mapper(new Row(reader));
         }
