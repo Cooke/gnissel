@@ -1,0 +1,86 @@
+using System.ComponentModel.DataAnnotations.Schema;
+using Dapper;
+using Npgsql;
+using Testcontainers.PostgreSql;
+
+namespace Cooke.Gnissel.Test;
+
+public class Tests
+{
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
+    private TestDbContext _db;
+
+    [OneTimeSetUp]
+    public async Task Setup()
+    {
+        _db = new TestDbContext(_dataSource);
+
+        await _dataSource
+            .CreateCommand(
+                """
+                    create table users
+                    (
+                        id   integer primary key generated always as identity,
+                        name text,
+                        age  integer
+                    );
+                """
+            )
+            .ExecuteNonQueryAsync();
+    }
+
+    [TearDown]
+    public void TearDown()
+    {
+        _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
+    }
+
+    [Test]
+    public async Task InsertOne()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+
+        var fetched = _dataSource.OpenConnection().QuerySingle<User>("SELECT * FROM users");
+        Assert.That(fetched, Is.EqualTo(new User(1, "Bob", 25)));
+    }
+
+    [Test]
+    public async Task InsertTwo()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Alice", 30));
+
+        var fetched = _dataSource.OpenConnection().Query<User>("SELECT * FROM users").ToArray();
+        Assert.That(2, Is.EqualTo(fetched.Length));
+        CollectionAssert.AreEqual(
+            new[] { new User(1, "Bob", 25), new User(2, "Alice", 30) },
+            fetched
+        );
+    }
+
+    public class TestDbContext : DbContext
+    {
+        public TestDbContext(NpgsqlDataSource dataSource)
+            : base(new NpgsqlProviderAdapter(dataSource)) { }
+
+        public Table<User> Users => Table<User>();
+        //
+        // public Table<Device> Devices => Table<Device>();
+        //
+        // public Table<UserHistory> UserHistory => Table<UserHistory>();
+        //
+        // public Table<DeviceKey> DeviceKeys => Table<DeviceKey>();
+    }
+
+    public record User(
+        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
+        string Name,
+        int Age
+    );
+
+    public record Device(string Id, string Name, int UserId);
+
+    public record DeviceKey(string DeviceId, string Key);
+
+    public record UserHistory(int UserId, string Event);
+}
