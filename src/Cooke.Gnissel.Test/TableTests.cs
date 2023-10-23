@@ -7,7 +7,7 @@ namespace Cooke.Gnissel.Test;
 public class TableTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
-    private TestDbContext _db;
+    private TestDbContext _db = null!;
 
     [OneTimeSetUp]
     public async Task Setup()

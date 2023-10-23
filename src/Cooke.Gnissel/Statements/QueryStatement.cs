@@ -7,16 +7,22 @@ namespace Cooke.Gnissel;
 
 public class QueryStatement<T> : IAsyncEnumerable<T>
 {
+    private readonly DbAdapter _dbAdapter;
+    private readonly string _fromTable;
     private readonly DbContext _dbContext;
     private readonly string? _condition;
     private readonly ImmutableArray<IColumn<T>> _columns;
 
     public QueryStatement(
+        DbAdapter dbAdapter,
+        string fromTable,
         DbContext dbContext,
         string? condition,
         ImmutableArray<IColumn<T>> columns
     )
     {
+        _dbAdapter = dbAdapter;
+        _fromTable = fromTable;
         _dbContext = dbContext;
         _condition = condition;
         Columns = columns;
@@ -83,7 +89,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     {
         var sql = new ParameterizedSql(100, 2);
         sql.AppendLiteral("SELECT * FROM ");
-        // sql.AppendLiteral(_from);
+        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
         return _dbContext.Query<T>(sql, cancellationToken);
     }
 

@@ -12,7 +12,7 @@ public class Table<T> : QueryStatement<T>
     private readonly string _name = typeof(T).Name.ToLower() + "s";
 
     public Table(DbContext dbContext, DbAdapter dbAdapter, ImmutableArray<IColumn<T>> columns)
-        : base(dbContext, null, columns)
+        : base(dbAdapter, typeof(T).Name.ToLower() + "s", dbContext, null, columns)
     {
         _dbAdapter = dbAdapter;
     }
