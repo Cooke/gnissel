@@ -44,12 +44,10 @@ public class TransactionTests
     [Test]
     public async Task Transaction()
     {
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using (var trans = await connection.BeginTransactionAsync())
+        await _db.Transaction(async trans =>
         {
-            await _db.Users.Insert(new User(0, "Bob", 25)).ExecuteAsync(connection);
-            await trans.CommitAsync();
-        }
+            await trans.Users.Insert(new User(0, "Bob", 25));
+        });
 
         var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
@@ -59,23 +57,25 @@ public class TransactionTests
     [Test]
     public async Task TransactionAbort()
     {
-        await using var connection = await _dataSource.OpenConnectionAsync();
-        await using (await connection.BeginTransactionAsync())
+        await _db.Transaction(async trans =>
         {
-            await _db.Users.Insert(new User(0, "Bob", 25)).ExecuteAsync(connection);
-        }
+            await trans.Users.Insert(new User(0, "Bob", 25));
+        });
 
         var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
         CollectionAssert.IsEmpty(results);
     }
 
-    private class TestDbContext : DbContext
+    private class TestDbContext : DbContext, TransactionalDbContext<TestDbContext>
     {
-        public TestDbContext(DbAdapter dataDbAdapter)
-            : base(dataDbAdapter) { }
+        public TestDbContext(DbConnectionProvider connectionProvider, DbAdapter dataDbAdapter)
+            : base(dataDbAdapter, connectionProvider) { }
 
         public Table<User> Users => Table<User>();
+
+        public TestDbContext WithConnectionProvider(DbConnectionProvider connectionProvider) =>
+            new TestDbContext(connectionProvider, DbAdapter);
     }
 
     public record User(

@@ -7,13 +7,16 @@ public interface DbAdapter
 {
     string EscapeIdentifier(string identifier);
 
+    string GetColumnName(PropertyInfo propertyInfo);
+
     DbParameter CreateParameter<TValue>(TValue value);
 
+    DbConnection CreateConnection();
+
     DbCommand CreateCommand();
+}
 
-    DbCommand CreateCommand(DbConnection connection);
-
-    Task<DbConnection> OpenConnection();
-    
-    string GetColumnName(PropertyInfo propertyInfo);
+public interface DbConnectionProvider
+{
+    DbCommand GetCommand();
 }

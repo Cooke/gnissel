@@ -3,18 +3,13 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
 
-public interface IInsertStatement
-{
-    Task<int> ExecuteAsync();
-    Task<int> ExecuteAsync(DbConnection connection);
-}
-
 public record InsertStatement<T>(
+    DbConnectionProvider DbConnectionProvider,
     DbAdapter DbAdapter,
     Table<T> Table,
     IEnumerable<IColumn<T>> Columns,
     IEnumerable<DbParameter> Parameters
-) : IInsertStatement
+)
 {
     public TaskAwaiter<int> GetAwaiter()
     {
@@ -23,13 +18,7 @@ public record InsertStatement<T>(
 
     public async Task<int> ExecuteAsync()
     {
-        await using var command = DbAdapter.CreateCommand();
-        return await ExecuteAsync(command);
-    }
-
-    public async Task<int> ExecuteAsync(DbConnection connection)
-    {
-        await using var command = DbAdapter.CreateCommand(connection);
+        await using var command = DbConnectionProvider.GetCommand();
         return await ExecuteAsync(command);
     }
 

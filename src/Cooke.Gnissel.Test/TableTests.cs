@@ -41,7 +41,7 @@ public class TableTests
     }
 
     [Test]
-    public async Task QueryParameters()
+    public async Task Query()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var users = await _db.Users.ToArrayAsync();
