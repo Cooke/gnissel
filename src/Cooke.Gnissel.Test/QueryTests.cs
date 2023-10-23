@@ -23,6 +23,13 @@ public class QueryTests
                         name text,
                         age  integer
                     );
+
+                    create table devices
+                    (
+                        id   text primary key,
+                        name text,
+                        user_id  integer
+                    );
                 """
             )
             .ExecuteNonQueryAsync();
@@ -56,6 +63,19 @@ public class QueryTests
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query(
                 $"SELECT * FROM users",
+                x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+    }
+
+    [Test]
+    public async Task QueryCustomNameMappingCollidingColumns()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Devices.Insert(new Device("my-device", "Bob", 1));
+        var results = await _db.Query(
+                $"SELECT * FROM users JOIN devices ON users.id = devices.user_id",
                 x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
             )
             .ToArrayAsync();
@@ -112,6 +132,8 @@ public class QueryTests
             : base(new NpgsqlDbAdapter(dataSource)) { }
 
         public Table<User> Users => Table<User>();
+
+        public Table<Device> Devices => Table<Device>();
     }
 
     private record User(
@@ -119,4 +141,6 @@ public class QueryTests
         string Name,
         int Age
     );
+
+    public record Device(string Id, string Name, int UserId);
 }

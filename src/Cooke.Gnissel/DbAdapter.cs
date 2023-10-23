@@ -1,4 +1,5 @@
 using System.Data.Common;
+using System.Reflection;
 
 namespace Cooke.Gnissel;
 
@@ -13,4 +14,6 @@ public interface DbAdapter
     DbCommand CreateCommand(DbConnection connection);
 
     Task<DbConnection> OpenConnection();
+    
+    string GetColumnName(PropertyInfo propertyInfo);
 }

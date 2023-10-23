@@ -1,5 +1,7 @@
 using System.Data.Common;
+using System.Reflection;
 using Npgsql;
+using Npgsql.NameTranslation;
 
 namespace Cooke.Gnissel.Npgsql;
 
@@ -29,4 +31,7 @@ public sealed class NpgsqlDbAdapter : DbAdapter
     }
 
     public async Task<DbConnection> OpenConnection() => await _dataSource.OpenConnectionAsync();
+
+    public string GetColumnName(PropertyInfo propertyInfo) =>
+        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name);
 }

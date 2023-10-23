@@ -35,7 +35,7 @@ public record InsertStatement<T>(
 
     private async Task<int> ExecuteAsync(DbCommand command)
     {
-        var cols = string.Join(", ", Columns.Select(x => x.Name));
+        var cols = string.Join(", ", Columns.Select(x => DbAdapter.EscapeIdentifier(x.Name)));
         var paramPlaceholders = string.Join(", ", Columns.Select((_, i) => "$" + (i + 1)));
 
         command.CommandText =

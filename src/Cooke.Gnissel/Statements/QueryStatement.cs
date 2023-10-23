@@ -5,12 +5,23 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
 
-public record QueryStatement<T>(
-    DbContext DbContext,
-    string? Condition,
-    ImmutableArray<IColumn<T>> Columns
-) : IAsyncEnumerable<T>
+public class QueryStatement<T> : IAsyncEnumerable<T>
 {
+    private readonly DbContext _dbContext;
+    private readonly string? _condition;
+    private readonly ImmutableArray<IColumn<T>> _columns;
+
+    public QueryStatement(
+        DbContext dbContext,
+        string? condition,
+        ImmutableArray<IColumn<T>> columns
+    )
+    {
+        _dbContext = dbContext;
+        _condition = condition;
+        Columns = columns;
+    }
+
     [Pure]
     public QueryStatement<T> Where(Expression<Func<T, bool>> predicate)
     {
@@ -71,7 +82,14 @@ public record QueryStatement<T>(
     public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var sql = new ParameterizedSql(100, 2);
-        sql.AppendLiteral("SELECT * FROM users");
-        return DbContext.Query<T>(sql, cancellationToken);
+        sql.AppendLiteral("SELECT * FROM ");
+        // sql.AppendLiteral(_from);
+        return _dbContext.Query<T>(sql, cancellationToken);
+    }
+
+    public ImmutableArray<IColumn<T>> Columns
+    {
+        get => _columns;
+        init => _columns = value;
     }
 }

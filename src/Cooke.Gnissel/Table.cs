@@ -6,10 +6,18 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel;
 
-public record Table<T>(DbContext DbContext, DbAdapter DbAdapter, ImmutableArray<IColumn<T>> Columns)
-    : QueryStatement<T>(DbContext, null, Columns)
+public class Table<T> : QueryStatement<T>
 {
-    public string Name { get; } = typeof(T).Name.ToLower() + "s";
+    private readonly DbAdapter _dbAdapter;
+    private readonly string _name = typeof(T).Name.ToLower() + "s";
+
+    public Table(DbContext dbContext, DbAdapter dbAdapter, ImmutableArray<IColumn<T>> columns)
+        : base(dbContext, null, columns)
+    {
+        _dbAdapter = dbAdapter;
+    }
+
+    public string Name => _name;
 
     public Table(DbContext dbContext, DbAdapter dbAdapter)
         : this(
@@ -23,7 +31,7 @@ public record Table<T>(DbContext DbContext, DbAdapter DbAdapter, ImmutableArray<
                         Activator.CreateInstance(
                             typeof(Column<,>).MakeGenericType(typeof(T), p.PropertyType),
                             dbAdapter,
-                            p.Name,
+                            dbAdapter.GetColumnName(p),
                             p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                                 ?.Let(
                                     x =>
@@ -42,7 +50,7 @@ public record Table<T>(DbContext DbContext, DbAdapter DbAdapter, ImmutableArray<
         var insertColumns = Columns.Where(x => !x.IsIdentity);
 
         return new InsertStatement<T>(
-            DbAdapter,
+            _dbAdapter,
             this,
             insertColumns,
             insertColumns.Select(col => col.CreateParameter(item))
