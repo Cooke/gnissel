@@ -1,4 +1,5 @@
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Npgsql;
 using Dapper;
 using Npgsql;
@@ -29,17 +30,13 @@ public class Tests
             )
             .ExecuteNonQueryAsync();
     }
-    
+
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
     {
         _db = new TestDbContext(_dataSource);
 
-        await _dataSource
-            .CreateCommand(
-                "drop table users;"
-            )
-            .ExecuteNonQueryAsync();
+        await _dataSource.CreateCommand("drop table users;").ExecuteNonQueryAsync();
     }
 
     [TearDown]
@@ -74,15 +71,12 @@ public class Tests
     public class TestDbContext : DbContext
     {
         public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlDbAdapter(dataSource)) { }
+            : base(new NpgsqlDbAdapter(dataSource))
+        {
+            Users = Table<User>();
+        }
 
-        public Table<User> Users => Table<User>();
-        //
-        // public Table<Device> Devices => Table<Device>();
-        //
-        // public Table<UserHistory> UserHistory => Table<UserHistory>();
-        //
-        // public Table<DeviceKey> DeviceKeys => Table<DeviceKey>();
+        public Table<User> Users { get; }
     }
 
     public record User(
@@ -90,10 +84,4 @@ public class Tests
         string Name,
         int Age
     );
-
-    public record Device(string Id, string Name, int UserId);
-
-    public record DeviceKey(string DeviceId, string Key);
-
-    public record UserHistory(int UserId, string Event);
 }

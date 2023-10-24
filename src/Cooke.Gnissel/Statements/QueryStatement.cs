@@ -9,14 +9,14 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
 {
     private readonly DbAdapter _dbAdapter;
     private readonly string _fromTable;
-    private readonly DbContext _dbContext;
+    private readonly IDbContext _dbContext;
     private readonly string? _condition;
     private readonly ImmutableArray<IColumn<T>> _columns;
 
     public QueryStatement(
         DbAdapter dbAdapter,
         string fromTable,
-        DbContext dbContext,
+        IDbContext dbContext,
         string? condition,
         ImmutableArray<IColumn<T>> columns
     )

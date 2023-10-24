@@ -9,32 +9,32 @@ namespace Cooke.Gnissel;
 public class Table<T> : QueryStatement<T>
 {
     private readonly DbAdapter _dbAdapter;
-    private readonly DbConnectionProvider _dbConnectionProvider;
+    private readonly ICommandProvider _commandProvider;
     private readonly string _name = typeof(T).Name.ToLower() + "s";
 
-    public Table(
-        DbContext dbContext,
+    private Table(
+        IDbContext dbContext,
         DbAdapter dbAdapter,
-        DbConnectionProvider dbConnectionProvider,
+        ICommandProvider commandProvider,
         ImmutableArray<IColumn<T>> columns
     )
         : base(dbAdapter, typeof(T).Name.ToLower() + "s", dbContext, null, columns)
     {
         _dbAdapter = dbAdapter;
-        _dbConnectionProvider = dbConnectionProvider;
+        _commandProvider = commandProvider;
     }
 
     public string Name => _name;
 
-    public Table(
-        DbContext dbContext,
+    internal Table(
+        IDbContext dbContext,
         DbAdapter dbAdapter,
-        DbConnectionProvider dbConnectionProvider
+        ICommandProvider commandProvider
     )
         : this(
             dbContext,
             dbAdapter,
-            dbConnectionProvider,
+            commandProvider,
             typeof(T)
                 .GetProperties()
                 .Select(p =>
@@ -62,7 +62,7 @@ public class Table<T> : QueryStatement<T>
         var insertColumns = Columns.Where(x => !x.IsIdentity);
 
         return new InsertStatement<T>(
-            _dbConnectionProvider,
+            _commandProvider,
             _dbAdapter,
             this,
             insertColumns,

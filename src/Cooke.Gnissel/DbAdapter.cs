@@ -13,10 +13,7 @@ public interface DbAdapter
 
     DbConnection CreateConnection();
 
-    DbCommand CreateCommand();
-}
+    DbCommand CreateReadyCommand();
 
-public interface DbConnectionProvider
-{
-    DbCommand GetCommand();
+    DbCommand CreateEmptyCommand();
 }

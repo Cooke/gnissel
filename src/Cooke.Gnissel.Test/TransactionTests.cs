@@ -20,7 +20,7 @@ public class TransactionTests
                 """
                     create table users
                     (
-                        id   integer primary key generated always as identity,
+                        id   integer primary key,
                         name text,
                         age  integer
                     );
@@ -44,43 +44,37 @@ public class TransactionTests
     [Test]
     public async Task Transaction()
     {
-        await _db.Transaction(async trans =>
-        {
-            await trans.Users.Insert(new User(0, "Bob", 25));
-        });
+        await _db.Transaction(_db.Users.Insert(new User(0, "Bob", 25)));
 
         var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+        CollectionAssert.AreEqual(new[] { new User(0, "Bob", 25) }, results);
     }
 
     [Test]
     public async Task TransactionAbort()
     {
-        await _db.Transaction(async trans =>
+        try
         {
-            await trans.Users.Insert(new User(0, "Bob", 25));
-        });
+            await _db.Transaction(
+                _db.Users.Insert(new User(0, "Bob", 25)),
+                _db.Users.Insert(new User(0, "Bob", 25))
+            );
+        }
+        catch (DbException) { }
 
         var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
         CollectionAssert.IsEmpty(results);
     }
 
-    private class TestDbContext : DbContext, TransactionalDbContext<TestDbContext>
+    private class TestDbContext : DbContext
     {
-        public TestDbContext(DbConnectionProvider connectionProvider, DbAdapter dataDbAdapter)
-            : base(dataDbAdapter, connectionProvider) { }
+        public TestDbContext(DbAdapter dataDbAdapter)
+            : base(dataDbAdapter) { }
 
         public Table<User> Users => Table<User>();
-
-        public TestDbContext WithConnectionProvider(DbConnectionProvider connectionProvider) =>
-            new TestDbContext(connectionProvider, DbAdapter);
     }
 
-    public record User(
-        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
-        string Name,
-        int Age
-    );
+    public record User(int Id, string Name, int Age);
 }

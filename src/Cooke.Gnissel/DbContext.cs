@@ -6,33 +6,38 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
 
-public static class TransactionalDbContextExtensions { }
-
-public interface TransactionalDbContext<out TContext>
-    where TContext : DbContext
+public static class DbContextExtensions
 {
-    TContext WithConnectionProvider(DbConnectionProvider connectionProvider);
+    public static Task Transaction(this DbContext dbContext, params IInsertStatement[] statements)
+    {
+        return dbContext.Transaction(statements);
+    }
 }
 
-public abstract class DbContext<TContext>
+public interface IDbContext
+{
+    IAsyncEnumerable<TOut> Query<TOut>(
+        ParameterizedSql parameterizedSql,
+        CancellationToken cancellationToken = default
+    );
+}
+
+public abstract class DbContext : IDbContext
 {
     private readonly DbAdapter _dbAdapter;
-    private readonly DbConnectionProvider _dbConnectionProvider;
-
+    private readonly ICommandProvider _commandProvider;
     private readonly ConcurrentDictionary<Type, object> _tables =
         new ConcurrentDictionary<Type, object>();
 
-    protected DbContext(DbAdapter dbAdapter, DbConnectionProvider dbConnectionProvider)
+    protected DbContext(DbAdapter dbAdapter)
     {
         _dbAdapter = dbAdapter;
-        _dbConnectionProvider = dbConnectionProvider;
+        _commandProvider = new ReadyCommandProvider(dbAdapter);
     }
-
-    protected DbAdapter DbAdapter => _dbAdapter;
 
     protected Table<T> Table<T>() =>
         (Table<T>)
-            _tables.GetOrAdd(typeof(T), _ => new Table<T>(this, _dbAdapter, _dbConnectionProvider));
+            _tables.GetOrAdd(typeof(T), _ => new Table<T>(this, _dbAdapter, _commandProvider));
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         ParameterizedSql parameterizedSql,
@@ -75,7 +80,7 @@ public abstract class DbContext<TContext>
         [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
-        await using var cmd = _dbConnectionProvider.GetCommand();
+        await using var cmd = _commandProvider.CreateCommand();
         cmd.CommandText = parameterizedSql.Sql;
         foreach (
             var parameter in parameterizedSql.Parameters.Select(x => _dbAdapter.CreateParameter(x))
@@ -92,38 +97,16 @@ public abstract class DbContext<TContext>
         }
     }
 
-    protected virtual TContext WithConnectionProvider(DbConnectionProvider connectionProvider)
-    {
-        throw new NotImplementedException();
-    }
-
-    public async Task Transaction(Func<TContext, Task> action)
+    public async Task Transaction(IEnumerable<IInsertStatement> statements)
     {
         await using var connection = _dbAdapter.CreateConnection();
         await connection.OpenAsync();
         await using var transaction = await connection.BeginTransactionAsync();
-        var transactionContext = WithConnectionProvider(new ConstDbConnectionProvider(connection, _dbAdapter));
-        await action(transactionContext);
+        foreach (var statement in statements)
+        {
+            await statement.ExecuteAsync(connection);
+        }
         await transaction.CommitAsync();
-    }
-}
-
-public sealed class ConstDbConnectionProvider : DbConnectionProvider
-{
-    private readonly DbConnection _connection;
-    private readonly DbAdapter _adapter;
-
-    public ConstDbConnectionProvider(DbConnection connection, DbAdapter adapter)
-    {
-        _connection = connection;
-        _adapter = adapter;
-    }
-
-    public DbCommand GetCommand()
-    {
-        var cmd = _adapter.CreateCommand();
-        cmd.Connection = _connection;
-        return cmd;
     }
 }
 
