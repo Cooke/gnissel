@@ -129,7 +129,7 @@ public class QueryTests
     private class TestDbContext : DbContext
     {
         public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlDbAdapter(dataSource)) { }
+            : base(new DbContextOptions(new NpgsqlDbAdapter(dataSource))) { }
 
         public Table<User> Users => Table<User>();
 

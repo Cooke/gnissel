@@ -5,7 +5,7 @@ using Npgsql.NameTranslation;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public sealed class NpgsqlDbAdapter : DbAdapter
+public sealed class NpgsqlDbAdapter : IDbAdapter
 {
     private readonly NpgsqlDataSource _dataSource;
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)

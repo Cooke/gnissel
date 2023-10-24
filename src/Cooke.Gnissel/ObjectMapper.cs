@@ -3,7 +3,12 @@ using System.Linq.Expressions;
 
 namespace Cooke.Gnissel;
 
-public class ObjectMapper
+public interface IObjectMapper
+{
+    TOut Map<TOut>(Row row);
+}
+
+public class ObjectMapper : IObjectMapper
 {
     private readonly ConcurrentDictionary<Type, object> _mappers =
         new ConcurrentDictionary<Type, object>();

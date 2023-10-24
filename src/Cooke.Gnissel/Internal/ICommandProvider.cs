@@ -9,9 +9,9 @@ public interface ICommandProvider
 
 internal class ReadyCommandProvider : ICommandProvider
 {
-    private readonly DbAdapter _dbAdapter;
+    private readonly IDbAdapter _dbAdapter;
 
-    public ReadyCommandProvider(DbAdapter dbAdapter)
+    public ReadyCommandProvider(IDbAdapter dbAdapter)
     {
         _dbAdapter = dbAdapter;
     }

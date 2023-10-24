@@ -19,24 +19,42 @@ public interface IDbContext
     );
 }
 
-public abstract class DbContext : IDbContext
+public class DbContextOptions
 {
-    private readonly ObjectMapper _objectMapper;
-    private readonly DbAdapter _dbAdapter;
-    private readonly ICommandProvider _commandProvider;
-    private readonly ConcurrentDictionary<Type, object> _tables =
-        new ConcurrentDictionary<Type, object>();
+    public DbContextOptions(IDbAdapter dbAdapter)
+        : this(new ObjectMapper(), dbAdapter) { }
 
-    protected DbContext(ObjectMapper objectMapper, DbAdapter dbAdapter)
+    public DbContextOptions(IObjectMapper objectMapper, IDbAdapter dbAdapter)
+        : this(objectMapper, dbAdapter, new ReadyCommandProvider(dbAdapter)) { }
+
+    public DbContextOptions(
+        IObjectMapper objectMapper,
+        IDbAdapter dbAdapter,
+        ICommandProvider commandProvider
+    )
     {
-        _objectMapper = objectMapper;
-        _dbAdapter = dbAdapter;
-        _commandProvider = new ReadyCommandProvider(dbAdapter);
+        ObjectMapper = objectMapper;
+        DbAdapter = dbAdapter;
+        CommandProvider = commandProvider;
     }
 
-    protected Table<T> Table<T>() =>
-        (Table<T>)
-            _tables.GetOrAdd(typeof(T), _ => new Table<T>(_dbAdapter, _commandProvider, _objectMapper));
+    public IObjectMapper ObjectMapper { get; }
+    public IDbAdapter DbAdapter { get; }
+    public ICommandProvider CommandProvider { get; }
+}
+
+public abstract class DbContext : IDbContext
+{
+    private readonly IObjectMapper _objectMapper;
+    private readonly IDbAdapter _dbAdapter;
+    private readonly ICommandProvider _commandProvider;
+
+    protected DbContext(DbContextOptions dbContextOptions)
+    {
+        _objectMapper = dbContextOptions.ObjectMapper;
+        _dbAdapter = dbContextOptions.DbAdapter;
+        _commandProvider = dbContextOptions.CommandProvider;
+    }
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         FormattedSql formattedSql,
@@ -47,10 +65,14 @@ public abstract class DbContext : IDbContext
         FormattedSql formattedSql,
         Func<Row, TOut> mapper,
         CancellationToken cancellationToken = default
-    )
-    {
-        return QueryExecutor.Execute(formattedSql, mapper, _commandProvider, _dbAdapter, cancellationToken);
-    }
+    ) =>
+        QueryExecutor.Execute(
+            formattedSql,
+            mapper,
+            _commandProvider,
+            _dbAdapter,
+            cancellationToken
+        );
 
     public async Task Transaction(IEnumerable<IInsertStatement> statements)
     {

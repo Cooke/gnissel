@@ -71,9 +71,9 @@ public class Tests
     public class TestDbContext : DbContext
     {
         public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlDbAdapter(dataSource))
+            : base(new DbContextOptions(new NpgsqlDbAdapter(dataSource)))
         {
-            Users = Table<User>();
+            Users = new Table<User>();
         }
 
         public Table<User> Users { get; }

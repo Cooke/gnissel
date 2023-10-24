@@ -8,60 +8,45 @@ namespace Cooke.Gnissel;
 
 public class Table<T> : QueryStatement<T>
 {
-    private readonly DbAdapter _dbAdapter;
+    private readonly IDbAdapter _dbAdapter;
     private readonly ICommandProvider _commandProvider;
     private readonly string _name = typeof(T).Name.ToLower() + "s";
 
-    private Table(
-        DbAdapter dbAdapter,
-        ICommandProvider commandProvider,
-        ImmutableArray<IColumn<T>> columns,
-        ObjectMapper objectMapper
-    )
+    private Table(DbContextOptions options)
         : base(
-            dbAdapter,
+            options,
             typeof(T).Name.ToLower() + "s",
             null,
-            columns,
-            objectMapper,
-            commandProvider
+            CreateColumns(options.DbAdapter)
+            
         )
     {
-        _dbAdapter = dbAdapter;
-        _commandProvider = commandProvider;
+        _dbAdapter = options.DbAdapter;
+        _commandProvider = options.CommandProvider;
     }
 
     public string Name => _name;
 
-    internal Table(
-        DbAdapter dbAdapter,
-        ICommandProvider commandProvider,
-        ObjectMapper objectMapper
-    )
-        : this(
-            dbAdapter,
-            commandProvider,
-            typeof(T)
-                .GetProperties()
-                .Select(p =>
-                {
-                    return (IColumn<T>)
-                        Activator.CreateInstance(
-                            typeof(Column<,>).MakeGenericType(typeof(T), p.PropertyType),
-                            dbAdapter,
-                            dbAdapter.GetColumnName(p),
-                            p.GetCustomAttribute<DatabaseGeneratedAttribute>()
-                                ?.Let(
-                                    x =>
-                                        x.DatabaseGeneratedOption
-                                        == DatabaseGeneratedOption.Identity
-                                ) ?? false,
-                            p
-                        )!;
-                })
-                .ToImmutableArray(),
-            objectMapper
-        ) { }
+    private static ImmutableArray<IColumn<T>> CreateColumns(IDbAdapter dbAdapter)
+    {
+        return typeof(T)
+            .GetProperties()
+            .Select(p =>
+            {
+                return (IColumn<T>)
+                    Activator.CreateInstance(
+                        typeof(Column<,>).MakeGenericType(typeof(T), p.PropertyType),
+                        dbAdapter,
+                        dbAdapter.GetColumnName(p),
+                        p.GetCustomAttribute<DatabaseGeneratedAttribute>()
+                            ?.Let(
+                                x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity
+                            ) ?? false,
+                        p
+                    )!;
+            })
+            .ToImmutableArray();
+    }
 
     [Pure]
     public InsertStatement<T> Insert(T item)

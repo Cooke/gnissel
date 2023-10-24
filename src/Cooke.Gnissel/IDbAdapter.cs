@@ -3,7 +3,7 @@ using System.Reflection;
 
 namespace Cooke.Gnissel;
 
-public interface DbAdapter
+public interface IDbAdapter
 {
     string EscapeIdentifier(string identifier);
 

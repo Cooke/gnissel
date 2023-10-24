@@ -70,8 +70,8 @@ public class TransactionTests
 
     private class TestDbContext : DbContext
     {
-        public TestDbContext(DbAdapter dataDbAdapter)
-            : base(dataDbAdapter) { }
+        public TestDbContext(IDbAdapter dataDbAdapter)
+            : base(new DbContextOptions(dataDbAdapter)) { }
 
         public Table<User> Users => Table<User>();
     }

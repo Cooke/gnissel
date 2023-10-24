@@ -5,9 +5,9 @@ namespace Cooke.Gnissel;
 public sealed class ConnectionBoundCommandProvider : ICommandProvider
 {
     private readonly DbConnection _connection;
-    private readonly DbAdapter _adapter;
+    private readonly IDbAdapter _adapter;
 
-    public ConnectionBoundCommandProvider(DbConnection connection, DbAdapter adapter)
+    public ConnectionBoundCommandProvider(DbConnection connection, IDbAdapter adapter)
     {
         _connection = connection;
         _adapter = adapter;

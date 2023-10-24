@@ -6,10 +6,10 @@ namespace Cooke.Gnissel;
 
 public class Column<TTable, TCol> : IColumn<TTable>
 {
-    private readonly DbAdapter _dbAdapter;
+    private readonly IDbAdapter _dbAdapter;
     private readonly Func<TTable, TCol> _getter;
 
-    public Column(DbAdapter dbAdapter, string name, bool isIdentity, MemberInfo member)
+    public Column(IDbAdapter dbAdapter, string name, bool isIdentity, MemberInfo member)
     {
         _dbAdapter = dbAdapter;
         Name = name;

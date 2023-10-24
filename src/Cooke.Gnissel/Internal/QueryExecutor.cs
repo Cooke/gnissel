@@ -8,7 +8,7 @@ public static class QueryExecutor
         FormattedSql formattedSql,
         Func<Row, TOut> mapper,
         ICommandProvider commandProvider,
-        DbAdapter dbAdapter,
+        IDbAdapter dbAdapter,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {

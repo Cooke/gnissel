@@ -7,28 +7,26 @@ namespace Cooke.Gnissel;
 
 public class QueryStatement<T> : IAsyncEnumerable<T>
 {
-    private readonly DbAdapter _dbAdapter;
+    private readonly IDbAdapter _dbAdapter;
     private readonly string _fromTable;
     private readonly string? _condition;
     private readonly ImmutableArray<IColumn<T>> _columns;
-    private readonly ObjectMapper _objectMapper;
+    private readonly IObjectMapper _objectMapper;
     private readonly ICommandProvider _commandProvider;
 
     public QueryStatement(
-        DbAdapter dbAdapter,
+        DbContextOptions options,
         string fromTable,
         string? condition,
-        ImmutableArray<IColumn<T>> columns,
-        ObjectMapper objectMapper,
-        ICommandProvider commandProvider
+        ImmutableArray<IColumn<T>> columns
     )
     {
-        _dbAdapter = dbAdapter;
+        _dbAdapter = options.DbAdapter;
+        _objectMapper = options.ObjectMapper;
+        _commandProvider = options.CommandProvider;
         _fromTable = fromTable;
         _condition = condition;
         Columns = columns;
-        _objectMapper = objectMapper;
-        _commandProvider = commandProvider;
     }
 
     [Pure]

@@ -50,10 +50,12 @@ public class TableTests
 
     private class TestDbContext : DbContext
     {
-        public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new NpgsqlDbAdapter(dataSource)) { }
+        public TestDbContext(NpgsqlDataSource dataSource) : base(new DbContextOptions(new NpgsqlDbAdapter(dataSource)))
+        {
+            
+        }
 
-        public Table<User> Users => Table<User>();
+        public Table<User> Users { get; }
     }
 
     private record User(

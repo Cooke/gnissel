@@ -11,14 +11,14 @@ public interface IInsertStatement
 public class InsertStatement<T> : IInsertStatement
 {
     private readonly ICommandProvider _commandProvider;
-    private readonly DbAdapter _dbAdapter;
+    private readonly IDbAdapter _dbAdapter;
     private readonly Table<T> _table;
     private readonly IEnumerable<DbParameter> _parameters;
     private readonly IEnumerable<IColumn<T>> _columns;
 
     internal InsertStatement(
         ICommandProvider commandProvider,
-        DbAdapter dbAdapter,
+        IDbAdapter dbAdapter,
         Table<T> table,
         IEnumerable<IColumn<T>> columns,
         IEnumerable<DbParameter> parameters
