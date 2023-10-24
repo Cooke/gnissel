@@ -13,12 +13,19 @@ public class Table<T> : QueryStatement<T>
     private readonly string _name = typeof(T).Name.ToLower() + "s";
 
     private Table(
-        IDbContext dbContext,
         DbAdapter dbAdapter,
         ICommandProvider commandProvider,
-        ImmutableArray<IColumn<T>> columns
+        ImmutableArray<IColumn<T>> columns,
+        ObjectMapper objectMapper
     )
-        : base(dbAdapter, typeof(T).Name.ToLower() + "s", dbContext, null, columns)
+        : base(
+            dbAdapter,
+            typeof(T).Name.ToLower() + "s",
+            null,
+            columns,
+            objectMapper,
+            commandProvider
+        )
     {
         _dbAdapter = dbAdapter;
         _commandProvider = commandProvider;
@@ -27,12 +34,11 @@ public class Table<T> : QueryStatement<T>
     public string Name => _name;
 
     internal Table(
-        IDbContext dbContext,
         DbAdapter dbAdapter,
-        ICommandProvider commandProvider
+        ICommandProvider commandProvider,
+        ObjectMapper objectMapper
     )
         : this(
-            dbContext,
             dbAdapter,
             commandProvider,
             typeof(T)
@@ -53,7 +59,8 @@ public class Table<T> : QueryStatement<T>
                             p
                         )!;
                 })
-                .ToImmutableArray()
+                .ToImmutableArray(),
+            objectMapper
         ) { }
 
     [Pure]

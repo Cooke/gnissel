@@ -9,23 +9,26 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
 {
     private readonly DbAdapter _dbAdapter;
     private readonly string _fromTable;
-    private readonly IDbContext _dbContext;
     private readonly string? _condition;
     private readonly ImmutableArray<IColumn<T>> _columns;
+    private readonly ObjectMapper _objectMapper;
+    private readonly ICommandProvider _commandProvider;
 
     public QueryStatement(
         DbAdapter dbAdapter,
         string fromTable,
-        IDbContext dbContext,
         string? condition,
-        ImmutableArray<IColumn<T>> columns
+        ImmutableArray<IColumn<T>> columns,
+        ObjectMapper objectMapper,
+        ICommandProvider commandProvider
     )
     {
         _dbAdapter = dbAdapter;
         _fromTable = fromTable;
-        _dbContext = dbContext;
         _condition = condition;
         Columns = columns;
+        _objectMapper = objectMapper;
+        _commandProvider = commandProvider;
     }
 
     [Pure]
@@ -87,10 +90,16 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
 
     public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var sql = new ParameterizedSql(100, 2);
+        var sql = new FormattedSql(100, 2);
         sql.AppendLiteral("SELECT * FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
-        return _dbContext.Query<T>(sql, cancellationToken);
+        return QueryExecutor.Execute(
+            sql,
+            _objectMapper.Map<T>,
+            _commandProvider,
+            _dbAdapter,
+            cancellationToken
+        );
     }
 
     public ImmutableArray<IColumn<T>> Columns

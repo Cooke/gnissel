@@ -5,14 +5,14 @@ using System.Text;
 namespace Cooke.Gnissel;
 
 [InterpolatedStringHandler]
-public class ParameterizedSql
+public class FormattedSql
 {
     private readonly StringBuilder _builder;
 
     // TODO avoid boxing: https://github.com/dotnet/runtime/issues/28882
     private readonly List<object?> _parameters = new();
 
-    public ParameterizedSql(int literalLength, int formattedCount)
+    public FormattedSql(int literalLength, int formattedCount)
     {
         _builder = new StringBuilder(literalLength + formattedCount * 3);
     }
