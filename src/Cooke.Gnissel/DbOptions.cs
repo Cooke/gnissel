@@ -3,27 +3,31 @@ namespace Cooke.Gnissel;
 public class DbOptions
 {
     public DbOptions(IDbAdapter dbAdapter)
-        : this(new ObjectMapper(), dbAdapter) { }
+        : this(dbAdapter, new ObjectMapper()) { }
 
-    public DbOptions(IObjectMapper objectMapper, IDbAdapter dbAdapter)
-        : this(objectMapper, dbAdapter, new ReadyCommandProvider(dbAdapter), new QueryExecutor())
-    { }
+    public DbOptions(IDbAdapter dbAdapter, IObjectMapper objectMapper)
+        : this(
+            dbAdapter,
+            objectMapper,
+            new QueryExecutor(),
+            new ManagedConnectionCommandFactory(dbAdapter)
+        ) { }
 
     public DbOptions(
-        IObjectMapper objectMapper,
         IDbAdapter dbAdapter,
-        ICommandProvider commandProvider,
-        IQueryExecutor queryExecutor
+        IObjectMapper objectMapper,
+        IQueryExecutor queryExecutor,
+        ICommandFactory commandFactory
     )
     {
         ObjectMapper = objectMapper;
         DbAdapter = dbAdapter;
-        CommandProvider = commandProvider;
+        CommandFactory = commandFactory;
         QueryExecutor = queryExecutor;
     }
 
     public IObjectMapper ObjectMapper { get; }
     public IDbAdapter DbAdapter { get; }
-    public ICommandProvider CommandProvider { get; }
+    public ICommandFactory CommandFactory { get; }
     public IQueryExecutor QueryExecutor { get; }
 }

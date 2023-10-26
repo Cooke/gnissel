@@ -7,8 +7,8 @@ public interface IQueryExecutor
     IAsyncEnumerable<TOut> Execute<TOut>(
         FormattedSql formattedSql,
         Func<RowReader, TOut> mapper,
-        ICommandProvider commandProvider,
+        ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
-        [EnumeratorCancellation] CancellationToken cancellationToken
+        CancellationToken cancellationToken
     );
 }

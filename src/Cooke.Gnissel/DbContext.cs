@@ -4,14 +4,14 @@ public class DbContext
 {
     private readonly IObjectMapper _objectMapper;
     private readonly IDbAdapter _dbAdapter;
-    private readonly ICommandProvider _commandProvider;
+    private readonly ICommandFactory _commandFactory;
     private readonly IQueryExecutor _queryExecutor;
 
     public DbContext(DbOptions dbOptions)
     {
         _objectMapper = dbOptions.ObjectMapper;
         _dbAdapter = dbOptions.DbAdapter;
-        _commandProvider = dbOptions.CommandProvider;
+        _commandFactory = dbOptions.CommandFactory;
         _queryExecutor = dbOptions.QueryExecutor;
     }
 
@@ -28,7 +28,7 @@ public class DbContext
         _queryExecutor.Execute(
             formattedSql,
             mapper,
-            _commandProvider,
+            _commandFactory,
             _dbAdapter,
             cancellationToken
         );

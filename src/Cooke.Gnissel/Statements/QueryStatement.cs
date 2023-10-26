@@ -12,7 +12,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     private readonly string? _condition;
     private readonly ImmutableArray<Column<T>> _columns;
     private readonly IObjectMapper _objectMapper;
-    private readonly ICommandProvider _commandProvider;
+    private readonly ICommandFactory _commandFactory;
     private readonly IQueryExecutor _queryExecutor;
 
     public QueryStatement(
@@ -24,7 +24,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     {
         _dbAdapter = options.DbAdapter;
         _objectMapper = options.ObjectMapper;
-        _commandProvider = options.CommandProvider;
+        _commandFactory = options.CommandFactory;
         _queryExecutor = options.QueryExecutor;
         _fromTable = fromTable;
         _condition = condition;
@@ -96,7 +96,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         return _queryExecutor.Execute(
             sql,
             _objectMapper.Map<T>,
-            _commandProvider,
+            _commandFactory,
             _dbAdapter,
             cancellationToken
         );

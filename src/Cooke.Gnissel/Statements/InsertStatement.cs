@@ -10,21 +10,21 @@ public interface IInsertStatement
 
 public class InsertStatement<T> : IInsertStatement
 {
-    private readonly ICommandProvider _commandProvider;
+    private readonly ICommandFactory _commandFactory;
     private readonly IDbAdapter _dbAdapter;
     private readonly Table<T> _table;
     private readonly IEnumerable<DbParameter> _parameters;
     private readonly IEnumerable<Column<T>> _columns;
 
     internal InsertStatement(
-        ICommandProvider commandProvider,
+        ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
         Table<T> table,
         IEnumerable<Column<T>> columns,
         IEnumerable<DbParameter> parameters
     )
     {
-        _commandProvider = commandProvider;
+        _commandFactory = commandFactory;
         _dbAdapter = dbAdapter;
         _table = table;
         _columns = columns;
@@ -38,13 +38,13 @@ public class InsertStatement<T> : IInsertStatement
 
     public async Task<int> ExecuteAsync()
     {
-        await using var command = _commandProvider.CreateCommand();
+        await using var command = _commandFactory.CreateCommand();
         return await ExecuteAsync(command);
     }
 
     public async Task<int> ExecuteAsync(DbConnection connection)
     {
-        await using var cmd = _dbAdapter.CreateEmptyCommand();
+        await using var cmd = _dbAdapter.CreateCommand();
         cmd.Connection = connection;
         return await ExecuteAsync(cmd);
     }

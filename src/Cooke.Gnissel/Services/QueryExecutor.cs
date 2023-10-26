@@ -7,12 +7,12 @@ public class QueryExecutor : IQueryExecutor
     public async IAsyncEnumerable<TOut> Execute<TOut>(
         FormattedSql formattedSql,
         Func<RowReader, TOut> mapper,
-        ICommandProvider commandProvider,
+        ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
-        await using var cmd = commandProvider.CreateCommand();
+        await using var cmd = commandFactory.CreateCommand();
         cmd.CommandText = formattedSql.Sql;
         foreach (var parameter in formattedSql.Parameters.Select(dbAdapter.CreateParameter))
         {

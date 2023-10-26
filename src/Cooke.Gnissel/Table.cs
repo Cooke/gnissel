@@ -9,14 +9,14 @@ namespace Cooke.Gnissel;
 public class Table<T> : QueryStatement<T>
 {
     private readonly IDbAdapter _dbAdapter;
-    private readonly ICommandProvider _commandProvider;
+    private readonly ICommandFactory _commandFactory;
     private readonly string _name = typeof(T).Name.ToLower() + "s";
 
     public Table(DbOptions options)
         : base(options, typeof(T).Name.ToLower() + "s", null, CreateColumns(options.DbAdapter))
     {
         _dbAdapter = options.DbAdapter;
-        _commandProvider = options.CommandProvider;
+        _commandFactory = options.CommandFactory;
     }
 
     public string Name => _name;
@@ -46,7 +46,7 @@ public class Table<T> : QueryStatement<T>
         var insertColumns = Columns.Where(x => !x.IsIdentity);
 
         return new InsertStatement<T>(
-            _commandProvider,
+            _commandFactory,
             _dbAdapter,
             this,
             insertColumns,

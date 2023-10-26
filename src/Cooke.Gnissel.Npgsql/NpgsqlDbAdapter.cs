@@ -21,9 +21,9 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     
     public DbConnection CreateConnection() => _dataSource.CreateConnection();
 
-    public DbCommand CreateReadyCommand() => _dataSource.CreateCommand();
+    public DbCommand CreateManagedConnectionCommand() => _dataSource.CreateCommand();
 
-    public DbCommand CreateEmptyCommand() => new NpgsqlCommand();
+    public DbCommand CreateCommand() => new NpgsqlCommand();
 
     public string GetColumnName(PropertyInfo propertyInfo) =>
         NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name);

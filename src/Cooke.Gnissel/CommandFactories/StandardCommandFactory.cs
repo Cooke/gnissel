@@ -2,12 +2,12 @@ using System.Data.Common;
 
 namespace Cooke.Gnissel;
 
-public sealed class ConnectionBoundCommandProvider : ICommandProvider
+public sealed class StandardCommandFactory : ICommandFactory
 {
     private readonly DbConnection _connection;
     private readonly IDbAdapter _adapter;
 
-    public ConnectionBoundCommandProvider(DbConnection connection, IDbAdapter adapter)
+    public StandardCommandFactory(DbConnection connection, IDbAdapter adapter)
     {
         _connection = connection;
         _adapter = adapter;
@@ -15,7 +15,7 @@ public sealed class ConnectionBoundCommandProvider : ICommandProvider
 
     public DbCommand CreateCommand()
     {
-        var cmd = _adapter.CreateEmptyCommand();
+        var cmd = _adapter.CreateCommand();
         cmd.Connection = _connection;
         return cmd;
     }

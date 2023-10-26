@@ -2,7 +2,7 @@ using System.Data.Common;
 
 namespace Cooke.Gnissel;
 
-public interface ICommandProvider
+public interface ICommandFactory
 {
     DbCommand CreateCommand();
 }

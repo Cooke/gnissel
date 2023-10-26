@@ -13,7 +13,7 @@ public interface IDbAdapter
 
     DbConnection CreateConnection();
 
-    DbCommand CreateReadyCommand();
+    DbCommand CreateCommand();
 
-    DbCommand CreateEmptyCommand();
+    DbCommand CreateManagedConnectionCommand();
 }
