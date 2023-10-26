@@ -1,6 +1,11 @@
 namespace Cooke.Gnissel;
 
-public class DbOptions
+public record DbOptions(
+    IDbAdapter DbAdapter,
+    IObjectMapper ObjectMapper,
+    IQueryExecutor QueryExecutor,
+    ICommandFactory CommandFactory
+)
 {
     public DbOptions(IDbAdapter dbAdapter)
         : this(dbAdapter, new ObjectMapper()) { }
@@ -12,22 +17,4 @@ public class DbOptions
             new QueryExecutor(),
             new ManagedConnectionCommandFactory(dbAdapter)
         ) { }
-
-    public DbOptions(
-        IDbAdapter dbAdapter,
-        IObjectMapper objectMapper,
-        IQueryExecutor queryExecutor,
-        ICommandFactory commandFactory
-    )
-    {
-        ObjectMapper = objectMapper;
-        DbAdapter = dbAdapter;
-        CommandFactory = commandFactory;
-        QueryExecutor = queryExecutor;
-    }
-
-    public IObjectMapper ObjectMapper { get; }
-    public IDbAdapter DbAdapter { get; }
-    public ICommandFactory CommandFactory { get; }
-    public IQueryExecutor QueryExecutor { get; }
 }

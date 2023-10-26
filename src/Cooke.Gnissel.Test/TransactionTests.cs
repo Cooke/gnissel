@@ -1,6 +1,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Transactions;
 using Npgsql;
 
 namespace Cooke.Gnissel.Test;
@@ -54,6 +55,12 @@ public class TransactionTests
     [Test]
     public async Task TransactionAbort()
     {
+        var test = new TestDbContextTransactional(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        await test.Transaction(async x =>
+        {
+            await x.Users.Insert(new User(0, "Bob", 25));
+        });
+        
         try
         {
             await _db.Transaction(
@@ -77,6 +84,32 @@ public class TransactionTests
         }
 
         public Table<User> Users { get; }
+    }
+
+    private class TestDbContextTransactional
+        : DbContext,
+            ITransactionContext<TestDbContextTransactional>
+    {
+        private readonly DbOptions _options;
+
+        public TestDbContextTransactional(DbOptions options)
+            : base(options)
+        {
+            _options = options;
+            Users = new Table<User>(options);
+        }
+
+        public Table<User> Users { get; }
+
+        public TestDbContextTransactional WithCommandFactory(ICommandFactory commandFactory)
+        {
+            return new TestDbContextTransactional(
+                _options with
+                {
+                    CommandFactory = commandFactory
+                }
+            );
+        }
     }
 
     public record User(int Id, string Name, int Age);

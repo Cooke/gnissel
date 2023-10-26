@@ -15,6 +15,8 @@ public class DbContext
         _queryExecutor = dbOptions.QueryExecutor;
     }
 
+    internal IDbAdapter Adapter => _dbAdapter;
+
     public IAsyncEnumerable<TOut> Query<TOut>(
         FormattedSql formattedSql,
         CancellationToken cancellationToken = default
