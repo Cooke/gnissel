@@ -12,7 +12,7 @@ public class TableTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(_dataSource);
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -50,9 +50,10 @@ public class TableTests
 
     private class TestDbContext : DbContext
     {
-        public TestDbContext(NpgsqlDataSource dataSource) : base(new DbContextOptions(new NpgsqlDbAdapter(dataSource)))
+        public TestDbContext(DbOptions options)
+            : base(options)
         {
-            
+            Users = new Table<User>(options);
         }
 
         public Table<User> Users { get; }

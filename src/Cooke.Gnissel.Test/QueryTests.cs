@@ -12,7 +12,7 @@ public class QueryTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(_dataSource);
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -128,12 +128,16 @@ public class QueryTests
 
     private class TestDbContext : DbContext
     {
-        public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new DbContextOptions(new NpgsqlDbAdapter(dataSource))) { }
+        public TestDbContext(DbOptions options)
+            : base(options)
+        {
+            Users = new Table<User>(options);
+            Devices = new Table<Device>(options);
+        }
 
-        public Table<User> Users => Table<User>();
+        public Table<User> Users { get; }
 
-        public Table<Device> Devices => Table<Device>();
+        public Table<Device> Devices { get; }
     }
 
     private record User(

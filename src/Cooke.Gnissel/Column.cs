@@ -4,32 +4,35 @@ using System.Reflection;
 
 namespace Cooke.Gnissel;
 
-public class Column<TTable, TCol> : IColumn<TTable>
+public class Column<TTable>
 {
-    private readonly IDbAdapter _dbAdapter;
-    private readonly Func<TTable, TCol> _getter;
+    private readonly Func<TTable, DbParameter> _parameterFactory;
 
     public Column(IDbAdapter dbAdapter, string name, bool isIdentity, MemberInfo member)
     {
-        _dbAdapter = dbAdapter;
         Name = name;
         IsIdentity = isIdentity;
         Member = member;
 
         var tableItemParameter = Expression.Parameter(typeof(TTable));
         var propertyInfo = (PropertyInfo)member;
-        _getter =
-            (Func<TTable, TCol>)
+        _parameterFactory =
+            (Func<TTable, DbParameter>)
                 Expression
                     .Lambda(
-                        Expression.GetFuncType(typeof(TTable), propertyInfo.PropertyType),
-                        Expression.Property(tableItemParameter, propertyInfo),
+                        Expression.GetFuncType(typeof(TTable), typeof(DbParameter)),
+                        Expression.Call(
+                            Expression.Constant(dbAdapter),
+                            nameof(dbAdapter.CreateParameter),
+                            new[] { propertyInfo.PropertyType },
+                            Expression.Property(tableItemParameter, propertyInfo)
+                        ),
                         tableItemParameter
                     )
                     .Compile();
     }
 
-    public DbParameter CreateParameter(TTable item) => _dbAdapter.CreateParameter(_getter(item));
+    public DbParameter CreateParameter(TTable item) => _parameterFactory(item);
 
     public string Name { get; }
 

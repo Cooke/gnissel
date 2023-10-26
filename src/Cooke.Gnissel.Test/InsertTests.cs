@@ -15,7 +15,7 @@ public class Tests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(_dataSource);
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -34,7 +34,7 @@ public class Tests
     [OneTimeTearDown]
     public async Task OneTimeTearDown()
     {
-        _db = new TestDbContext(_dataSource);
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource.CreateCommand("drop table users;").ExecuteNonQueryAsync();
     }
@@ -70,10 +70,10 @@ public class Tests
 
     public class TestDbContext : DbContext
     {
-        public TestDbContext(NpgsqlDataSource dataSource)
-            : base(new DbContextOptions(new NpgsqlDbAdapter(dataSource)))
+        public TestDbContext(DbOptions options)
+            : base(options)
         {
-            Users = new Table<User>();
+            Users = new Table<User>(options);
         }
 
         public Table<User> Users { get; }

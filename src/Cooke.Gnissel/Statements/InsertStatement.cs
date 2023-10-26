@@ -14,13 +14,13 @@ public class InsertStatement<T> : IInsertStatement
     private readonly IDbAdapter _dbAdapter;
     private readonly Table<T> _table;
     private readonly IEnumerable<DbParameter> _parameters;
-    private readonly IEnumerable<IColumn<T>> _columns;
+    private readonly IEnumerable<Column<T>> _columns;
 
     internal InsertStatement(
         ICommandProvider commandProvider,
         IDbAdapter dbAdapter,
         Table<T> table,
-        IEnumerable<IColumn<T>> columns,
+        IEnumerable<Column<T>> columns,
         IEnumerable<DbParameter> parameters
     )
     {

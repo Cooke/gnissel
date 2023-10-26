@@ -12,14 +12,8 @@ public class Table<T> : QueryStatement<T>
     private readonly ICommandProvider _commandProvider;
     private readonly string _name = typeof(T).Name.ToLower() + "s";
 
-    private Table(DbContextOptions options)
-        : base(
-            options,
-            typeof(T).Name.ToLower() + "s",
-            null,
-            CreateColumns(options.DbAdapter)
-            
-        )
+    public Table(DbOptions options)
+        : base(options, typeof(T).Name.ToLower() + "s", null, CreateColumns(options.DbAdapter))
     {
         _dbAdapter = options.DbAdapter;
         _commandProvider = options.CommandProvider;
@@ -27,15 +21,13 @@ public class Table<T> : QueryStatement<T>
 
     public string Name => _name;
 
-    private static ImmutableArray<IColumn<T>> CreateColumns(IDbAdapter dbAdapter)
+    private static ImmutableArray<Column<T>> CreateColumns(IDbAdapter dbAdapter)
     {
         return typeof(T)
             .GetProperties()
-            .Select(p =>
-            {
-                return (IColumn<T>)
-                    Activator.CreateInstance(
-                        typeof(Column<,>).MakeGenericType(typeof(T), p.PropertyType),
+            .Select(
+                p =>
+                    new Column<T>(
                         dbAdapter,
                         dbAdapter.GetColumnName(p),
                         p.GetCustomAttribute<DatabaseGeneratedAttribute>()
@@ -43,8 +35,8 @@ public class Table<T> : QueryStatement<T>
                                 x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity
                             ) ?? false,
                         p
-                    )!;
-            })
+                    )
+            )
             .ToImmutableArray();
     }
 

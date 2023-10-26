@@ -13,7 +13,7 @@ public class TransactionTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new NpgsqlDbAdapter(_dataSource));
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -70,10 +70,13 @@ public class TransactionTests
 
     private class TestDbContext : DbContext
     {
-        public TestDbContext(IDbAdapter dataDbAdapter)
-            : base(new DbContextOptions(dataDbAdapter)) { }
+        public TestDbContext(DbOptions options)
+            : base(options)
+        {
+            Users = new Table<User>(options);
+        }
 
-        public Table<User> Users => Table<User>();
+        public Table<User> Users { get; }
     }
 
     public record User(int Id, string Name, int Age);

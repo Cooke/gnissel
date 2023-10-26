@@ -10,20 +10,22 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     private readonly IDbAdapter _dbAdapter;
     private readonly string _fromTable;
     private readonly string? _condition;
-    private readonly ImmutableArray<IColumn<T>> _columns;
+    private readonly ImmutableArray<Column<T>> _columns;
     private readonly IObjectMapper _objectMapper;
     private readonly ICommandProvider _commandProvider;
+    private readonly IQueryExecutor _queryExecutor;
 
     public QueryStatement(
-        DbContextOptions options,
+        DbOptions options,
         string fromTable,
         string? condition,
-        ImmutableArray<IColumn<T>> columns
+        ImmutableArray<Column<T>> columns
     )
     {
         _dbAdapter = options.DbAdapter;
         _objectMapper = options.ObjectMapper;
         _commandProvider = options.CommandProvider;
+        _queryExecutor = options.QueryExecutor;
         _fromTable = fromTable;
         _condition = condition;
         Columns = columns;
@@ -37,7 +39,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         // {
         //     case BinaryExpression exp:
         //     {
-        //         IColumn<T> leftColumn;
+        //         Column<T> leftColumn;
         //         if (exp.Left is MemberExpression memberExp)
         //         {
         //             leftColumn = Columns.First(x => x.Member == memberExp.Member);
@@ -91,7 +93,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         var sql = new FormattedSql(100, 2);
         sql.AppendLiteral("SELECT * FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
-        return QueryExecutor.Execute(
+        return _queryExecutor.Execute(
             sql,
             _objectMapper.Map<T>,
             _commandProvider,
@@ -100,7 +102,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         );
     }
 
-    public ImmutableArray<IColumn<T>> Columns
+    public ImmutableArray<Column<T>> Columns
     {
         get => _columns;
         init => _columns = value;

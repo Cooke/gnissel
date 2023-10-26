@@ -2,11 +2,11 @@ using System.Data.Common;
 
 namespace Cooke.Gnissel;
 
-public readonly struct Row
+public readonly struct RowReader
 {
     private readonly DbDataReader _dataRecord;
 
-    public Row(DbDataReader dataRecord)
+    public RowReader(DbDataReader dataRecord)
     {
         _dataRecord = dataRecord;
     }

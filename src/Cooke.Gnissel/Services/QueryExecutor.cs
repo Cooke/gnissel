@@ -2,11 +2,11 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
 
-public static class QueryExecutor
+public class QueryExecutor : IQueryExecutor
 {
-    internal static async IAsyncEnumerable<TOut> Execute<TOut>(
+    public async IAsyncEnumerable<TOut> Execute<TOut>(
         FormattedSql formattedSql,
-        Func<Row, TOut> mapper,
+        Func<RowReader, TOut> mapper,
         ICommandProvider commandProvider,
         IDbAdapter dbAdapter,
         [EnumeratorCancellation] CancellationToken cancellationToken
@@ -23,7 +23,7 @@ public static class QueryExecutor
         cancellationToken.Register(reader.Close);
         while (await reader.ReadAsync(cancellationToken))
         {
-            yield return mapper(new Row(reader));
+            yield return mapper(new RowReader(reader));
         }
     }
 }

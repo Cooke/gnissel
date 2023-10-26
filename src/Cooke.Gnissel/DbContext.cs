@@ -1,59 +1,18 @@
-using System.Collections.Concurrent;
-using System.Data;
-
 namespace Cooke.Gnissel;
 
-public static class DbContextExtensions
-{
-    public static Task Transaction(this DbContext dbContext, params IInsertStatement[] statements)
-    {
-        return dbContext.Transaction(statements);
-    }
-}
-
-public interface IDbContext
-{
-    IAsyncEnumerable<TOut> Query<TOut>(
-        FormattedSql formattedSql,
-        CancellationToken cancellationToken = default
-    );
-}
-
-public class DbContextOptions
-{
-    public DbContextOptions(IDbAdapter dbAdapter)
-        : this(new ObjectMapper(), dbAdapter) { }
-
-    public DbContextOptions(IObjectMapper objectMapper, IDbAdapter dbAdapter)
-        : this(objectMapper, dbAdapter, new ReadyCommandProvider(dbAdapter)) { }
-
-    public DbContextOptions(
-        IObjectMapper objectMapper,
-        IDbAdapter dbAdapter,
-        ICommandProvider commandProvider
-    )
-    {
-        ObjectMapper = objectMapper;
-        DbAdapter = dbAdapter;
-        CommandProvider = commandProvider;
-    }
-
-    public IObjectMapper ObjectMapper { get; }
-    public IDbAdapter DbAdapter { get; }
-    public ICommandProvider CommandProvider { get; }
-}
-
-public abstract class DbContext : IDbContext
+public class DbContext
 {
     private readonly IObjectMapper _objectMapper;
     private readonly IDbAdapter _dbAdapter;
     private readonly ICommandProvider _commandProvider;
+    private readonly IQueryExecutor _queryExecutor;
 
-    protected DbContext(DbContextOptions dbContextOptions)
+    public DbContext(DbOptions dbOptions)
     {
-        _objectMapper = dbContextOptions.ObjectMapper;
-        _dbAdapter = dbContextOptions.DbAdapter;
-        _commandProvider = dbContextOptions.CommandProvider;
+        _objectMapper = dbOptions.ObjectMapper;
+        _dbAdapter = dbOptions.DbAdapter;
+        _commandProvider = dbOptions.CommandProvider;
+        _queryExecutor = dbOptions.QueryExecutor;
     }
 
     public IAsyncEnumerable<TOut> Query<TOut>(
@@ -63,10 +22,10 @@ public abstract class DbContext : IDbContext
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         FormattedSql formattedSql,
-        Func<Row, TOut> mapper,
+        Func<RowReader, TOut> mapper,
         CancellationToken cancellationToken = default
     ) =>
-        QueryExecutor.Execute(
+        _queryExecutor.Execute(
             formattedSql,
             mapper,
             _commandProvider,
