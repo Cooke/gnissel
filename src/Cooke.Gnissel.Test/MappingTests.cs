@@ -1,6 +1,13 @@
+#region
+
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
+using NpgsqlTypes;
+
+#endregion
 
 namespace Cooke.Gnissel.Test;
 
@@ -21,7 +28,8 @@ public class MappingTests
                     (
                         id   integer primary key generated always as identity,
                         name text,
-                        age  integer
+                        age  integer,
+                        data jsonb
                     );
 
                     create table devices
@@ -46,6 +54,7 @@ public class MappingTests
     public void TearDown()
     {
         _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
+        _dataSource.CreateCommand("TRUNCATE devices RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
     [Test]
@@ -118,6 +127,14 @@ public class MappingTests
     }
 
     [Test]
+    public async Task JsonMapping()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25) { Data = new UserData("bob", 1) });
+        var results = await _db.Query<string>($"SELECT * FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { "Bob" }, results);
+    }
+
+    [Test]
     [Ignore("Should warn when over fetching")]
     public async Task NotAllValuesMapped()
     {
@@ -144,7 +161,13 @@ public class MappingTests
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age
-    );
+    )
+    {
+        [DataType("jsonb")]
+        public UserData Data { get; init; }
+    }
+
+    private record UserData(string Username, int Level);
 
     public record Device(string Id, string Name, int UserId);
 }

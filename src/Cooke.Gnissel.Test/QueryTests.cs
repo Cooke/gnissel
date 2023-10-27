@@ -1,6 +1,10 @@
+#region
+
 using System.ComponentModel.DataAnnotations.Schema;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
+
+#endregion
 
 namespace Cooke.Gnissel.Test;
 
@@ -45,6 +49,7 @@ public class QueryTests
     public void TearDown()
     {
         _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
+        _dataSource.CreateCommand("TRUNCATE devices RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
     [Test]
