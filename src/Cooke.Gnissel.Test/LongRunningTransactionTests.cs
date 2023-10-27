@@ -4,7 +4,7 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class TransactionTests
+public class LongRunningTransactionTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
     private TestDbContext _db;
@@ -43,7 +43,7 @@ public class TransactionTests
     [Test]
     public async Task Transaction()
     {
-        await _db.Transaction(_db.Users.Insert(new User(0, "Bob", 25)));
+        await _db.Transaction(async trans => await trans.Users.Insert(new User(0, "Bob", 25)));
 
         var results = await _db.Query<User>($"SELECT * FROM users WHERE name={"Bob"}")
             .ToArrayAsync();
@@ -55,10 +55,11 @@ public class TransactionTests
     {
         try
         {
-            await _db.Transaction(
-                _db.Users.Insert(new User(0, "Bob", 25)),
-                _db.Users.Insert(new User(0, "Bob", 25))
-            );
+            await _db.Transaction(async trans =>
+            {
+                await trans.Users.Insert(new User(0, "Bob", 25));
+                await trans.Users.Insert(new User(0, "Bob", 25));
+            });
         }
         catch (DbException) { }
 
@@ -69,13 +70,38 @@ public class TransactionTests
 
     private class TestDbContext : DbContext
     {
+        private readonly DbOptions _options;
+
         public TestDbContext(DbOptions options)
             : base(options)
         {
+            _options = options;
             Users = new Table<User>(options);
         }
 
+        private TestDbContext(TestDbContext context, DbOptions options)
+            : base(options)
+        {
+            _options = options;
+            Users = new Table<User>(context.Users, options);
+        }
+
         public Table<User> Users { get; }
+
+        public async Task Transaction(
+            Func<TestDbContext, Task> action,
+            CancellationToken cancellationToken = default
+        )
+        {
+            var dbAdapter = _options.DbAdapter;
+            await using var connection = dbAdapter.CreateConnection();
+            await connection.OpenAsync(cancellationToken);
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            var transactionCommandFactory = new ConnectionCommandFactory(connection, dbAdapter);
+            var transactionDbOptions = _options with { CommandFactory = transactionCommandFactory };
+            await action(new TestDbContext(this, transactionDbOptions));
+            await transaction.CommitAsync(cancellationToken);
+        }
     }
 
     public record User(int Id, string Name, int Age);

@@ -19,6 +19,13 @@ public class Table<T> : QueryStatement<T>
         _commandFactory = options.CommandFactory;
     }
 
+    public Table(Table<T> source, DbOptions options)
+        : base(options, source._name, null, source.Columns)
+    {
+        _dbAdapter = options.DbAdapter;
+        _commandFactory = options.CommandFactory;
+    }
+
     public string Name => _name;
 
     private static ImmutableArray<Column<T>> CreateColumns(IDbAdapter dbAdapter)
