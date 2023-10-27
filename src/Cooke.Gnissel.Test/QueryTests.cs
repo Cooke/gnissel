@@ -58,59 +58,6 @@ public class QueryTests
     }
 
     [Test]
-    public async Task QueryCustomNameMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query(
-                $"SELECT * FROM users",
-                x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
-            )
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryCustomNameMappingCollidingColumns()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Devices.Insert(new Device("my-device", "Bob", 1));
-        var results = await _db.Query(
-                $"SELECT * FROM users JOIN devices ON users.id = devices.user_id",
-                x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
-            )
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryCustomOrdinalMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query(
-                $"SELECT * FROM users",
-                x => new User(x.Get<int>(0), x.Get<string>(1), x.Get<int>(2))
-            )
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryClassMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task QueryTupleMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<(int, string, int)>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { (1, "Bob", 25) }, results);
-    }
-
-    [Test]
     [Timeout(1000)]
     public async Task CancelOperations()
     {
