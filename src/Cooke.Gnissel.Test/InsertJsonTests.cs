@@ -1,6 +1,5 @@
 #region
 
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
@@ -80,7 +79,7 @@ public class InsertJsonTests
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age,
-        [property: DataType("jsonb")] UserData Data
+        [property: DbType("jsonb")] UserData Data
     );
 
     public record UserData(string Username, int Level);

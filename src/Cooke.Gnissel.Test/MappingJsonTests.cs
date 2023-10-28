@@ -1,6 +1,5 @@
 #region
 
-using System.ComponentModel.DataAnnotations;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Services.Implementations;
@@ -21,7 +20,9 @@ public class MappingJsonTests
         _db = new TestDbContext(
             new DbOptions(
                 new NpgsqlDbAdapter(_dataSource),
-                new DefaultObjectMapper(new NpgsqlObjectMapperValueReader(new JsonSerializerOptions()))
+                new DefaultObjectMapper(
+                    new NpgsqlObjectMapperValueReader(new JsonSerializerOptions())
+                )
             )
         );
 
@@ -54,12 +55,21 @@ public class MappingJsonTests
     }
 
     [Test]
-    public async Task JsonMapping()
+    public async Task NestedJsonMapping()
     {
         var inserted = new User(0, "Bob", 25, new UserData("bob", 1));
         await _db.Users.Insert(inserted);
         var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { inserted }, results);
+    }
+
+    [Test]
+    public async Task DirectJsonMapping()
+    {
+        var inserted = new User(0, "Bob", 25, new UserData("bob", 1));
+        await _db.Users.Insert(inserted);
+        var results = await _db.Query<UserData>($"SELECT data FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { inserted.Data }, results);
     }
 
     private class TestDbContext : DbContext
@@ -76,8 +86,9 @@ public class MappingJsonTests
         public Table<Device> Devices { get; }
     }
 
-    private record User(int Id, string Name, int Age, [property: DataType("jsonb")] UserData Data);
+    private record User(int Id, string Name, int Age, UserData Data);
 
+    [DbType("jsonb")]
     private record UserData(string Username, int Level);
 
     public record Device(string Id, string Name, int UserId);

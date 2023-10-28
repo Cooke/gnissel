@@ -23,8 +23,9 @@ public class NpgsqlObjectMapperValueReader : IObjectMapperValueReader
     {
         if (dbType == "jsonb")
         {
+            // TODO: why can't we use the stream overload here?
             return JsonSerializer.Deserialize<TOut>(
-                reader.GetStream(ordinal),
+                reader.GetFieldValue<byte[]>(ordinal),
                 _jsonSerializerOptions
             );
         }

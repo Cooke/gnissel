@@ -1,10 +1,10 @@
 #region
 
-using System.ComponentModel.DataAnnotations;
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Utils;
 
 #endregion
 
@@ -32,17 +32,11 @@ public class Column<TTable>
                             nameof(dbAdapter.CreateParameter),
                             new[] { propertyInfo.PropertyType },
                             Expression.Property(tableItemParameter, propertyInfo),
-                            Expression.Constant(GetDbType(propertyInfo), typeof(string))
+                            Expression.Constant(propertyInfo.GetDbType(), typeof(string))
                         ),
                         tableItemParameter
                     )
                     .Compile();
-    }
-
-    private string? GetDbType(PropertyInfo propertyInfo)
-    {
-        var dataTypeAttribute = propertyInfo.GetCustomAttribute<DataTypeAttribute>();
-        return dataTypeAttribute?.CustomDataType;
     }
 
     public DbParameter CreateParameter(TTable item) => _parameterFactory(item);

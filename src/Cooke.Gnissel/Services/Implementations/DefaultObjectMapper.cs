@@ -1,10 +1,9 @@
 #region
 
 using System.Collections.Concurrent;
-using System.ComponentModel.DataAnnotations;
 using System.Data.Common;
 using System.Linq.Expressions;
-using System.Reflection;
+using Cooke.Gnissel.Utils;
 
 #endregion
 
@@ -30,6 +29,13 @@ public class DefaultObjectMapper : IObjectMapper
     private Func<DbDataReader, TOut> CreateTypeMapper<TOut>()
     {
         var type = typeof(TOut);
+
+        var dbType = type.GetDbType();
+        if (dbType != null)
+        {
+            return reader => _objectMapperValueReader.Read<TOut>(reader, 0, dbType) ?? default!;
+        }
+
         return type switch
         {
             { IsValueType: true } => CreatePositionalMapper<TOut>(),
@@ -50,8 +56,7 @@ public class DefaultObjectMapper : IObjectMapper
                     ctor.GetParameters()
                         .Select(p =>
                         {
-                            var attr = p.GetCustomAttribute<DataTypeAttribute>();
-                            var dbType = attr?.CustomDataType;
+                            var dbType = p.GetDbType();
                             var readValue = Expression.Call(
                                 Expression.Constant(_objectMapperValueReader),
                                 "Read",
