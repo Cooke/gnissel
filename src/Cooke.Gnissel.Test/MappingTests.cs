@@ -2,9 +2,7 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
-using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
 using Npgsql;
 
 #endregion
@@ -13,18 +11,13 @@ namespace Cooke.Gnissel.Test;
 
 public class MappingTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(
-            new DbOptions(
-                new NpgsqlDbAdapter(_dataSource),
-                new DefaultObjectMapper(new NpgsqlObjectMapperValueReader(new JsonSerializerOptions()))
-            )
-        );
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -72,7 +65,7 @@ public class MappingTests
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
     }
-    
+
     [Test]
     public async Task ClassConstructorMapping()
     {

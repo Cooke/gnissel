@@ -4,7 +4,6 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
-using Npgsql.Internal;
 
 #endregion
 
@@ -12,19 +11,17 @@ namespace Cooke.Gnissel.Test;
 
 public class MappingJsonTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
-    private TestDbContext _db;
+    private NpgsqlDataSource _dataSource = null!;
+    private TestDbContext _db = null!;
 
     [OneTimeSetUp]
     public async Task Setup()
     {
-        // var builder = new NpgsqlDataSourceBuilder(_dataSource.ConnectionString);
-
-        // var jsonTypeInfoResolver = typeof(NpgsqlCommand).Assembly.GetType(
-        //     "Npgsql.Internal.Resolvers.JsonTypeInfoResolver"
-        // )!;
-        // var typeInfoResolver = (IPgTypeInfoResolver)Activator.CreateInstance(jsonTypeInfoResolver)!;
-        // builder.AddTypeInfoResolver(typeInfoResolver);
+        _dataSource = Fixture.DataSourceBuilder
+            .EnableDynamicJsonMappings(
+                new JsonSerializerOptions { Converters = { new GameClassConverter() } }
+            )
+            .Build();
         _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
@@ -72,15 +69,19 @@ public class MappingJsonTests
     [Test]
     public async Task DirectJsonMapping()
     {
-        var inserted = new User(
-            0,
-            "Bob",
-            25,
-            new UserData("bob", 1, UserRole.User, TimeSpan.FromHours(1), GameClass.Healer)
-        );
-        await _db.Users.Insert(inserted);
+        _dataSource
+            .CreateCommand(
+                "INSERT INTO users(id, name, age, data) VALUES(2, 'Bob', 25, '{\"Username\": \"bob\", \"Level\": 1, \"Role\": 1, \"PlayTime\": \"01:00:00\", \"Class\": \"Healer\"}')"
+            )
+            .ExecuteNonQuery();
         var results = await _db.Query<UserData>($"SELECT data FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { inserted.Data }, results);
+        CollectionAssert.AreEqual(
+            new[]
+            {
+                new UserData("bob", 1, UserRole.User, TimeSpan.FromHours(1), GameClass.Healer)
+            },
+            results
+        );
     }
 
     private class TestDbContext : DbContext

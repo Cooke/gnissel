@@ -12,7 +12,7 @@ namespace Cooke.Gnissel.Test;
 
 public class InsertJsonTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.EnableDynamicJsonMappings().Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]

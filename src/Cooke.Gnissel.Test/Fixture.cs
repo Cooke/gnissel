@@ -1,6 +1,5 @@
 #region
 
-using System.Text.Json;
 using Npgsql;
 using Testcontainers.PostgreSql;
 
@@ -11,23 +10,21 @@ namespace Cooke.Gnissel.Test;
 [SetUpFixture]
 public class Fixture
 {
-    public static NpgsqlDataSource DataSource;
+    public static NpgsqlDataSourceBuilder DataSourceBuilder = null!;
 
-    private PostgreSqlContainer _postgres;
+    private PostgreSqlContainer _postgres = null!;
 
     [OneTimeSetUp]
     public async Task Setup()
     {
         _postgres = new PostgreSqlBuilder().Build();
         await _postgres.StartAsync();
-        var jsonOptions = new JsonSerializerOptions
-        {
-            Converters = { new MappingJsonTests.GameClassConverter() }
-        };
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(
-            _postgres.GetConnectionString()
-        ).EnableDynamicJsonMappings(jsonOptions);
-        DataSource = dataSourceBuilder.Build();
+        DataSourceBuilder = new NpgsqlDataSourceBuilder(
+            new NpgsqlConnectionStringBuilder(_postgres.GetConnectionString())
+            {
+                IncludeErrorDetail = true
+            }.ConnectionString
+        );
     }
 
     [OneTimeTearDown]

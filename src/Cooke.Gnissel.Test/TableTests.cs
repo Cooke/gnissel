@@ -1,12 +1,16 @@
+#region
+
 using System.ComponentModel.DataAnnotations.Schema;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
+
+#endregion
 
 namespace Cooke.Gnissel.Test;
 
 public class TableTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db = null!;
 
     [OneTimeSetUp]

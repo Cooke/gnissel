@@ -21,7 +21,9 @@ public class DefaultQueryExecutor : IQueryExecutor
         await using var cmd = commandFactory.CreateCommand();
         cmd.CommandText = formattedSql.Sql;
         foreach (
-            var parameter in formattedSql.Parameters.Select((p) => dbAdapter.CreateParameter(p))
+            var parameter in formattedSql.Parameters.Select(
+                (p) => dbAdapter.CreateParameter(p.value, p.dbType)
+            )
         )
         {
             cmd.Parameters.Add(parameter);

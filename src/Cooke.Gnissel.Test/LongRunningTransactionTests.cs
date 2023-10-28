@@ -1,13 +1,17 @@
+#region
+
 using System.Data.Common;
 using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
 
+#endregion
+
 namespace Cooke.Gnissel.Test;
 
 public class LongRunningTransactionTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]
