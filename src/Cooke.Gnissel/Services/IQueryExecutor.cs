@@ -1,10 +1,11 @@
 #region
 
 using System.Data.Common;
+using Cooke.Gnissel.CommandFactories;
 
 #endregion
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Services;
 
 public interface IQueryExecutor
 {

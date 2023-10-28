@@ -8,16 +8,16 @@ using System.Reflection;
 
 #endregion
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Services.Implementations;
 
-public class ObjectMapper : IObjectMapper
+public class DefaultObjectMapper : IObjectMapper
 {
     private readonly IObjectMapperValueReader _objectMapperValueReader;
 
     private readonly ConcurrentDictionary<Type, object> _mappers =
         new ConcurrentDictionary<Type, object>();
 
-    public ObjectMapper(IObjectMapperValueReader objectMapperValueReader)
+    public DefaultObjectMapper(IObjectMapperValueReader objectMapperValueReader)
     {
         _objectMapperValueReader = objectMapperValueReader;
     }
@@ -35,7 +35,7 @@ public class ObjectMapper : IObjectMapper
             { IsValueType: true } => CreatePositionalMapper<TOut>(),
             not null when type == typeof(string) => CreatePositionalMapper<TOut>(),
             { IsClass: true } => CreateNamedMapper<TOut>(),
-            _ => throw new NotSupportedException($"Cannot map type {type.Name}")
+            _ => throw new NotSupportedException($"Cannot map type {type}")
         };
     }
 
@@ -57,7 +57,13 @@ public class ObjectMapper : IObjectMapper
                                 "Read",
                                 new[] { p.ParameterType },
                                 rowReader,
-                                GetOrdinal(rowReader, p.Name),
+                                GetOrdinal(
+                                    rowReader,
+                                    p.Name
+                                        ?? throw new NotSupportedException(
+                                            $"Cannot map property without name: {p}"
+                                        )
+                                ),
                                 Expression.Constant(dbType, typeof(string))
                             );
                             return readValue;

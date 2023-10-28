@@ -4,7 +4,7 @@ using System.Data.Common;
 
 #endregion
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Services.Implementations;
 
 public interface IObjectMapperValueReader
 {

@@ -1,9 +1,10 @@
 using System.Collections.Immutable;
 using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
+using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Statements;
 
 public class QueryStatement<T> : IAsyncEnumerable<T>
 {

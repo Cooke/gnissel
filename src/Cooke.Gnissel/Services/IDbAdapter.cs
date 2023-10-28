@@ -5,7 +5,7 @@ using System.Reflection;
 
 #endregion
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Services;
 
 public interface IDbAdapter
 {

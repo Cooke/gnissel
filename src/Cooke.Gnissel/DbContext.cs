@@ -1,6 +1,9 @@
 #region
 
 using System.Data.Common;
+using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Statements;
 
 #endregion
 

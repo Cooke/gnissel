@@ -1,6 +1,7 @@
 using System.Data.Common;
+using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.CommandFactories;
 
 public sealed class ConnectionCommandFactory : ICommandFactory
 {

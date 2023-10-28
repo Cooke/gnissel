@@ -1,6 +1,6 @@
 using System.Data.Common;
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.CommandFactories;
 
 public interface ICommandFactory
 {

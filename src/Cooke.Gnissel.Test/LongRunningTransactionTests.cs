@@ -1,4 +1,5 @@
 using System.Data.Common;
+using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
 

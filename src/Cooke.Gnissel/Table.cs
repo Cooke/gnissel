@@ -2,6 +2,9 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.Contracts;
 using System.Reflection;
+using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Statements;
 using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel;

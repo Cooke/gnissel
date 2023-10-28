@@ -1,7 +1,9 @@
 using System.Data.Common;
 using System.Runtime.CompilerServices;
+using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Statements;
 
 public interface IInsertStatement
 {

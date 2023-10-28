@@ -1,3 +1,7 @@
+using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Services.Implementations;
+
 namespace Cooke.Gnissel;
 
 public record DbOptions(
@@ -8,13 +12,13 @@ public record DbOptions(
 )
 {
     public DbOptions(IDbAdapter dbAdapter)
-        : this(dbAdapter, new ObjectMapper(new DefaultObjectMapperValueReader())) { }
+        : this(dbAdapter, new DefaultObjectMapper(new DefaultObjectMapperValueReader())) { }
 
     public DbOptions(IDbAdapter dbAdapter, IObjectMapper objectMapper)
         : this(
             dbAdapter,
             objectMapper,
-            new QueryExecutor(),
+            new DefaultQueryExecutor(),
             new ManagedConnectionCommandFactory(dbAdapter)
         ) { }
 }

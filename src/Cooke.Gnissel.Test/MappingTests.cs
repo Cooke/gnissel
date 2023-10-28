@@ -4,6 +4,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Npgsql;
 
 #endregion
@@ -21,7 +22,7 @@ public class MappingTests
         _db = new TestDbContext(
             new DbOptions(
                 new NpgsqlDbAdapter(_dataSource),
-                new ObjectMapper(new NpgsqlObjectMapperValueReader(new JsonSerializerOptions()))
+                new DefaultObjectMapper(new NpgsqlObjectMapperValueReader(new JsonSerializerOptions()))
             )
         );
 

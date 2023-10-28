@@ -1,5 +1,6 @@
 using System.Data.Common;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Utils;
 using Npgsql;
 
 namespace Cooke.Gnissel.Test;

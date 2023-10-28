@@ -2,12 +2,13 @@
 
 using System.Data.Common;
 using System.Runtime.CompilerServices;
+using Cooke.Gnissel.CommandFactories;
 
 #endregion
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Services.Implementations;
 
-public class QueryExecutor : IQueryExecutor
+public class DefaultQueryExecutor : IQueryExecutor
 {
     public async IAsyncEnumerable<TOut> Execute<TOut>(
         FormattedSql formattedSql,

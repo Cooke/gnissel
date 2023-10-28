@@ -2,6 +2,7 @@
 
 using System.Data.Common;
 using System.Reflection;
+using Cooke.Gnissel.Services;
 using Npgsql;
 using Npgsql.NameTranslation;
 

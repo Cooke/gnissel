@@ -1,4 +1,6 @@
-namespace Cooke.Gnissel;
+using Cooke.Gnissel.Statements;
+
+namespace Cooke.Gnissel.Utils;
 
 public static class DbContextExtensions
 {
