@@ -6,7 +6,7 @@ using System.Data.Common;
 
 namespace Cooke.Gnissel.Services;
 
-public interface IObjectMapper
+public interface IRowReader
 {
-    TOut Map<TOut>(DbDataReader rowReader);
+    TOut Read<TOut>(DbDataReader rowReader);
 }

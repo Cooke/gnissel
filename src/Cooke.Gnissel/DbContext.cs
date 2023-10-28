@@ -11,14 +11,14 @@ namespace Cooke.Gnissel;
 
 public class DbContext
 {
-    private readonly IObjectMapper _objectMapper;
+    private readonly IRowReader _rowReader;
     private readonly IDbAdapter _dbAdapter;
     private readonly ICommandFactory _commandFactory;
     private readonly IQueryExecutor _queryExecutor;
 
     public DbContext(DbOptions dbOptions)
     {
-        _objectMapper = dbOptions.ObjectMapper;
+        _rowReader = dbOptions.RowReader;
         _dbAdapter = dbOptions.DbAdapter;
         _commandFactory = dbOptions.CommandFactory;
         _queryExecutor = dbOptions.QueryExecutor;
@@ -29,7 +29,7 @@ public class DbContext
     public IAsyncEnumerable<TOut> Query<TOut>(
         FormattedSql formattedSql,
         CancellationToken cancellationToken = default
-    ) => Query(formattedSql, _objectMapper.Map<TOut>, cancellationToken);
+    ) => Query(formattedSql, _rowReader.Read<TOut>, cancellationToken);
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         FormattedSql formattedSql,

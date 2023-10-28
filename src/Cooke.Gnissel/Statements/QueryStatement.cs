@@ -1,8 +1,12 @@
+#region
+
 using System.Collections.Immutable;
 using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
 using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
+
+#endregion
 
 namespace Cooke.Gnissel.Statements;
 
@@ -12,7 +16,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     private readonly string _fromTable;
     private readonly string? _condition;
     private readonly ImmutableArray<Column<T>> _columns;
-    private readonly IObjectMapper _objectMapper;
+    private readonly IRowReader _rowReader;
     private readonly ICommandFactory _commandFactory;
     private readonly IQueryExecutor _queryExecutor;
 
@@ -24,7 +28,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     )
     {
         _dbAdapter = options.DbAdapter;
-        _objectMapper = options.ObjectMapper;
+        _rowReader = options.RowReader;
         _commandFactory = options.CommandFactory;
         _queryExecutor = options.QueryExecutor;
         _fromTable = fromTable;
@@ -96,7 +100,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
         return _queryExecutor.Execute(
             sql,
-            _objectMapper.Map<T>,
+            _rowReader.Read<T>,
             _commandFactory,
             _dbAdapter,
             cancellationToken

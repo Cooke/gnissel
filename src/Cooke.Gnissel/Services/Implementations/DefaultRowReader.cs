@@ -9,19 +9,19 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectMapper : IObjectMapper
+public class DefaultRowReader : IRowReader
 {
-    private readonly IObjectMapperValueReader _objectMapperValueReader;
+    private readonly IColumnReader _columnReader;
 
     private readonly ConcurrentDictionary<Type, object> _mappers =
         new ConcurrentDictionary<Type, object>();
 
-    public DefaultObjectMapper(IObjectMapperValueReader objectMapperValueReader)
+    public DefaultRowReader(IColumnReader columnReader)
     {
-        _objectMapperValueReader = objectMapperValueReader;
+        _columnReader = columnReader;
     }
 
-    public TOut Map<TOut>(DbDataReader rowReader) =>
+    public TOut Read<TOut>(DbDataReader rowReader) =>
         ((Func<DbDataReader, TOut>)_mappers.GetOrAdd(typeof(TOut), _ => CreateTypeMapper<TOut>()))(
             rowReader
         );
@@ -33,7 +33,7 @@ public class DefaultObjectMapper : IObjectMapper
         var dbType = type.GetDbType();
         if (dbType != null)
         {
-            return reader => _objectMapperValueReader.Read<TOut>(reader, 0, dbType) ?? default!;
+            return reader => _columnReader.Read<TOut>(reader, 0, dbType) ?? default!;
         }
 
         return type switch
@@ -58,7 +58,7 @@ public class DefaultObjectMapper : IObjectMapper
                         {
                             var dbType = p.GetDbType();
                             var readValue = Expression.Call(
-                                Expression.Constant(_objectMapperValueReader),
+                                Expression.Constant(_columnReader),
                                 "Read",
                                 new[] { p.ParameterType },
                                 rowReader,
