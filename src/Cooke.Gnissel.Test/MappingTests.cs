@@ -1,11 +1,10 @@
 #region
 
-using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
+using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
 using Npgsql;
-using NpgsqlTypes;
 
 #endregion
 
@@ -19,7 +18,12 @@ public class MappingTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(
+            new DbOptions(
+                new NpgsqlDbAdapter(_dataSource),
+                new ObjectMapper(new NpgsqlObjectMapperValueReader(new JsonSerializerOptions()))
+            )
+        );
 
         await _dataSource
             .CreateCommand(
@@ -28,8 +32,7 @@ public class MappingTests
                     (
                         id   integer primary key generated always as identity,
                         name text,
-                        age  integer,
-                        data jsonb
+                        age  integer
                     );
 
                     create table devices
@@ -58,42 +61,17 @@ public class MappingTests
     }
 
     [Test]
-    public async Task CustomNameMapping()
+    public async Task CustomMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query(
                 $"SELECT * FROM users",
-                x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
+                x => new User(x.GetInt32(0), x.GetString(x.GetOrdinal("name")), x.GetInt32("age"))
             )
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
     }
-
-    [Test]
-    public async Task CustomNameMappingCollidingColumns()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Devices.Insert(new Device("my-device", "Bob", 1));
-        var results = await _db.Query(
-                $"SELECT * FROM users JOIN devices ON users.id = devices.user_id",
-                x => new User(x.Get<int>("id"), x.Get<string>("name"), x.Get<int>("age"))
-            )
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
-    public async Task CustomOrdinalMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query(
-                $"SELECT * FROM users",
-                x => new User(x.Get<int>(0), x.Get<string>(1), x.Get<int>(2))
-            )
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
+    
     [Test]
     public async Task ClassConstructorMapping()
     {
@@ -127,14 +105,6 @@ public class MappingTests
     }
 
     [Test]
-    public async Task JsonMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25) { Data = new UserData("bob", 1) });
-        var results = await _db.Query<string>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { "Bob" }, results);
-    }
-
-    [Test]
     [Ignore("Should warn when over fetching")]
     public async Task NotAllValuesMapped()
     {
@@ -161,13 +131,7 @@ public class MappingTests
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age
-    )
-    {
-        [DataType("jsonb")]
-        public UserData Data { get; init; }
-    }
-
-    private record UserData(string Username, int Level);
+    );
 
     public record Device(string Id, string Name, int UserId);
 }

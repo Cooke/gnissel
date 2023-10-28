@@ -1,3 +1,9 @@
+#region
+
+using System.Data.Common;
+
+#endregion
+
 namespace Cooke.Gnissel;
 
 public class DbContext
@@ -24,7 +30,7 @@ public class DbContext
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         FormattedSql formattedSql,
-        Func<RowReader, TOut> mapper,
+        Func<DbDataReader, TOut> mapper,
         CancellationToken cancellationToken = default
     ) =>
         _queryExecutor.Execute(

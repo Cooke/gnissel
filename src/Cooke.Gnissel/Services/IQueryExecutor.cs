@@ -1,4 +1,8 @@
-using System.Runtime.CompilerServices;
+#region
+
+using System.Data.Common;
+
+#endregion
 
 namespace Cooke.Gnissel;
 
@@ -6,7 +10,7 @@ public interface IQueryExecutor
 {
     IAsyncEnumerable<TOut> Execute<TOut>(
         FormattedSql formattedSql,
-        Func<RowReader, TOut> mapper,
+        Func<DbDataReader, TOut> mapper,
         ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
         CancellationToken cancellationToken

@@ -8,7 +8,7 @@ public record DbOptions(
 )
 {
     public DbOptions(IDbAdapter dbAdapter)
-        : this(dbAdapter, new ObjectMapper()) { }
+        : this(dbAdapter, new ObjectMapper(new DefaultObjectMapperValueReader())) { }
 
     public DbOptions(IDbAdapter dbAdapter, IObjectMapper objectMapper)
         : this(

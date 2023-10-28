@@ -1,5 +1,9 @@
+#region
+
 using System.Data.Common;
 using System.Reflection;
+
+#endregion
 
 namespace Cooke.Gnissel;
 
@@ -9,7 +13,7 @@ public interface IDbAdapter
 
     string GetColumnName(PropertyInfo propertyInfo);
 
-    DbParameter CreateParameter<TValue>(TValue value);
+    DbParameter CreateParameter<TValue>(TValue value, string? dbType = null);
 
     DbConnection CreateConnection();
 

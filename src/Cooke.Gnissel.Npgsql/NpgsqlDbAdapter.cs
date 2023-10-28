@@ -1,24 +1,30 @@
+#region
+
 using System.Data.Common;
 using System.Reflection;
 using Npgsql;
 using Npgsql.NameTranslation;
+
+#endregion
 
 namespace Cooke.Gnissel.Npgsql;
 
 public sealed class NpgsqlDbAdapter : IDbAdapter
 {
     private readonly NpgsqlDataSource _dataSource;
+
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
     }
+
     public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
-    public DbParameter CreateParameter<TValue>(TValue value) =>
+    public DbParameter CreateParameter<TValue>(TValue value, string? dbType) =>
         typeof(TValue) == typeof(object)
-            ? new NpgsqlParameter { Value = value }
-            : new NpgsqlParameter<TValue> { TypedValue = value };
-    
+            ? new NpgsqlParameter { Value = value, DataTypeName = dbType }
+            : new NpgsqlParameter<TValue> { TypedValue = value, DataTypeName = dbType };
+
     public DbConnection CreateConnection() => _dataSource.CreateConnection();
 
     public DbCommand CreateManagedConnectionCommand() => _dataSource.CreateCommand();

@@ -1,6 +1,8 @@
 #region
 
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
 using Dapper;
 using Npgsql;
@@ -9,7 +11,7 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class InsertTests
+public class InsertJsonTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSource;
     private TestDbContext _db;
@@ -26,7 +28,8 @@ public class InsertTests
                     (
                         id   integer primary key generated always as identity,
                         name text,
-                        age  integer
+                        age  integer,
+                        data jsonb
                     );
                 """
             )
@@ -48,26 +51,18 @@ public class InsertTests
     }
 
     [Test]
-    public async Task InsertOne()
+    public async Task Insert()
     {
-        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Bob", 25, new UserData("bob", 1)));
 
-        var fetched = _dataSource.OpenConnection().QuerySingle<User>("SELECT * FROM users");
-        Assert.That(fetched, Is.EqualTo(new User(1, "Bob", 25)));
-    }
-
-    [Test]
-    public async Task InsertTwo()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Users.Insert(new User(0, "Alice", 30));
-
-        var fetched = _dataSource.OpenConnection().Query<User>("SELECT * FROM users").ToArray();
-        Assert.That(fetched.Length, Is.EqualTo(2));
-        CollectionAssert.AreEqual(
-            new[] { new User(1, "Bob", 25), new User(2, "Alice", 30) },
-            fetched
+        var fetched = _dataSource.OpenConnection().QuerySingle("SELECT * FROM users");
+        var fetchedTyped = new User(
+            fetched.id,
+            fetched.name,
+            fetched.age,
+            JsonSerializer.Deserialize<UserData>(fetched.data)
         );
+        Assert.That(fetchedTyped, Is.EqualTo(new User(1, "Bob", 25, new UserData("bob", 1))));
     }
 
     public class TestDbContext : DbContext
@@ -84,6 +79,9 @@ public class InsertTests
     public record User(
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
-        int Age
+        int Age,
+        [property: DataType("jsonb")] UserData Data
     );
+
+    public record UserData(string Username, int Level);
 }
