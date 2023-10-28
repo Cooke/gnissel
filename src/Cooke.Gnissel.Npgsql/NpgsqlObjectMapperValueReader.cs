@@ -21,14 +21,14 @@ public class NpgsqlObjectMapperValueReader : IObjectMapperValueReader
 
     public TOut? Read<TOut>(DbDataReader reader, int ordinal, string? dbType)
     {
-        if (dbType == "jsonb")
-        {
-            // TODO: why can't we use the stream overload here?
-            return JsonSerializer.Deserialize<TOut>(
-                reader.GetFieldValue<byte[]>(ordinal),
-                _jsonSerializerOptions
-            );
-        }
+        // if (dbType == "jsonb")
+        // {
+        //     // TODO: why can't we use the stream overload here?
+        //     return JsonSerializer.Deserialize<TOut>(
+        //         reader.GetFieldValue<byte[]>(ordinal),
+        //         _jsonSerializerOptions
+        //     );
+        // }
 
         return _inner.Read<TOut>(reader, ordinal, dbType);
     }

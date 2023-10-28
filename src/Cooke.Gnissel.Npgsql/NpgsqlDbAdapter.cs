@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using System.Globalization;
 using System.Reflection;
 using Cooke.Gnissel.Services;
 using Npgsql;
@@ -33,5 +34,5 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
     public string GetColumnName(PropertyInfo propertyInfo) =>
-        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name);
+        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name, CultureInfo.CurrentCulture);
 }

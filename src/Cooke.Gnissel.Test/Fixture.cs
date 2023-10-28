@@ -1,7 +1,10 @@
-using System.ComponentModel.DataAnnotations.Schema;
-using Dapper;
+#region
+
+using System.Text.Json;
 using Npgsql;
 using Testcontainers.PostgreSql;
+
+#endregion
 
 namespace Cooke.Gnissel.Test;
 
@@ -17,7 +20,13 @@ public class Fixture
     {
         _postgres = new PostgreSqlBuilder().Build();
         await _postgres.StartAsync();
-        var dataSourceBuilder = new NpgsqlDataSourceBuilder(_postgres.GetConnectionString());
+        var jsonOptions = new JsonSerializerOptions
+        {
+            Converters = { new MappingJsonTests.GameClassConverter() }
+        };
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(
+            _postgres.GetConnectionString()
+        ).EnableDynamicJsonMappings(jsonOptions);
         DataSource = dataSourceBuilder.Build();
     }
 
