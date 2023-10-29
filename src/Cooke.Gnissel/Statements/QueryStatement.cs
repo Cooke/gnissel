@@ -98,7 +98,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         var sql = new Sql(100, 2);
         sql.AppendLiteral("SELECT * FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
-        return _queryExecutor.Execute(
+        return _queryExecutor.Query(
             sql,
             _rowReader.Read<T>,
             _commandFactory,

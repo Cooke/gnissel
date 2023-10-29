@@ -10,7 +10,7 @@ namespace Cooke.Gnissel.Services.Implementations;
 
 public class DefaultQueryExecutor : IQueryExecutor
 {
-    public async IAsyncEnumerable<TOut> Execute<TOut>(
+    public async IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
         Func<DbDataReader, TOut> mapper,
         ICommandFactory commandFactory,
@@ -26,5 +26,17 @@ public class DefaultQueryExecutor : IQueryExecutor
         {
             yield return mapper(reader);
         }
+    }
+
+    public async ValueTask<int> Execute(
+        Sql sql,
+        ICommandFactory commandFactory,
+        IDbAdapter dbAdapter,
+        CancellationToken cancellationToken
+    )
+    {
+        await using var cmd = commandFactory.CreateCommand();
+        dbAdapter.PopulateCommand(cmd, sql);
+        return await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 }

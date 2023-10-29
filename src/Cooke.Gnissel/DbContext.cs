@@ -24,8 +24,6 @@ public class DbContext
         _queryExecutor = dbOptions.QueryExecutor;
     }
 
-    internal IDbAdapter Adapter => _dbAdapter;
-
     public IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
         CancellationToken cancellationToken = default
@@ -35,14 +33,10 @@ public class DbContext
         Sql sql,
         Func<DbDataReader, TOut> mapper,
         CancellationToken cancellationToken = default
-    ) =>
-        _queryExecutor.Execute(
-            sql,
-            mapper,
-            _commandFactory,
-            _dbAdapter,
-            cancellationToken
-        );
+    ) => _queryExecutor.Query(sql, mapper, _commandFactory, _dbAdapter, cancellationToken);
+
+    public ValueTask<int> Execute(Sql sql, CancellationToken cancellationToken = default)
+        => _queryExecutor.Execute(sql, _commandFactory, _dbAdapter, cancellationToken);
 
     public async Task Transaction(IEnumerable<IInsertStatement> statements)
     {

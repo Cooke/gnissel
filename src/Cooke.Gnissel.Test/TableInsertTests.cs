@@ -9,7 +9,7 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class InsertTests
+public class TableInsertTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
