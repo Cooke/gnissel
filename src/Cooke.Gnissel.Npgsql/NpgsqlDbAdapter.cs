@@ -1,8 +1,8 @@
 #region
 
 using System.Data.Common;
-using System.Globalization;
 using System.Reflection;
+using System.Text;
 using Cooke.Gnissel.Services;
 using Npgsql;
 using Npgsql.NameTranslation;
@@ -31,8 +31,41 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public DbCommand CreateManagedConnectionCommand() => _dataSource.CreateCommand();
 
+    public void PopulateCommand(DbCommand cmd, Sql sql)
+    {
+        var sb = new StringBuilder(
+            sql.Fragments.Sum(
+                x =>
+                    x switch
+                    {
+                        Sql.Literal { Value: var s } => s.Length,
+                        Sql.IParameter => 3,
+                        _ => 0
+                    }
+            )
+        );
+
+        foreach (var fragment in sql.Fragments)
+        {
+            switch (fragment)
+            {
+                case Sql.Literal { Value: var s }:
+                    sb.Append(s);
+                    break;
+
+                case Sql.IParameter p:
+                    sb.Append('$');
+                    sb.Append(cmd.Parameters.Count + 1);
+                    cmd.Parameters.Add(p.ToParameter(this));
+                    break;
+            }
+        }
+
+        cmd.CommandText = sb.ToString();
+    }
+
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
     public string GetColumnName(PropertyInfo propertyInfo) =>
-        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name, CultureInfo.CurrentCulture);
+        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name);
 }

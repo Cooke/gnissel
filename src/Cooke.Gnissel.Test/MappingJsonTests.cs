@@ -18,10 +18,10 @@ public class MappingJsonTests
     public async Task Setup()
     {
         _dataSource = Fixture.DataSourceBuilder
-            .EnableDynamicJsonMappings(
-                new JsonSerializerOptions { Converters = { new GameClassConverter() } }
-            )
-            .Build();
+        // .EnableDynamicJsonMappings(
+        //     new JsonSerializerOptions { Converters = { new GameClassConverter() } }
+        // )
+        .Build();
         _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
@@ -109,6 +109,8 @@ public class MappingJsonTests
         GameClass Class
     );
 
+    // TODO move to JsonSerializerOptions when upgrading to npgsql 8
+    [JsonConverter(typeof(GameClassConverter))]
     public class GameClass
     {
         public static readonly GameClass Warrior = new GameClass("Warrior");

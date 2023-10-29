@@ -95,7 +95,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
 
     public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var sql = new FormattedSql(100, 2);
+        var sql = new Sql(100, 2);
         sql.AppendLiteral("SELECT * FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
         return _queryExecutor.Execute(

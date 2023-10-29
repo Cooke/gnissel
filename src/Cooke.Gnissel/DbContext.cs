@@ -27,17 +27,17 @@ public class DbContext
     internal IDbAdapter Adapter => _dbAdapter;
 
     public IAsyncEnumerable<TOut> Query<TOut>(
-        FormattedSql formattedSql,
+        Sql sql,
         CancellationToken cancellationToken = default
-    ) => Query(formattedSql, _rowReader.Read<TOut>, cancellationToken);
+    ) => Query(sql, _rowReader.Read<TOut>, cancellationToken);
 
     public IAsyncEnumerable<TOut> Query<TOut>(
-        FormattedSql formattedSql,
+        Sql sql,
         Func<DbDataReader, TOut> mapper,
         CancellationToken cancellationToken = default
     ) =>
         _queryExecutor.Execute(
-            formattedSql,
+            sql,
             mapper,
             _commandFactory,
             _dbAdapter,

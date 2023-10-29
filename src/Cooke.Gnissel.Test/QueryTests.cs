@@ -12,8 +12,8 @@ namespace Cooke.Gnissel.Test;
 public class QueryTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
-        .EnableDynamicJsonMappings()
-        .Build();
+    // .EnableDynamicJsonMappings()
+    .Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]
@@ -72,6 +72,18 @@ public class QueryTests
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<User>(
                 $"SELECT * FROM users WHERE to_jsonb(name) = {JsonSerializer.Serialize(name):jsonb}"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+    }
+
+    [Test]
+    public async Task QueryInject()
+    {
+        const string name = "Bob";
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        var results = await _db.Query<User>(
+                $"SELECT * FROM {Sql.Inject("users")} WHERE name={name}"
             )
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);

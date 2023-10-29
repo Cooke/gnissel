@@ -11,7 +11,7 @@ namespace Cooke.Gnissel.Services.Implementations;
 public class DefaultQueryExecutor : IQueryExecutor
 {
     public async IAsyncEnumerable<TOut> Execute<TOut>(
-        FormattedSql formattedSql,
+        Sql sql,
         Func<DbDataReader, TOut> mapper,
         ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
@@ -19,16 +19,7 @@ public class DefaultQueryExecutor : IQueryExecutor
     )
     {
         await using var cmd = commandFactory.CreateCommand();
-        cmd.CommandText = formattedSql.Sql;
-        foreach (
-            var parameter in formattedSql.Parameters.Select(
-                (p) => dbAdapter.CreateParameter(p.value, p.dbType)
-            )
-        )
-        {
-            cmd.Parameters.Add(parameter);
-        }
-
+        dbAdapter.PopulateCommand(cmd, sql);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         cancellationToken.Register(reader.Close);
         while (await reader.ReadAsync(cancellationToken))

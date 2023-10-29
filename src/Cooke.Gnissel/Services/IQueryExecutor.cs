@@ -10,7 +10,7 @@ namespace Cooke.Gnissel.Services;
 public interface IQueryExecutor
 {
     IAsyncEnumerable<TOut> Execute<TOut>(
-        FormattedSql formattedSql,
+        Sql sql,
         Func<DbDataReader, TOut> mapper,
         ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
