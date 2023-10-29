@@ -2,6 +2,7 @@
 
 using System.Data.Common;
 using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Statements;
 
 #endregion
 
@@ -17,5 +18,5 @@ public interface IQueryExecutor
         CancellationToken cancellationToken
     );
     
-    ValueTask<int> Execute(Sql sql, ICommandFactory commandFactory, IDbAdapter dbAdapter, CancellationToken cancellationToken);
+    IExecuteStatement Execute(Sql sql, ICommandFactory commandFactory, IDbAdapter dbAdapter, CancellationToken cancellationToken);
 }

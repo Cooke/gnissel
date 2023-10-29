@@ -35,17 +35,17 @@ public class DbContext
         CancellationToken cancellationToken = default
     ) => _queryExecutor.Query(sql, mapper, _commandFactory, _dbAdapter, cancellationToken);
 
-    public ValueTask<int> Execute(Sql sql, CancellationToken cancellationToken = default)
+    public IExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default)
         => _queryExecutor.Execute(sql, _commandFactory, _dbAdapter, cancellationToken);
 
-    public async Task Transaction(IEnumerable<IInsertStatement> statements)
+    public async Task Transaction(IEnumerable<IExecuteStatement> statements)
     {
         await using var connection = _dbAdapter.CreateConnection();
         await connection.OpenAsync();
+        var transactionCommandFactory = new ConnectionCommandFactory(connection, _dbAdapter);
         await using var transaction = await connection.BeginTransactionAsync();
-        foreach (var statement in statements)
-        {
-            await statement.ExecuteAsync(connection);
+        foreach (var statement in statements) {
+            await statement.ExecuteAsync(transactionCommandFactory);
         }
         await transaction.CommitAsync();
     }

@@ -5,12 +5,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Statements;
 
-public interface IInsertStatement
-{
-    Task<int> ExecuteAsync(DbConnection connection);
-}
-
-public class InsertStatement<T> : IInsertStatement
+public class InsertStatement<T> : IExecuteStatement
 {
     private readonly ICommandFactory _commandFactory;
     private readonly IDbAdapter _dbAdapter;
@@ -33,25 +28,24 @@ public class InsertStatement<T> : IInsertStatement
         _parameters = parameters;
     }
 
-    public TaskAwaiter<int> GetAwaiter()
+    public ValueTaskAwaiter<int> GetAwaiter()
     {
         return ExecuteAsync().GetAwaiter();
     }
 
-    public async Task<int> ExecuteAsync()
+    public async ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         await using var command = _commandFactory.CreateCommand();
-        return await ExecuteAsync(command);
+        return await ExecuteAsync(command, cancellationToken);
     }
 
-    public async Task<int> ExecuteAsync(DbConnection connection)
+    public async ValueTask<int> ExecuteAsync(ICommandFactory? commandFactory, CancellationToken cancellationToken = default)
     {
-        await using var cmd = _dbAdapter.CreateCommand();
-        cmd.Connection = connection;
-        return await ExecuteAsync(cmd);
+        await using var cmd = (commandFactory ?? _commandFactory).CreateCommand();
+        return await ExecuteAsync(cmd, cancellationToken);
     }
 
-    private async Task<int> ExecuteAsync(DbCommand command)
+    private async Task<int> ExecuteAsync(DbCommand command, CancellationToken cancellationToken)
     {
         var cols = string.Join(", ", _columns.Select(x => _dbAdapter.EscapeIdentifier(x.Name)));
         var paramPlaceholders = string.Join(", ", _columns.Select((_, i) => "$" + (i + 1)));
@@ -63,6 +57,6 @@ public class InsertStatement<T> : IInsertStatement
             command.Parameters.Add(dbParameter);
         }
 
-        return await command.ExecuteNonQueryAsync();
+        return await command.ExecuteNonQueryAsync(cancellationToken);
     }
 }

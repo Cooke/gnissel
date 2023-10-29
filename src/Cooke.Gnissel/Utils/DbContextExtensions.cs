@@ -4,7 +4,7 @@ namespace Cooke.Gnissel.Utils;
 
 public static class DbContextExtensions
 {
-    public static Task Transaction(this DbContext dbContext, params IInsertStatement[] statements)
+    public static Task Transaction(this DbContext dbContext, params IExecuteStatement[] statements)
     {
         return dbContext.Transaction(statements);
     }
