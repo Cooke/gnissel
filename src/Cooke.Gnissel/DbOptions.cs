@@ -16,7 +16,7 @@ public record DbOptions(
 )
 {
     public DbOptions(IDbAdapter dbAdapter)
-        : this(dbAdapter, new DefaultRowReader(new DefaultColumnReader())) { }
+        : this(dbAdapter, new DefaultRowReader()) { }
 
     public DbOptions(IDbAdapter dbAdapter, IRowReader rowReader)
         : this(

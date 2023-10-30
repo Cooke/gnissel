@@ -28,24 +28,6 @@ public class Sql
         _fragments = new List<IFragment>(literalLength + formattedCount);
     }
 
-    public static Sql Join(string separator, IEnumerable<Sql> sqls)
-    {
-        var sql = new Sql();
-        bool first = true;
-        foreach (var sqlPart in sqls)
-        {
-            if (!first)
-            {
-                sql.AppendLiteral(separator);
-            }
-
-            sql.AddFragments(sqlPart.Fragments);
-            first = false;
-        }
-
-        return sql;
-    }
-
     public IReadOnlyList<IFragment> Fragments => _fragments;
 
     public void AddFragment(IFragment fragment)
