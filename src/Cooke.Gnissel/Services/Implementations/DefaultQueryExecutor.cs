@@ -13,7 +13,7 @@ public class DefaultQueryExecutor : IQueryExecutor
 {
     public async IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
-        Func<DbDataReader, TOut> mapper,
+        Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
         ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
         [EnumeratorCancellation] CancellationToken cancellationToken
@@ -23,9 +23,9 @@ public class DefaultQueryExecutor : IQueryExecutor
         dbAdapter.PopulateCommand(cmd, sql);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         cancellationToken.Register(reader.Close);
-        while (await reader.ReadAsync(cancellationToken))
+        await foreach (var value in mapper(reader, cancellationToken))
         {
-            yield return mapper(reader);
+            yield return value;
         }
     }
 

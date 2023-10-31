@@ -12,7 +12,7 @@ public interface IQueryExecutor
 {
     IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
-        Func<DbDataReader, TOut> mapper,
+        Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
         ICommandFactory commandFactory,
         IDbAdapter dbAdapter,
         CancellationToken cancellationToken

@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using System.Runtime.CompilerServices;
 using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Statements;
@@ -31,12 +32,32 @@ public class DbContext
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
-        Func<DbDataReader, TOut> mapper,
+        Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
         CancellationToken cancellationToken = default
     ) => _queryExecutor.Query(sql, mapper, _commandFactory, _dbAdapter, cancellationToken);
 
-    public IExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default)
-        => _queryExecutor.Execute(sql, _commandFactory, _dbAdapter, cancellationToken);
+    public IAsyncEnumerable<TOut> Query<TOut>(
+        Sql sql,
+        Func<DbDataReader, TOut> mapper,
+        CancellationToken cancellationToken = default
+    )
+    {
+        return _queryExecutor.Query(sql, Mapper, _commandFactory, _dbAdapter, cancellationToken);
+
+        async IAsyncEnumerable<TOut> Mapper(
+            DbDataReader reader,
+            [EnumeratorCancellation] CancellationToken cancellationToken
+        )
+        {
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                yield return mapper(reader);
+            }
+        }
+    }
+
+    public IExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
+        _queryExecutor.Execute(sql, _commandFactory, _dbAdapter, cancellationToken);
 
     public async Task Transaction(IEnumerable<IExecuteStatement> statements)
     {
@@ -44,7 +65,8 @@ public class DbContext
         await connection.OpenAsync();
         var transactionCommandFactory = new ConnectionCommandFactory(connection, _dbAdapter);
         await using var transaction = await connection.BeginTransactionAsync();
-        foreach (var statement in statements) {
+        foreach (var statement in statements)
+        {
             await statement.ExecuteAsync(transactionCommandFactory);
         }
         await transaction.CommitAsync();

@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Utils;
 
 #endregion
@@ -15,10 +16,18 @@ public class DefaultRowReader : IRowReader
     private readonly ConcurrentDictionary<Type, object> _readers =
         new ConcurrentDictionary<Type, object>();
 
-    public TOut Read<TOut>(DbDataReader rowReader) =>
-        ((Func<DbDataReader, TOut>)_readers.GetOrAdd(typeof(TOut), _ => CreateReader<TOut>()))(
-            rowReader
-        );
+    public async IAsyncEnumerable<TOut> Read<TOut>(
+        DbDataReader reader,
+        [EnumeratorCancellation] CancellationToken cancellationToken
+    )
+    {
+        var mapper =
+            (Func<DbDataReader, TOut>)_readers.GetOrAdd(typeof(TOut), _ => CreateReader<TOut>());
+        while (await reader.ReadAsync(cancellationToken))
+        {
+            yield return mapper(reader);
+        }
+    }
 
     private static Func<DbDataReader, TOut> CreateReader<TOut>()
     {

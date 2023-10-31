@@ -8,5 +8,5 @@ namespace Cooke.Gnissel.Services;
 
 public interface IRowReader
 {
-    TOut Read<TOut>(DbDataReader rowReader);
+    IAsyncEnumerable<TOut> Read<TOut>(DbDataReader reader, CancellationToken cancellationToken);
 }
