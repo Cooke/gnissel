@@ -4,6 +4,7 @@ using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Statements;
+using Cooke.Gnissel.Utils;
 
 #endregion
 
@@ -36,7 +37,7 @@ public class DefaultQueryExecutor : IQueryExecutor
         CancellationToken cancellationToken
     )
     {
-        return new ExecuteStatement(commandFactory, dbAdapter, sql);
+        return new ExecuteStatement(commandFactory, dbAdapter, sql, cancellationToken);
     }
 
     private class ExecuteStatement : IExecuteStatement
@@ -44,12 +45,19 @@ public class DefaultQueryExecutor : IQueryExecutor
         private readonly ICommandFactory _commandFactory;
         private readonly IDbAdapter _dbAdapter;
         private readonly Sql _sql;
+        private readonly CancellationToken _cancellationToken;
 
-        public ExecuteStatement(ICommandFactory commandFactory, IDbAdapter dbAdapter, Sql sql)
+        public ExecuteStatement(
+            ICommandFactory commandFactory,
+            IDbAdapter dbAdapter,
+            Sql sql,
+            CancellationToken cancellationToken
+        )
         {
             _commandFactory = commandFactory;
             _dbAdapter = dbAdapter;
             _sql = sql;
+            _cancellationToken = cancellationToken;
         }
 
         public async ValueTask<int> ExecuteAsync(
@@ -59,7 +67,7 @@ public class DefaultQueryExecutor : IQueryExecutor
         {
             await using var cmd = (commandFactory ?? _commandFactory).CreateCommand();
             _dbAdapter.PopulateCommand(cmd, _sql);
-            return await cmd.ExecuteNonQueryAsync(cancellationToken);
+            return await cmd.ExecuteNonQueryAsync(cancellationToken.Combine(_cancellationToken));
         }
 
         public ValueTaskAwaiter<int> GetAwaiter()

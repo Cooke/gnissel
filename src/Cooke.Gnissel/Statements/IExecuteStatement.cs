@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.CommandFactories;
 
