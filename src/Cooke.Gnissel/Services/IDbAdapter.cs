@@ -20,5 +20,8 @@ public interface IDbAdapter
     DbCommand CreateCommand();
 
     DbCommand CreateManagedConnectionCommand();
-    void PopulateCommand(DbCommand cmd, Sql sql);
+    
+    (string CommandText, DbParameter[] Parameters) BuildSql(Sql sql);
+
+    DbBatchCommand CreateBatchCommand();
 }

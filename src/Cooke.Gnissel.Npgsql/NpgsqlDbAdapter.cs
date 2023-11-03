@@ -31,7 +31,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public DbCommand CreateManagedConnectionCommand() => _dataSource.CreateCommand();
 
-    public void PopulateCommand(DbCommand cmd, Sql sql)
+    public (string CommandText, DbParameter[] Parameters) BuildSql(Sql sql)
     {
         var sb = new StringBuilder(
             sql.Fragments.Sum(
@@ -45,6 +45,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
             )
         );
 
+        var parameters = new List<DbParameter>();
         foreach (var fragment in sql.Fragments)
         {
             switch (fragment)
@@ -55,14 +56,16 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
                 case Sql.IParameter p:
                     sb.Append('$');
-                    sb.Append(cmd.Parameters.Count + 1);
-                    cmd.Parameters.Add(p.ToParameter(this));
+                    sb.Append(parameters.Count + 1);
+                    parameters.Add(p.ToParameter(this));
                     break;
             }
         }
 
-        cmd.CommandText = sb.ToString();
+        return ( sb.ToString(),parameters.ToArray());
     }
+
+    public DbBatchCommand CreateBatchCommand() => new NpgsqlBatchCommand();
 
     public DbCommand CreateCommand() => new NpgsqlCommand();
 

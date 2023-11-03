@@ -12,6 +12,7 @@ public class InsertStatement<T> : IExecuteStatement
     private readonly Table<T> _table;
     private readonly IEnumerable<DbParameter> _parameters;
     private readonly IEnumerable<Column<T>> _columns;
+    private readonly Sql _sql;
 
     internal InsertStatement(
         ICommandFactory commandFactory,
@@ -26,7 +27,37 @@ public class InsertStatement<T> : IExecuteStatement
         _table = table;
         _columns = columns;
         _parameters = parameters;
+
+        Sql sql = new Sql(20 + _columns.Count() * 2 + _parameters.Count() * 2);
+        sql.AppendLiteral("INSERT INTO ");
+        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_table.Name));
+        sql.AppendLiteral(" (");
+        var firstColumn = true;
+        foreach (var column in _columns)
+        {
+            if (!firstColumn)
+            {
+                sql.AppendLiteral(", ");
+            }
+            sql.AppendLiteral(_dbAdapter.EscapeIdentifier(column.Name));
+            firstColumn = false;
+        }
+        sql.AppendLiteral(") VALUES(");
+        bool firstParam = true;
+        foreach (var dbParameter in _parameters)
+        {
+            if (!firstParam)
+            {
+                sql.AppendLiteral(", ");
+            }
+            sql.AppendFormatted(dbParameter);
+            firstParam = false;
+        }
+        sql.AppendLiteral(")");
+        _sql = sql;
     }
+
+    public Sql Sql => _sql;
 
     public ValueTaskAwaiter<int> GetAwaiter()
     {
@@ -39,7 +70,10 @@ public class InsertStatement<T> : IExecuteStatement
         return await ExecuteAsync(command, cancellationToken);
     }
 
-    public async ValueTask<int> ExecuteAsync(ICommandFactory? commandFactory, CancellationToken cancellationToken = default)
+    public async ValueTask<int> ExecuteAsync(
+        ICommandFactory? commandFactory,
+        CancellationToken cancellationToken = default
+    )
     {
         await using var cmd = (commandFactory ?? _commandFactory).CreateCommand();
         return await ExecuteAsync(cmd, cancellationToken);
@@ -47,15 +81,9 @@ public class InsertStatement<T> : IExecuteStatement
 
     private async Task<int> ExecuteAsync(DbCommand command, CancellationToken cancellationToken)
     {
-        var cols = string.Join(", ", _columns.Select(x => _dbAdapter.EscapeIdentifier(x.Name)));
-        var paramPlaceholders = string.Join(", ", _columns.Select((_, i) => "$" + (i + 1)));
-
-        command.CommandText =
-            $"INSERT INTO {_dbAdapter.EscapeIdentifier(_table.Name)}({cols}) VALUES({paramPlaceholders})";
-        foreach (var dbParameter in _parameters)
-        {
-            command.Parameters.Add(dbParameter);
-        }
+        var (commandText, parameters) = _dbAdapter.BuildSql(Sql);
+        command.CommandText = commandText;
+        command.Parameters.AddRange(parameters);
 
         return await command.ExecuteNonQueryAsync(cancellationToken);
     }

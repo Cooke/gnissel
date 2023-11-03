@@ -11,4 +11,6 @@ public interface IExecuteStatement
     );
 
     ValueTaskAwaiter<int> GetAwaiter();
+
+    Sql Sql { get; }
 }

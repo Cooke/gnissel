@@ -21,7 +21,9 @@ public class DefaultQueryExecutor : IQueryExecutor
     )
     {
         await using var cmd = commandFactory.CreateCommand();
-        dbAdapter.PopulateCommand(cmd, sql);
+        var (commandText, parameters) = dbAdapter.BuildSql(sql);
+        cmd.CommandText = commandText;
+        cmd.Parameters.AddRange(parameters);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         cancellationToken.Register(reader.Close);
         await foreach (var value in mapper(reader, cancellationToken))
@@ -60,13 +62,17 @@ public class DefaultQueryExecutor : IQueryExecutor
             _cancellationToken = cancellationToken;
         }
 
+        public Sql Sql => _sql;
+
         public async ValueTask<int> ExecuteAsync(
             ICommandFactory? commandFactory = null,
             CancellationToken cancellationToken = default
         )
         {
             await using var cmd = (commandFactory ?? _commandFactory).CreateCommand();
-            _dbAdapter.PopulateCommand(cmd, _sql);
+            var (commandText, parameters) = _dbAdapter.BuildSql(_sql);
+            cmd.CommandText = commandText;
+            cmd.Parameters.AddRange(parameters);
             return await cmd.ExecuteNonQueryAsync(cancellationToken.Combine(_cancellationToken));
         }
 

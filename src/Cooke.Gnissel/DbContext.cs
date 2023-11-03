@@ -56,6 +56,22 @@ public class DbContext
         }
     }
 
+    public async Task Batch(List<IExecuteStatement> statements)
+    {
+        await using var connection = _dbAdapter.CreateConnection();
+        await using var batch = connection.CreateBatch();
+        foreach (var statement in statements)
+        {
+            var (commandText, parameters) = _dbAdapter.BuildSql(statement.Sql);
+            var batchCommand = _dbAdapter.CreateBatchCommand();
+            batchCommand.CommandText = commandText;
+            batchCommand.Parameters.AddRange(parameters);
+            batch.BatchCommands.Add(batchCommand);
+        }
+        await connection.OpenAsync();
+        await batch.ExecuteNonQueryAsync();
+    }
+
     public IExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
         _queryExecutor.Execute(sql, _commandFactory, _dbAdapter, cancellationToken);
 

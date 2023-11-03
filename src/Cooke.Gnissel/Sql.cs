@@ -54,6 +54,11 @@ public class Sql
     {
         _fragments.Add(new Parameter<T>(t, null));
     }
+    
+    public void AppendFormatted(DbParameter parameter)
+    {
+        _fragments.Add(new ExistingParameter(parameter));
+    }
 
     public void AppendFormatted<T>(T t, string? format)
     {
@@ -77,5 +82,10 @@ public class Sql
     {
         public DbParameter ToParameter(IDbAdapter adapter) =>
             adapter.CreateParameter(Value, DbType);
+    }
+    
+    private record ExistingParameter(DbParameter Parameter) : IParameter
+    {
+        public DbParameter ToParameter(IDbAdapter adapter) => Parameter;
     }
 }
