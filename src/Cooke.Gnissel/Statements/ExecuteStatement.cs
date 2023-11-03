@@ -26,13 +26,13 @@ public class ExecuteStatement
     public ValueTaskAwaiter<int> GetAwaiter()
     {
         return ExecuteAsync().GetAwaiter();
+    }
 
-        async ValueTask<int> ExecuteAsync()
-        {
-            await using var cmd = _dbAccessFactory.CreateCommand();
-            cmd.CommandText = _compiledSql.CommandText;
-            cmd.Parameters.AddRange(_compiledSql.Parameters);
-            return await cmd.ExecuteNonQueryAsync(_cancellationToken);
-        }
+    public async ValueTask<int> ExecuteAsync()
+    {
+        await using var cmd = _dbAccessFactory.CreateCommand();
+        cmd.CommandText = _compiledSql.CommandText;
+        cmd.Parameters.AddRange(_compiledSql.Parameters);
+        return await cmd.ExecuteNonQueryAsync(_cancellationToken);
     }
 }
