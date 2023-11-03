@@ -14,11 +14,11 @@ public class DefaultQueryExecutor : IQueryExecutor
     public async IAsyncEnumerable<TOut> Query<TOut>(
         CompiledSql compiledSql,
         Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
-        ICommandFactory commandFactory,
+        IDbAccessFactory dbAccessFactory,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
-        await using var cmd = commandFactory.CreateCommand();
+        await using var cmd = dbAccessFactory.CreateCommand();
         cmd.CommandText = compiledSql.CommandText;
         cmd.Parameters.AddRange(compiledSql.Parameters);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);

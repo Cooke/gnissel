@@ -12,7 +12,7 @@ public record DbOptions(
     IDbAdapter DbAdapter,
     IRowReader RowReader,
     IQueryExecutor QueryExecutor,
-    ICommandFactory CommandFactory
+    IDbAccessFactory DbAccessFactory
 )
 {
     public DbOptions(IDbAdapter dbAdapter)
@@ -23,6 +23,6 @@ public record DbOptions(
             dbAdapter,
             rowReader,
             new DefaultQueryExecutor(),
-            new ManagedConnectionCommandFactory(dbAdapter)
+            dbAdapter.CreateAccessFactory()
         ) { }
 }

@@ -17,7 +17,7 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
     private readonly string? _condition;
     private readonly ImmutableArray<Column<T>> _columns;
     private readonly IRowReader _rowReader;
-    private readonly ICommandFactory _commandFactory;
+    private readonly IDbAccessFactory _dbAccessFactory;
     private readonly IQueryExecutor _queryExecutor;
 
     public TableQueryStatement(
@@ -29,7 +29,7 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
     {
         _dbAdapter = options.DbAdapter;
         _rowReader = options.RowReader;
-        _commandFactory = options.CommandFactory;
+        _dbAccessFactory = options.DbAccessFactory;
         _queryExecutor = options.QueryExecutor;
         _fromTable = fromTable;
         _condition = condition;
@@ -101,7 +101,7 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
         return _queryExecutor.Query(
             _dbAdapter.CompileSql(sql),
             _rowReader.Read<T>,
-            _commandFactory,
+            _dbAccessFactory,
             cancellationToken
         );
     }

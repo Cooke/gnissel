@@ -3,6 +3,7 @@
 using System.Data.Common;
 using System.Reflection;
 using System.Text;
+using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Npgsql;
 using Npgsql.NameTranslation;
@@ -26,10 +27,6 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
         typeof(TValue) == typeof(object)
             ? new NpgsqlParameter { Value = value, DataTypeName = dbType }
             : new NpgsqlParameter<TValue> { TypedValue = value, DataTypeName = dbType };
-
-    public DbConnection CreateConnection() => _dataSource.CreateConnection();
-
-    public DbCommand CreateManagedConnectionCommand() => _dataSource.CreateCommand();
 
     public CompiledSql CompileSql(Sql sql)
     {
@@ -67,9 +64,9 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public DbBatchCommand CreateBatchCommand() => new NpgsqlBatchCommand();
 
-    public DbBatch CreateBatch() => _dataSource.CreateBatch();
-
     public DbCommand CreateCommand() => new NpgsqlCommand();
+
+    public IDbAccessFactory CreateAccessFactory() => new NpgsqlDbAccessFactory(_dataSource);
 
     public string GetColumnName(PropertyInfo propertyInfo) =>
         NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name);

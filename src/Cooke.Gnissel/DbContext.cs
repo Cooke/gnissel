@@ -15,14 +15,14 @@ public class DbContext
 {
     private readonly IRowReader _rowReader;
     private readonly IDbAdapter _dbAdapter;
-    private readonly ICommandFactory _commandFactory;
+    private readonly IDbAccessFactory _dbAccessFactory;
     private readonly IQueryExecutor _queryExecutor;
 
     public DbContext(DbOptions dbOptions)
     {
         _rowReader = dbOptions.RowReader;
         _dbAdapter = dbOptions.DbAdapter;
-        _commandFactory = dbOptions.CommandFactory;
+        _dbAccessFactory = dbOptions.DbAccessFactory;
         _queryExecutor = dbOptions.QueryExecutor;
     }
 
@@ -39,7 +39,7 @@ public class DbContext
         _queryExecutor.Query(
             _dbAdapter.CompileSql(sql),
             mapper,
-            _commandFactory,
+            _dbAccessFactory,
             cancellationToken
         );
 
@@ -52,7 +52,7 @@ public class DbContext
         return _queryExecutor.Query(
             _dbAdapter.CompileSql(sql),
             Mapper,
-            _commandFactory,
+            _dbAccessFactory,
             cancellationToken
         );
 
@@ -69,11 +69,11 @@ public class DbContext
     }
 
     public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
-        new ExecuteStatement(_commandFactory, _dbAdapter.CompileSql(sql), cancellationToken);
+        new ExecuteStatement(_dbAccessFactory, _dbAdapter.CompileSql(sql), cancellationToken);
 
     public async Task Batch(List<ExecuteStatement> statements)
     {
-        await using var batch = _commandFactory.CreateBatch();
+        await using var batch = _dbAccessFactory.CreateBatch();
         foreach (var statement in statements)
         {
             var batchCommand = _dbAdapter.CreateBatchCommand();
@@ -86,7 +86,7 @@ public class DbContext
 
     public async Task Transaction(IEnumerable<ExecuteStatement> statements)
     {
-        await using var connection = _dbAdapter.CreateConnection();
+        await using var connection = _dbAccessFactory.CreateConnection();
         await using var batch = connection.CreateBatch();
         foreach (var statement in statements)
         {

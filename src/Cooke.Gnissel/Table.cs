@@ -13,7 +13,7 @@ namespace Cooke.Gnissel;
 public class Table<T> : TableQueryStatement<T>
 {
     private readonly IDbAdapter _dbAdapter;
-    private readonly ICommandFactory _commandFactory;
+    private readonly IDbAccessFactory _dbAccessFactory;
     private readonly string _name = typeof(T).Name.ToLower() + "s";
     private readonly string _insertCommandText;
 
@@ -21,7 +21,7 @@ public class Table<T> : TableQueryStatement<T>
         : base(options, typeof(T).Name.ToLower() + "s", null, CreateColumns(options.DbAdapter))
     {
         _dbAdapter = options.DbAdapter;
-        _commandFactory = options.CommandFactory;
+        _dbAccessFactory = options.DbAccessFactory;
 
         var sql = new Sql(20 + Columns.Length * 4);
         sql.AppendLiteral("INSERT INTO ");
@@ -56,7 +56,7 @@ public class Table<T> : TableQueryStatement<T>
         : base(options, source._name, null, source.Columns)
     {
         _dbAdapter = options.DbAdapter;
-        _commandFactory = options.CommandFactory;
+        _dbAccessFactory = options.DbAccessFactory;
         _insertCommandText = source._insertCommandText;
     }
 
@@ -90,6 +90,6 @@ public class Table<T> : TableQueryStatement<T>
             _insertCommandText,
             insertColumns.Select(col => col.CreateParameter(item)).ToArray()
         );
-        return new ExecuteStatement(_commandFactory, sql, CancellationToken.None);
+        return new ExecuteStatement(_dbAccessFactory, sql, CancellationToken.None);
     }
 }

@@ -6,18 +6,18 @@ namespace Cooke.Gnissel.Services.Implementations;
 
 public class ExecuteStatement
 {
-    private readonly ICommandFactory _commandFactory;
+    private readonly IDbAccessFactory _dbAccessFactory;
     private readonly CancellationToken _cancellationToken;
     private readonly CompiledSql _compiledSql;
 
     public ExecuteStatement(
-        ICommandFactory commandFactory,
+        IDbAccessFactory dbAccessFactory,
         CompiledSql compiledSql,
         CancellationToken cancellationToken
     )
     {
         _compiledSql = compiledSql;
-        _commandFactory = commandFactory;
+        _dbAccessFactory = dbAccessFactory;
         _cancellationToken = cancellationToken;
     }
 
@@ -29,7 +29,7 @@ public class ExecuteStatement
 
         async ValueTask<int> ExecuteAsync()
         {
-            await using var cmd = _commandFactory.CreateCommand();
+            await using var cmd = _dbAccessFactory.CreateCommand();
             cmd.CommandText = _compiledSql.CommandText;
             cmd.Parameters.AddRange(_compiledSql.Parameters);
             return await cmd.ExecuteNonQueryAsync(_cancellationToken);

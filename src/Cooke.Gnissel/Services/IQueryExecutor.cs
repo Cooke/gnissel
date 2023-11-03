@@ -13,7 +13,7 @@ public interface IQueryExecutor
     IAsyncEnumerable<TOut> Query<TOut>(
         CompiledSql compiledSql,
         Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
-        ICommandFactory commandFactory,
+        IDbAccessFactory dbAccessFactory,
         CancellationToken cancellationToken
     );
 }

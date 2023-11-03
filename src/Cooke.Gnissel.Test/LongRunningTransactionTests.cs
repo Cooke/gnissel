@@ -99,11 +99,11 @@ public class LongRunningTransactionTests
         )
         {
             var dbAdapter = _options.DbAdapter;
-            await using var connection = dbAdapter.CreateConnection();
+            await using var connection = _options.DbAccessFactory.CreateConnection();
             await connection.OpenAsync(cancellationToken);
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            var transactionCommandFactory = new ConnectionCommandFactory(connection, dbAdapter);
-            var transactionDbOptions = _options with { CommandFactory = transactionCommandFactory };
+            var transactionCommandFactory = new ConnectionDbAccessFactory(connection, dbAdapter);
+            var transactionDbOptions = _options with { DbAccessFactory = transactionCommandFactory };
             await action(new TestDbContext(this, transactionDbOptions));
             await transaction.CommitAsync(cancellationToken);
         }
