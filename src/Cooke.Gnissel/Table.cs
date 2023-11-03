@@ -2,6 +2,8 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Diagnostics.Contracts;
 using System.Reflection;
+using System.Text;
+using System.Text.RegularExpressions;
 using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
@@ -100,29 +102,30 @@ public class Table<T> : TableQueryStatement<T>
     public ExecuteStatement Insert(IEnumerable<T> items)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity).ToArray();
-
-        var values = string.Join(
-            ", ",
-            items
-                .Skip(1)
-                .Select(
-                    (_, itemIndex) =>
-                        "("
-                        + string.Join(
-                            ", ",
-                            insertColumns.Select(
-                                (_, colIndex) =>
-                                    // TODO pg specific should be fixed
-                                    $"${(itemIndex + 1) * insertColumns.Length + colIndex + 1}"
-                            )
-                        )
-                        + ")"
-                )
+        var itemsArray = items as ICollection<T> ?? (ICollection<T>)items.ToArray();
+        var sb = new StringBuilder(
+            _insertCommandText.Length + insertColumns.Length * 6 * itemsArray.Count
         );
+        sb.Append(_insertCommandText);
+        for (var i = 1; i < itemsArray.Count; i++)
+        {
+            sb.Append(", (");
+            for (var j = 0; j < insertColumns.Length; j++)
+            {
+                if (j > 0)
+                {
+                    sb.Append(", ");
+                }
+
+                sb.Append('$');
+                sb.Append(i * insertColumns.Length + j + 1);
+            }
+            sb.Append(") ");
+        }
 
         var sql = new CompiledSql(
-            _insertCommandText + ", " + values,
-            items
+            sb.ToString(),
+            itemsArray
                 .SelectMany(item => insertColumns.Select(col => col.CreateParameter(item)))
                 .ToArray()
         );

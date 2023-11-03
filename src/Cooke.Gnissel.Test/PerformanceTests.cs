@@ -83,7 +83,7 @@ public class PerformanceTests
             );
         }
 
-        await _db.Batch(inserts.Chunk(500).Select(_db.Users.Insert));
+        await _db.Batch(inserts.Chunk(1000).Select(_db.Users.Insert));
 
         // Warm-up
         await QueryDapper();
