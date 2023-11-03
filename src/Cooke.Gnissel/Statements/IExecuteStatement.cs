@@ -5,12 +5,7 @@ namespace Cooke.Gnissel.Statements;
 
 public interface IExecuteStatement
 {
-    ValueTask<int> ExecuteAsync(
-        ICommandFactory? commandFactory = null,
-        CancellationToken cancellationToken = default
-    );
-
     ValueTaskAwaiter<int> GetAwaiter();
 
-    Sql Sql { get; }
+    CompiledSql CompiledSql { get; }
 }

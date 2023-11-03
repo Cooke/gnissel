@@ -17,6 +17,4 @@ public interface IQueryExecutor
         IDbAdapter dbAdapter,
         CancellationToken cancellationToken
     );
-    
-    IExecuteStatement Execute(Sql sql, ICommandFactory commandFactory, IDbAdapter dbAdapter, CancellationToken cancellationToken);
 }

@@ -31,7 +31,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public DbCommand CreateManagedConnectionCommand() => _dataSource.CreateCommand();
 
-    public (string CommandText, DbParameter[] Parameters) BuildSql(Sql sql)
+    public CompiledSql CompileSql(Sql sql)
     {
         var sb = new StringBuilder(
             sql.Fragments.Sum(
@@ -62,7 +62,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
             }
         }
 
-        return ( sb.ToString(),parameters.ToArray());
+        return new CompiledSql(sb.ToString(), parameters.ToArray());
     }
 
     public DbBatchCommand CreateBatchCommand() => new NpgsqlBatchCommand();

@@ -8,6 +8,11 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel;
 
+public interface ISql
+{
+    
+}
+
 [InterpolatedStringHandler]
 public class Sql
 {
