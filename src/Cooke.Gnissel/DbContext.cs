@@ -71,7 +71,10 @@ public class DbContext
     public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
         new ExecuteStatement(_dbAccessFactory, _dbAdapter.CompileSql(sql), cancellationToken);
 
-    public async Task Batch(List<ExecuteStatement> statements)
+    public Task Batch(params ExecuteStatement[] statements) =>
+        Batch((IEnumerable<ExecuteStatement>)statements);
+
+    public async Task Batch(IEnumerable<ExecuteStatement> statements)
     {
         await using var batch = _dbAccessFactory.CreateBatch();
         foreach (var statement in statements)

@@ -92,4 +92,40 @@ public class Table<T> : TableQueryStatement<T>
         );
         return new ExecuteStatement(_dbAccessFactory, sql, CancellationToken.None);
     }
+
+    [Pure]
+    public ExecuteStatement Insert(params T[] items) => Insert((IEnumerable<T>)items);
+
+    [Pure]
+    public ExecuteStatement Insert(IEnumerable<T> items)
+    {
+        var insertColumns = Columns.Where(x => !x.IsIdentity).ToArray();
+
+        var values = string.Join(
+            ", ",
+            items
+                .Skip(1)
+                .Select(
+                    (_, itemIndex) =>
+                        "("
+                        + string.Join(
+                            ", ",
+                            insertColumns.Select(
+                                (_, colIndex) =>
+                                    // TODO pg specific should be fixed
+                                    $"${(itemIndex + 1) * insertColumns.Length + colIndex + 1}"
+                            )
+                        )
+                        + ")"
+                )
+        );
+
+        var sql = new CompiledSql(
+            _insertCommandText + ", " + values,
+            items
+                .SelectMany(item => insertColumns.Select(col => col.CreateParameter(item)))
+                .ToArray()
+        );
+        return new ExecuteStatement(_dbAccessFactory, sql, CancellationToken.None);
+    }
 }

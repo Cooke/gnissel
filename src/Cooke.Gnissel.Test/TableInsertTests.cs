@@ -57,7 +57,7 @@ public class TableInsertTests
     }
 
     [Test]
-    public async Task InsertTwo()
+    public async Task InsertTwoSerial()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         await _db.Users.Insert(new User(0, "Alice", 30));
@@ -66,6 +66,38 @@ public class TableInsertTests
         Assert.That(fetched.Length, Is.EqualTo(2));
         CollectionAssert.AreEqual(
             new[] { new User(1, "Bob", 25), new User(2, "Alice", 30) },
+            fetched
+        );
+    }
+
+    [Test]
+    public async Task InsertMany()
+    {
+        await _db.Users.Insert(
+            new User(0, "Bob", 25),
+            new User(0, "Alice", 30),
+            new User(0, "Slurf", 35)
+        );
+
+        var fetched = _dataSource.OpenConnection().Query<User>("SELECT * FROM users").ToArray();
+        CollectionAssert.AreEqual(
+            new[] { new User(1, "Bob", 25), new User(2, "Alice", 30), new User(3, "Slurf", 35) },
+            fetched
+        );
+    }
+
+    [Test]
+    public async Task InsertBatch()
+    {
+        await _db.Batch(
+            _db.Users.Insert(new User(0, "Bob", 25)),
+            _db.Users.Insert(new User(0, "Alice", 30)),
+            _db.Users.Insert(new User(0, "Slurf", 35))
+        );
+
+        var fetched = _dataSource.OpenConnection().Query<User>("SELECT * FROM users").ToArray();
+        CollectionAssert.AreEqual(
+            new[] { new User(1, "Bob", 25), new User(2, "Alice", 30), new User(3, "Slurf", 35) },
             fetched
         );
     }

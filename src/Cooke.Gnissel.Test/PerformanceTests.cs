@@ -55,37 +55,38 @@ public class PerformanceTests
             .ExecuteNonQueryAsync();
 
         var rand = new Random();
-        var inserts = new List<ExecuteStatement>();
+        var inserts = new List<User>();
         for (int i = 0; i < 10000; i++)
         {
             inserts.Add(
-                _db.Users.Insert(
-                    new User(
-                        0,
-                        "Bob" + i,
-                        25 - (i % 10),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        Guid.NewGuid().ToString(),
-                        rand.Next(),
-                        rand.Next(),
-                        rand.Next(),
-                        rand.Next(),
-                        rand.Next(),
-                        rand.Next(),
-                        rand.Next(),
-                        rand.Next()
-                    )
+                new User(
+                    0,
+                    "Bob" + i,
+                    25 - (i % 10),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    Guid.NewGuid().ToString(),
+                    rand.Next(),
+                    rand.Next(),
+                    rand.Next(),
+                    rand.Next(),
+                    rand.Next(),
+                    rand.Next(),
+                    rand.Next(),
+                    rand.Next()
                 )
             );
         }
 
-        await _db.Batch(inserts);
+        foreach (var users in inserts.Chunk(2000))
+        {
+            await _db.Users.Insert(users);
+        }
 
         // Warm-up
         await QueryDapper();

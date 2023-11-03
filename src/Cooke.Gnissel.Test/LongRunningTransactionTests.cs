@@ -56,6 +56,47 @@ public class LongRunningTransactionTests
     }
 
     [Test]
+    public async Task BatchInTransaction()
+    {
+        await _db.Transaction(async trans =>
+        {
+            await trans.Batch(
+                trans.Users.Insert(new User(1, "Bob", 25)),
+                trans.Users.Insert(new User(2, "Alice", 30)),
+                trans.Users.Insert(new User(3, "Slurf", 35))
+            );
+        });
+
+        var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(
+            new[] { new User(1, "Bob", 25), new User(2, "Alice", 30), new User(3, "Slurf", 35) },
+            results
+        );
+    }
+
+    [Test]
+    public async Task BatchInTransactionAbort()
+    {
+        try
+        {
+            await _db.Transaction(async trans =>
+            {
+                await trans.Batch(
+                    trans.Users.Insert(new User(1, "Bob", 25)),
+                    trans.Users.Insert(new User(2, "Alice", 30)),
+                    trans.Users.Insert(new User(3, "Slurf", 35))
+                );
+
+                await trans.Users.Insert(new User(3, "Slurf", 35)); // Throws on colliding id
+            });
+        }
+        catch (DbException) { }
+
+        var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
+        CollectionAssert.IsEmpty(results);
+    }
+
+    [Test]
     public async Task TransactionAbort()
     {
         try
@@ -103,7 +144,10 @@ public class LongRunningTransactionTests
             await connection.OpenAsync(cancellationToken);
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
             var transactionCommandFactory = new ConnectionDbAccessFactory(connection, dbAdapter);
-            var transactionDbOptions = _options with { DbAccessFactory = transactionCommandFactory };
+            var transactionDbOptions = _options with
+            {
+                DbAccessFactory = transactionCommandFactory
+            };
             await action(new TestDbContext(this, transactionDbOptions));
             await transaction.CommitAsync(cancellationToken);
         }
