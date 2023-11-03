@@ -83,10 +83,7 @@ public class PerformanceTests
             );
         }
 
-        foreach (var users in inserts.Chunk(2000))
-        {
-            await _db.Users.Insert(users);
-        }
+        await _db.Batch(inserts.Chunk(500).Select(_db.Users.Insert));
 
         // Warm-up
         await QueryDapper();
