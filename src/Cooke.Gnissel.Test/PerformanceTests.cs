@@ -3,6 +3,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Statements;
 using Dapper;
 using Npgsql;
@@ -54,7 +55,7 @@ public class PerformanceTests
             .ExecuteNonQueryAsync();
 
         var rand = new Random();
-        var inserts = new List<IExecuteStatement>();
+        var inserts = new List<ExecuteStatement>();
         for (int i = 0; i < 10000; i++)
         {
             inserts.Add(

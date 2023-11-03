@@ -10,7 +10,7 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel;
 
-public class Table<T> : QueryStatement<T>
+public class Table<T> : TableQueryStatement<T>
 {
     private readonly IDbAdapter _dbAdapter;
     private readonly ICommandFactory _commandFactory;

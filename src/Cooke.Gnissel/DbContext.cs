@@ -35,7 +35,13 @@ public class DbContext
         Sql sql,
         Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
         CancellationToken cancellationToken = default
-    ) => _queryExecutor.Query(sql, mapper, _commandFactory, _dbAdapter, cancellationToken);
+    ) =>
+        _queryExecutor.Query(
+            _dbAdapter.CompileSql(sql),
+            mapper,
+            _commandFactory,
+            cancellationToken
+        );
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
@@ -43,7 +49,12 @@ public class DbContext
         CancellationToken cancellationToken = default
     )
     {
-        return _queryExecutor.Query(sql, Mapper, _commandFactory, _dbAdapter, cancellationToken);
+        return _queryExecutor.Query(
+            _dbAdapter.CompileSql(sql),
+            Mapper,
+            _commandFactory,
+            cancellationToken
+        );
 
         async IAsyncEnumerable<TOut> Mapper(
             DbDataReader reader,
@@ -57,7 +68,7 @@ public class DbContext
         }
     }
 
-    public async Task Batch(List<IExecuteStatement> statements)
+    public async Task Batch(List<ExecuteStatement> statements)
     {
         await using var connection = _dbAdapter.CreateConnection();
         await using var batch = connection.CreateBatch();
@@ -72,17 +83,18 @@ public class DbContext
         await batch.ExecuteNonQueryAsync();
     }
 
-    public IExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
-     new ExecuteStatement(_commandFactory, _dbAdapter.CompileSql(sql), cancellationToken);
+    public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
+        new ExecuteStatement(_commandFactory, _dbAdapter.CompileSql(sql), cancellationToken);
 
-    public async Task Transaction(IEnumerable<IExecuteStatement> statements)
+    public async Task Transaction(IEnumerable<ExecuteStatement> statements)
     {
         await using var connection = _dbAdapter.CreateConnection();
         await connection.OpenAsync();
-        var transactionCommandFactory = new ConnectionCommandFactory(connection, _dbAdapter);
         await using var transaction = await connection.BeginTransactionAsync();
-        foreach (var statement in statements) {
-            await using var cmd = transactionCommandFactory.CreateCommand();
+        foreach (var statement in statements)
+        {
+            await using var cmd = _dbAdapter.CreateCommand();
+            cmd.Connection = connection;
             cmd.CommandText = statement.CompiledSql.CommandText;
             cmd.Parameters.AddRange(statement.CompiledSql.Parameters);
             await cmd.ExecuteNonQueryAsync();

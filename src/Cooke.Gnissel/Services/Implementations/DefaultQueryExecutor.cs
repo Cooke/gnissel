@@ -12,17 +12,15 @@ namespace Cooke.Gnissel.Services.Implementations;
 public class DefaultQueryExecutor : IQueryExecutor
 {
     public async IAsyncEnumerable<TOut> Query<TOut>(
-        Sql sql,
+        CompiledSql compiledSql,
         Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
         ICommandFactory commandFactory,
-        IDbAdapter dbAdapter,
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
         await using var cmd = commandFactory.CreateCommand();
-        var (commandText, parameters) = dbAdapter.CompileSql(sql);
-        cmd.CommandText = commandText;
-        cmd.Parameters.AddRange(parameters);
+        cmd.CommandText = compiledSql.CommandText;
+        cmd.Parameters.AddRange(compiledSql.Parameters);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         cancellationToken.Register(reader.Close);
         await foreach (var value in mapper(reader, cancellationToken))
@@ -30,5 +28,4 @@ public class DefaultQueryExecutor : IQueryExecutor
             yield return value;
         }
     }
-
 }

@@ -22,7 +22,6 @@ public class DefaultRowReader : IRowReader
     )
     {
         var objectReader = _objectReaderProvider.GetReader<TOut>();
-        // var ordinalCache = stackalloc  int[objectReader.Width];
         while (await reader.ReadAsync(cancellationToken))
         {
             yield return objectReader.Read(reader, 0);

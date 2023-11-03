@@ -4,7 +4,7 @@ using Cooke.Gnissel.Statements;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class ExecuteStatement : IExecuteStatement
+public class ExecuteStatement
 {
     private readonly ICommandFactory _commandFactory;
     private readonly CancellationToken _cancellationToken;

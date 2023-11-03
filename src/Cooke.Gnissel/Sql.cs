@@ -8,11 +8,6 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel;
 
-public interface ISql
-{
-    
-}
-
 [InterpolatedStringHandler]
 public class Sql
 {
@@ -59,7 +54,7 @@ public class Sql
     {
         _fragments.Add(new Parameter<T>(t, null));
     }
-    
+
     public void AppendFormatted(DbParameter parameter)
     {
         _fragments.Add(new ExistingParameter(parameter));
@@ -88,7 +83,7 @@ public class Sql
         public DbParameter ToParameter(IDbAdapter adapter) =>
             adapter.CreateParameter(Value, DbType);
     }
-    
+
     private record ExistingParameter(DbParameter Parameter) : IParameter
     {
         public DbParameter ToParameter(IDbAdapter adapter) => Parameter;

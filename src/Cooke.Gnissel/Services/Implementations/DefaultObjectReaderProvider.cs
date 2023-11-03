@@ -23,7 +23,6 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
-        // var ordinalCache = Expression.Parameter(typeof(int[]));
         var (body, width) = CreateReader(dataReader, ordinalOffset, typeof(TOut));
         var objectReader = Expression
             .Lambda<ObjectReaderFunc<TOut>>(body, dataReader, ordinalOffset)
@@ -34,7 +33,6 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     private static (Expression Body, int Width) CreateReader(
         Expression dataReader,
         Expression ordinalOffset,
-        // Expression cacheIndex,
         Type type,
         string? dbType = null
     )
@@ -108,8 +106,6 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     private static Expression GetOrdinal(
         Expression dataReader,
         Expression ordinalOffset,
-        // Expression ordinalCache,
-        // Expression cacheIndex,
         int width,
         string name
     )
@@ -129,28 +125,6 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
             Expression.Constant(width),
             Expression.Constant(name)
         );
-        // var getOrdinalInMethod =
-        //     typeof(DefaultObjectReaderProvider).GetMethod(nameof(GetOrdinalIn))
-        //     ?? throw new ArgumentNullException(
-        //         "typeof(DefaultObjectReaderProvider).GetMethod(nameof(GetOrdinalIn))"
-        //     );
-        // return Expression.IfThenElse(
-        //     Expression.NotEqual(
-        //         Expression.ArrayIndex(ordinalCache, cacheIndex),
-        //         Expression.Constant(0)
-        //     ),
-        //     Expression.ArrayIndex(ordinalCache, cacheIndex),
-        //     Expression.Assign(
-        //         Expression.ArrayIndex(ordinalCache, cacheIndex),
-        //         Expression.Call(
-        //             getOrdinalInMethod,
-        //             dataReader,
-        //             ordinalOffset,
-        //             Expression.Constant(width),
-        //             Expression.Constant(name)
-        //         )
-        //     )
-        // );
     }
 
     private static int GetOrdinalIn(DbDataReader dataReader, int offset, int width, string name)

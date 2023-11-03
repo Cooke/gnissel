@@ -10,7 +10,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Statements;
 
-public class QueryStatement<T> : IAsyncEnumerable<T>
+public class TableQueryStatement<T> : IAsyncEnumerable<T>
 {
     private readonly IDbAdapter _dbAdapter;
     private readonly string _fromTable;
@@ -20,7 +20,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     private readonly ICommandFactory _commandFactory;
     private readonly IQueryExecutor _queryExecutor;
 
-    public QueryStatement(
+    public TableQueryStatement(
         DbOptions options,
         string fromTable,
         string? condition,
@@ -37,7 +37,7 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     }
 
     [Pure]
-    public QueryStatement<T> Where(Expression<Func<T, bool>> predicate)
+    public TableQueryStatement<T> Where(Expression<Func<T, bool>> predicate)
     {
         // string condition = "";
         // switch (predicate.Body)
@@ -62,8 +62,8 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         throw new NotImplementedException();
     }
 
-    public QueryStatement<TOut> GroupJoin<TRight, TOut>(
-        QueryStatement<TRight> right,
+    public TableQueryStatement<TOut> GroupJoin<TRight, TOut>(
+        TableQueryStatement<TRight> right,
         Func<T, TRight, bool> func,
         Func<T, IEnumerable<TRight>, TOut> selector
     )
@@ -72,12 +72,12 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
     }
 
     [Pure]
-    public QueryStatement<TOut> Select<TOut>(Expression<Func<T, TOut>> selector)
+    public TableQueryStatement<TOut> Select<TOut>(Expression<Func<T, TOut>> selector)
     {
         throw new NotImplementedException();
     }
 
-    public QueryStatement<TOut> Join<TRight, TOut>(
+    public TableQueryStatement<TOut> Join<TRight, TOut>(
         Table<TRight> right,
         Expression<Func<T, TRight, bool>> predicate,
         Expression<Func<T, TRight, TOut>> selector
@@ -99,10 +99,9 @@ public class QueryStatement<T> : IAsyncEnumerable<T>
         sql.AppendLiteral("SELECT * FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
         return _queryExecutor.Query(
-            sql,
+            _dbAdapter.CompileSql(sql),
             _rowReader.Read<T>,
             _commandFactory,
-            _dbAdapter,
             cancellationToken
         );
     }
