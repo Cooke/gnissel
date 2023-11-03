@@ -73,8 +73,7 @@ public class DbContext
 
     public async Task Batch(List<ExecuteStatement> statements)
     {
-        await using var connection = _dbAdapter.CreateConnection();
-        await using var batch = connection.CreateBatch();
+        await using var batch = _commandFactory.CreateBatch();
         foreach (var statement in statements)
         {
             var batchCommand = _dbAdapter.CreateBatchCommand();
@@ -82,7 +81,6 @@ public class DbContext
             batchCommand.Parameters.AddRange(statement.CompiledSql.Parameters);
             batch.BatchCommands.Add(batchCommand);
         }
-        await connection.OpenAsync();
         await batch.ExecuteNonQueryAsync();
     }
 

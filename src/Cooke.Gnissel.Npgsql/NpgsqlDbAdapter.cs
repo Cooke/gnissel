@@ -67,6 +67,8 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public DbBatchCommand CreateBatchCommand() => new NpgsqlBatchCommand();
 
+    public DbBatch CreateBatch() => _dataSource.CreateBatch();
+
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
     public string GetColumnName(PropertyInfo propertyInfo) =>

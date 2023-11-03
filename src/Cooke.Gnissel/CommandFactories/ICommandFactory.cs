@@ -5,4 +5,6 @@ namespace Cooke.Gnissel.CommandFactories;
 public interface ICommandFactory
 {
     DbCommand CreateCommand();
+    
+    DbBatch CreateBatch();
 }

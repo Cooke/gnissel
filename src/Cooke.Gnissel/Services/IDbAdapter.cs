@@ -20,8 +20,10 @@ public interface IDbAdapter
     DbCommand CreateCommand();
 
     DbCommand CreateManagedConnectionCommand();
-    
+
     CompiledSql CompileSql(Sql sql);
 
     DbBatchCommand CreateBatchCommand();
+
+    DbBatch CreateBatch();
 }

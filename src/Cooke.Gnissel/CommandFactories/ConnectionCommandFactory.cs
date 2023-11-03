@@ -20,4 +20,8 @@ public sealed class ConnectionCommandFactory : ICommandFactory
         cmd.Connection = _connection;
         return cmd;
     }
+    public DbBatch CreateBatch()
+    {
+        return _connection.CreateBatch();
+    }
 }

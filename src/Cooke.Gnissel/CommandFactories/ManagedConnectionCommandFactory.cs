@@ -13,4 +13,8 @@ internal class ManagedConnectionCommandFactory : ICommandFactory
     }
 
     public DbCommand CreateCommand() => _dbAdapter.CreateManagedConnectionCommand();
+    public DbBatch CreateBatch()
+    {
+        return _dbAdapter.CreateBatch();
+    }
 }
