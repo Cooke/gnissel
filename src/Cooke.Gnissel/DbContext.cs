@@ -68,6 +68,9 @@ public class DbContext
         }
     }
 
+    public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
+        new ExecuteStatement(_commandFactory, _dbAdapter.CompileSql(sql), cancellationToken);
+
     public async Task Batch(List<ExecuteStatement> statements)
     {
         await using var connection = _dbAdapter.CreateConnection();
@@ -83,22 +86,21 @@ public class DbContext
         await batch.ExecuteNonQueryAsync();
     }
 
-    public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
-        new ExecuteStatement(_commandFactory, _dbAdapter.CompileSql(sql), cancellationToken);
-
     public async Task Transaction(IEnumerable<ExecuteStatement> statements)
     {
         await using var connection = _dbAdapter.CreateConnection();
-        await connection.OpenAsync();
-        await using var transaction = await connection.BeginTransactionAsync();
+        await using var batch = connection.CreateBatch();
         foreach (var statement in statements)
         {
-            await using var cmd = _dbAdapter.CreateCommand();
-            cmd.Connection = connection;
-            cmd.CommandText = statement.CompiledSql.CommandText;
-            cmd.Parameters.AddRange(statement.CompiledSql.Parameters);
-            await cmd.ExecuteNonQueryAsync();
+            var batchCommand = _dbAdapter.CreateBatchCommand();
+            batchCommand.CommandText = statement.CompiledSql.CommandText;
+            batchCommand.Parameters.AddRange(statement.CompiledSql.Parameters);
+            batch.BatchCommands.Add(batchCommand);
         }
+        await connection.OpenAsync();
+        await using var transaction = await connection.BeginTransactionAsync();
+        batch.Transaction = transaction;
+        await batch.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
     }
 }
