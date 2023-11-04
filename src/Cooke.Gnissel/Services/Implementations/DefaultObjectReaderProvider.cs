@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Utils;
 
 #endregion
@@ -55,7 +54,9 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     )
     {
         var primitiveOrdinal =
-            dbName != null ? GetOrdinalAfter(dataReader, ordinalOffset, dbName) : ordinalOffset;
+            dbName != null
+                ? GetOrdinalAfterExpression(dataReader, ordinalOffset, dbName)
+                : ordinalOffset;
         if (type.GetDbType() != null || dbType != null)
         {
             return (CreateValueReader(dataReader, primitiveOrdinal, type), 1);
@@ -130,7 +131,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
         Type type
     ) => Expression.Call(rowReader, "GetFieldValue", new[] { type }, ordinal);
 
-    private static Expression GetOrdinalAfter(
+    private static Expression GetOrdinalAfterExpression(
         Expression dataReader,
         Expression ordinalOffset,
         string name
