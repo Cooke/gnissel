@@ -131,7 +131,7 @@ public class Table<T> : TableQueryStatement<T>
     )
     {
         return new Column<T>(
-            dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
+            p.GetDbName() ?? dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
             p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                 ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
             CreateParameterFactory(dbAdapter, memberExpression, p.GetDbType(), objectExpression)

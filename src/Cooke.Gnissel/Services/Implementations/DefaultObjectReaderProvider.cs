@@ -50,20 +50,23 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
+        string? dbName = null,
         string? dbType = null
     )
     {
+        var primitiveOrdinal =
+            dbName != null ? GetOrdinal(dataReader, ordinalOffset, dbName) : ordinalOffset;
         if (type.GetDbType() != null || dbType != null)
         {
-            return (CreateValueReader(dataReader, ordinalOffset, type), 1);
+            return (CreateValueReader(dataReader, primitiveOrdinal, type), 1);
         }
 
         return type switch
         {
-            { IsPrimitive: true } => (CreateValueReader(dataReader, ordinalOffset, type), 1),
+            { IsPrimitive: true } => (CreateValueReader(dataReader, primitiveOrdinal, type), 1),
             { IsValueType: true } => CreatePositionalReader(dataReader, ordinalOffset, type),
             not null when type == typeof(string)
-                => (CreateValueReader(dataReader, ordinalOffset, typeof(string)), 1),
+                => (CreateValueReader(dataReader, primitiveOrdinal, typeof(string)), 1),
             { IsClass: true } => CreateNamedReader(dataReader, ordinalOffset, type),
             _ => throw new NotSupportedException($"Cannot map type {type}")
         };
@@ -86,6 +89,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
                         dataReader,
                         Expression.Add(ordinalOffset, Expression.Constant(width)),
                         p.ParameterType,
+                        p.GetDbName() ?? _identifierMapper.ToColumnName(p),
                         p.GetDbType()
                     );
                     width += innerWidth;
@@ -129,13 +133,12 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     private static Expression GetOrdinal(
         Expression dataReader,
         Expression ordinalOffset,
-        int width,
         string name
     )
     {
         var getOrdinalInMethod =
             typeof(DefaultObjectReaderProvider).GetMethod(
-                nameof(GetOrdinalIn),
+                nameof(GetOrdinalAfter),
                 BindingFlags.Static | BindingFlags.NonPublic
             )
             ?? throw new ArgumentNullException(
@@ -145,14 +148,13 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
             getOrdinalInMethod,
             dataReader,
             ordinalOffset,
-            Expression.Constant(width),
             Expression.Constant(name)
         );
     }
 
-    private static int GetOrdinalIn(DbDataReader dataReader, int offset, int width, string name)
+    private static int GetOrdinalAfter(DbDataReader dataReader, int offset, string name)
     {
-        for (int ordinal = offset; ordinal < offset + width; ordinal++)
+        for (int ordinal = offset; ordinal < dataReader.FieldCount; ordinal++)
         {
             if (dataReader.GetName(ordinal).Equals(name, StringComparison.OrdinalIgnoreCase))
             {
@@ -161,7 +163,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
         }
 
         throw new InvalidOperationException(
-            $"No column with name '{name}' in data reader between ordinals {offset} and {offset + width}"
+            $"No column with name '{name}' in data reader after offset {offset}"
         );
     }
 }
