@@ -93,13 +93,13 @@ public class QueryTests
     public async Task QueryJoin()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Devices.Insert(new Device("my-device", "IPhone", 1));
+        await _db.Devices.Insert(new Device(new DeviceId("my-device"), "IPhone", 1));
         var results = await _db.Query<(User, Device)>(
                 $"SELECT * FROM users JOIN devices ON users.id=devices.user_id"
             )
             .ToArrayAsync();
         CollectionAssert.AreEqual(
-            new[] { (new User(1, "Bob", 25), new Device("my-device", "IPhone", 1)) },
+            new[] { (new User(1, "Bob", 25), new Device(new DeviceId("my-device"), "IPhone", 1)) },
             results
         );
     }
@@ -140,5 +140,7 @@ public class QueryTests
         int Age
     );
 
-    public record Device(string Id, string Name, int UserId);
+    public record Device(DeviceId Id, string Name, int UserId);
+
+    public record DeviceId(string Id);
 }

@@ -1,6 +1,8 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Data.Common;
 using System.Diagnostics.Contracts;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -66,21 +68,95 @@ public class Table<T> : TableQueryStatement<T>
 
     private static ImmutableArray<Column<T>> CreateColumns(IDbAdapter dbAdapter)
     {
+        var objectParameter = Expression.Parameter(typeof(T));
         return typeof(T)
             .GetProperties()
-            .Select(
+            .SelectMany(
                 p =>
-                    new Column<T>(
+                    CreateColumns(
                         dbAdapter,
-                        dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
-                        p.GetCustomAttribute<DatabaseGeneratedAttribute>()
-                            ?.Let(
-                                x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity
-                            ) ?? false,
-                        p
+                        p,
+                        objectParameter,
+                        Expression.Property(objectParameter, p)
                     )
             )
             .ToImmutableArray();
+    }
+
+    private static IEnumerable<Column<T>> CreateColumns(
+        IDbAdapter dbAdapter,
+        PropertyInfo p,
+        ParameterExpression rootExpression,
+        Expression memberExpression
+    )
+    {
+        if (p.GetDbType() != null)
+        {
+            yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
+        }
+        else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
+        {
+            yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
+        }
+        else if (p.PropertyType.IsClass)
+        {
+            foreach (
+                var column in p.PropertyType
+                    .GetProperties()
+                    .SelectMany<PropertyInfo, Column<T>>(
+                        innerProperty =>
+                            CreateColumns(
+                                dbAdapter,
+                                innerProperty,
+                                rootExpression,
+                                Expression.Property(memberExpression, innerProperty)
+                            )
+                    )
+            )
+            {
+                yield return column;
+            }
+        }
+        else
+        {
+            yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
+        }
+    }
+
+    private static Column<T> CreateColumn(
+        IDbAdapter dbAdapter,
+        PropertyInfo p,
+        ParameterExpression objectExpression,
+        Expression memberExpression
+    )
+    {
+        return new Column<T>(
+            dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
+            p.GetCustomAttribute<DatabaseGeneratedAttribute>()
+                ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
+            CreateParameterFactory(dbAdapter, memberExpression, p.GetDbType(), objectExpression)
+        );
+    }
+
+    private static Func<T, DbParameter> CreateParameterFactory(
+        IDbAdapter dbAdapter,
+        Expression valueExpression,
+        string? dbType,
+        ParameterExpression tableItemParameter
+    )
+    {
+        return Expression
+            .Lambda<Func<T, DbParameter>>(
+                Expression.Call(
+                    Expression.Constant(dbAdapter),
+                    nameof(dbAdapter.CreateParameter),
+                    new[] { valueExpression.Type },
+                    valueExpression,
+                    Expression.Constant(dbType, typeof(string))
+                ),
+                tableItemParameter
+            )
+            .Compile();
     }
 
     [Pure]

@@ -76,18 +76,21 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     )
     {
         var ctor = type.GetConstructors().First();
-        var width = ctor.GetParameters().Length;
+        var width = 0;
         var body = Expression.New(
             ctor,
             ctor.GetParameters()
-                .Select(
-                    p =>
-                        CreateValueReader(
-                            dataReader,
-                            GetOrdinal(dataReader, ordinalOffset, width, _identifierMapper.ToColumnName(p)),
-                            p.ParameterType
-                        )
-                )
+                .Select(p =>
+                {
+                    var (body, innerWidth) = CreateReader(
+                        dataReader,
+                        Expression.Add(ordinalOffset, Expression.Constant(width)),
+                        p.ParameterType,
+                        p.GetDbType()
+                    );
+                    width += innerWidth;
+                    return body;
+                })
         );
         return (body, width);
     }
@@ -105,7 +108,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
             ctor.GetParameters()
                 .Select(p =>
                 {
-                    var (reader, width) = ((Expression Reader, int Width))CreateReader(
+                    var (reader, width) = CreateReader(
                         dataReader,
                         Expression.Add(ordinalOffset, Expression.Constant(totalWidth)),
                         p.ParameterType

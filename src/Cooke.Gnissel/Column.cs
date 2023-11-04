@@ -3,7 +3,6 @@
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
-using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
 
 #endregion
@@ -14,29 +13,11 @@ public class Column<TTable>
 {
     private readonly Func<TTable, DbParameter> _parameterFactory;
 
-    public Column(IDbAdapter dbAdapter, string name, bool isIdentity, MemberInfo member)
+    public Column(string name, bool isIdentity, Func<TTable, DbParameter> parameterFactory)
     {
+        _parameterFactory = parameterFactory;
         Name = name;
         IsIdentity = isIdentity;
-        Member = member;
-
-        var tableItemParameter = Expression.Parameter(typeof(TTable));
-        var propertyInfo = (PropertyInfo)member;
-        _parameterFactory =
-            (Func<TTable, DbParameter>)
-                Expression
-                    .Lambda(
-                        Expression.GetFuncType(typeof(TTable), typeof(DbParameter)),
-                        Expression.Call(
-                            Expression.Constant(dbAdapter),
-                            nameof(dbAdapter.CreateParameter),
-                            new[] { propertyInfo.PropertyType },
-                            Expression.Property(tableItemParameter, propertyInfo),
-                            Expression.Constant(propertyInfo.GetDbType(), typeof(string))
-                        ),
-                        tableItemParameter
-                    )
-                    .Compile();
     }
 
     public DbParameter CreateParameter(TTable item) => _parameterFactory(item);
