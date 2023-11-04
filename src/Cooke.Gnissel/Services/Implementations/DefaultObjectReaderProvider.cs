@@ -55,7 +55,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     )
     {
         var primitiveOrdinal =
-            dbName != null ? GetOrdinal(dataReader, ordinalOffset, dbName) : ordinalOffset;
+            dbName != null ? GetOrdinalAfter(dataReader, ordinalOffset, dbName) : ordinalOffset;
         if (type.GetDbType() != null || dbType != null)
         {
             return (CreateValueReader(dataReader, primitiveOrdinal, type), 1);
@@ -130,7 +130,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
         Type type
     ) => Expression.Call(rowReader, "GetFieldValue", new[] { type }, ordinal);
 
-    private static Expression GetOrdinal(
+    private static Expression GetOrdinalAfter(
         Expression dataReader,
         Expression ordinalOffset,
         string name
