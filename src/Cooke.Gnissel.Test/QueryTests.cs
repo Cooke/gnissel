@@ -90,6 +90,21 @@ public class QueryTests
     }
 
     [Test]
+    public async Task QueryJoin()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Devices.Insert(new Device("my-device", "IPhone", 1));
+        var results = await _db.Query<(User, Device)>(
+                $"SELECT * FROM users JOIN devices ON users.id=devices.user_id"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(
+            new[] { (new User(1, "Bob", 25), new Device("my-device", "IPhone", 1)) },
+            results
+        );
+    }
+
+    [Test]
     [Timeout(1000)]
     public async Task CancelOperations()
     {

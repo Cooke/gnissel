@@ -13,24 +13,40 @@ namespace Cooke.Gnissel.Services.Implementations;
 
 public class DefaultObjectReaderProvider : IObjectReaderProvider
 {
+    private readonly IIdentifierMapper _identifierMapper;
     private readonly ConcurrentDictionary<Type, object> _readers =
         new ConcurrentDictionary<Type, object>();
 
-    public ObjectReader<TOut> GetReader<TOut>() =>
-        (ObjectReader<TOut>)_readers.GetOrAdd(typeof(TOut), _ => CreateReader<TOut>());
+    public DefaultObjectReaderProvider(IIdentifierMapper identifierMapper)
+    {
+        _identifierMapper = identifierMapper;
+    }
 
-    private static ObjectReader<TOut> CreateReader<TOut>()
+    public ObjectReader<TOut> GetReader<TOut>() => (ObjectReader<TOut>)GetReader(typeof(TOut));
+
+    private object GetReader(Type type) => _readers.GetOrAdd(type, _ => CreateReader(type));
+
+    private object CreateReader(Type type)
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
-        var (body, width) = CreateReader(dataReader, ordinalOffset, typeof(TOut));
+        var (body, width) = CreateReader(dataReader, ordinalOffset, type);
         var objectReader = Expression
-            .Lambda<ObjectReaderFunc<TOut>>(body, dataReader, ordinalOffset)
+            .Lambda(
+                typeof(ObjectReaderFunc<>).MakeGenericType(type),
+                body,
+                dataReader,
+                ordinalOffset
+            )
             .Compile();
-        return new ObjectReader<TOut>(objectReader, width);
+        return Activator.CreateInstance(
+            typeof(ObjectReader<>).MakeGenericType(type),
+            objectReader,
+            width
+        )!;
     }
 
-    private static (Expression Body, int Width) CreateReader(
+    private (Expression Body, int Width) CreateReader(
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
@@ -39,20 +55,21 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
     {
         if (type.GetDbType() != null || dbType != null)
         {
-            return (GetFieldValue(dataReader, ordinalOffset, type), 1);
+            return (CreateValueReader(dataReader, ordinalOffset, type), 1);
         }
 
         return type switch
         {
+            { IsPrimitive: true } => (CreateValueReader(dataReader, ordinalOffset, type), 1),
             { IsValueType: true } => CreatePositionalReader(dataReader, ordinalOffset, type),
             not null when type == typeof(string)
-                => (GetFieldValue(dataReader, ordinalOffset, typeof(string)), 1),
+                => (CreateValueReader(dataReader, ordinalOffset, typeof(string)), 1),
             { IsClass: true } => CreateNamedReader(dataReader, ordinalOffset, type),
             _ => throw new NotSupportedException($"Cannot map type {type}")
         };
     }
 
-    private static (Expression Body, int Width) CreateNamedReader(
+    private (Expression Body, int Width) CreateNamedReader(
         Expression dataReader,
         Expression ordinalOffset,
         Type type
@@ -65,9 +82,9 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
             ctor.GetParameters()
                 .Select(
                     p =>
-                        GetFieldValue(
+                        CreateValueReader(
                             dataReader,
-                            GetOrdinal(dataReader, ordinalOffset, width, p.Name),
+                            GetOrdinal(dataReader, ordinalOffset, width, _identifierMapper.ToColumnName(p)),
                             p.ParameterType
                         )
                 )
@@ -75,29 +92,32 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
         return (body, width);
     }
 
-    private static (Expression Body, int Width) CreatePositionalReader(
-        Expression rowReader,
+    private (Expression Body, int Width) CreatePositionalReader(
+        Expression dataReader,
         Expression ordinalOffset,
         Type type
     )
     {
         var ctor = type.GetConstructors().First();
+        int totalWidth = 0;
         var body = Expression.New(
             ctor,
             ctor.GetParameters()
-                .Select(
-                    (p, i) =>
-                        GetFieldValue(
-                            rowReader,
-                            Expression.Add(ordinalOffset, Expression.Constant(i)),
-                            p.ParameterType
-                        )
-                )
+                .Select(p =>
+                {
+                    var (reader, width) = ((Expression Reader, int Width))CreateReader(
+                        dataReader,
+                        Expression.Add(ordinalOffset, Expression.Constant(totalWidth)),
+                        p.ParameterType
+                    );
+                    totalWidth += width;
+                    return reader;
+                })
         );
-        return (body, ctor.GetParameters().Length);
+        return (body, totalWidth);
     }
 
-    private static MethodCallExpression GetFieldValue(
+    private static MethodCallExpression CreateValueReader(
         Expression rowReader,
         Expression ordinal,
         Type type

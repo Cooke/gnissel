@@ -68,6 +68,6 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public IDbAccessFactory CreateAccessFactory() => new NpgsqlDbAccessFactory(_dataSource);
 
-    public string GetColumnName(PropertyInfo propertyInfo) =>
-        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(propertyInfo.Name);
+    public IIdentifierMapper DefaultIdentifierMapper { get; } =
+        new DefaultPostgresIdentifierMapper();
 }

@@ -12,13 +12,15 @@ public interface IDbAdapter
 {
     string EscapeIdentifier(string identifier);
 
-    string GetColumnName(PropertyInfo propertyInfo);
-
     DbParameter CreateParameter<TValue>(TValue value, string? dbType = null);
 
     CompiledSql CompileSql(Sql sql);
 
     DbBatchCommand CreateBatchCommand();
+    
     DbCommand CreateCommand();
+    
     IDbAccessFactory CreateAccessFactory();
+    
+    IIdentifierMapper DefaultIdentifierMapper { get; }
 }

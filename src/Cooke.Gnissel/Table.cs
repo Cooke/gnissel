@@ -72,7 +72,7 @@ public class Table<T> : TableQueryStatement<T>
                 p =>
                     new Column<T>(
                         dbAdapter,
-                        dbAdapter.GetColumnName(p),
+                        dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
                         p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                             ?.Let(
                                 x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity
