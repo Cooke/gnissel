@@ -64,6 +64,10 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
 
         return type switch
         {
+            not null when type == typeof(DateTimeOffset)
+                => (CreateValueReader(dataReader, primitiveOrdinal, type), 1),
+            not null when type == typeof(DateTime)
+                => (CreateValueReader(dataReader, primitiveOrdinal, type), 1),
             { IsPrimitive: true } => (CreateValueReader(dataReader, primitiveOrdinal, type), 1),
             { IsValueType: true } => CreatePositionalReader(dataReader, ordinalOffset, type),
             not null when type == typeof(string)

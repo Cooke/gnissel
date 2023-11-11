@@ -87,6 +87,9 @@ public class DbContext
         await batch.ExecuteNonQueryAsync();
     }
 
+    public Task Transaction(params ExecuteStatement[] statements) =>
+        Transaction((IEnumerable<ExecuteStatement>)statements);
+
     public async Task Transaction(IEnumerable<ExecuteStatement> statements)
     {
         await using var connection = _dbAccessFactory.CreateConnection();

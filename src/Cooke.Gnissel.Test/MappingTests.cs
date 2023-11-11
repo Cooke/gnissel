@@ -35,6 +35,12 @@ public class MappingTests
                         name text,
                         user_id  integer
                     );
+
+                    create table dates
+                    (
+                        timestamp_with_timezone timestamp with time zone,
+                        timestamp_without_timezone timestamp without time zone
+                    );
                 """
             )
             .ExecuteNonQueryAsync();
@@ -45,6 +51,7 @@ public class MappingTests
     {
         _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
         _dataSource.CreateCommand("DROP TABLE devices").ExecuteNonQuery();
+        _dataSource.CreateCommand("DROP TABLE dates").ExecuteNonQuery();
     }
 
     [TearDown]
@@ -52,6 +59,7 @@ public class MappingTests
     {
         _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
         _dataSource.CreateCommand("TRUNCATE devices RESTART IDENTITY CASCADE").ExecuteNonQuery();
+        _dataSource.CreateCommand("TRUNCATE dates RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
     [Test]
@@ -96,6 +104,21 @@ public class MappingTests
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<string>($"SELECT name FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { "Bob" }, results);
+    }
+
+    [Test]
+    public async Task TimestampMapping()
+    {
+        DateTime withTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Utc);
+        DateTime withoutTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Local);
+        await _db.Execute(
+            $"INSERT INTO dates (timestamp_with_timezone, timestamp_without_timezone) VALUES ({withTimeZone}, {withoutTimeZone})"
+        );
+        var results = await _db.Query<(DateTime WithTimezone, DateTime WithoutTimezone)>(
+                $"SELECT timestamp_with_timezone, timestamp_without_timezone FROM dates"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { (withTimeZone, withoutTimeZone) }, results);
     }
 
     [Test]
