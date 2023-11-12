@@ -6,7 +6,6 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
-using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Statements;
@@ -17,7 +16,7 @@ namespace Cooke.Gnissel;
 public class Table<T> : TableQueryStatement<T>
 {
     private readonly IDbAdapter _dbAdapter;
-    private readonly IDbAccessFactory _dbAccessFactory;
+    private readonly IDbConnector _dbConnector;
     private readonly string _name = typeof(T).Name.ToLower() + "s";
     private readonly string _insertCommandText;
 
@@ -25,7 +24,7 @@ public class Table<T> : TableQueryStatement<T>
         : base(options, typeof(T).Name.ToLower() + "s", null, CreateColumns(options.DbAdapter))
     {
         _dbAdapter = options.DbAdapter;
-        _dbAccessFactory = options.DbAccessFactory;
+        _dbConnector = options.DbConnector;
 
         var sql = new Sql(20 + Columns.Length * 4);
         sql.AppendLiteral("INSERT INTO ");
@@ -53,14 +52,14 @@ public class Table<T> : TableQueryStatement<T>
             firstParam = false;
         }
         sql.AppendLiteral(")");
-        _insertCommandText = _dbAdapter.CompileSql(sql).CommandText;
+        _insertCommandText = _dbAdapter.RenderSql(sql).CommandText;
     }
 
     public Table(Table<T> source, DbOptions options)
         : base(options, source._name, null, source.Columns)
     {
         _dbAdapter = options.DbAdapter;
-        _dbAccessFactory = options.DbAccessFactory;
+        _dbConnector = options.DbConnector;
         _insertCommandText = source._insertCommandText;
     }
 
@@ -164,11 +163,11 @@ public class Table<T> : TableQueryStatement<T>
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity);
 
-        var sql = new CompiledSql(
+        var sql = new RenderedSql(
             _insertCommandText,
             insertColumns.Select(col => col.CreateParameter(item)).ToArray()
         );
-        return new ExecuteStatement(_dbAccessFactory, sql, CancellationToken.None);
+        return new ExecuteStatement(_dbConnector, sql, CancellationToken.None);
     }
 
     [Pure]
@@ -199,12 +198,12 @@ public class Table<T> : TableQueryStatement<T>
             sb.Append(") ");
         }
 
-        var sql = new CompiledSql(
+        var sql = new RenderedSql(
             sb.ToString(),
             itemsArray
                 .SelectMany(item => insertColumns.Select(col => col.CreateParameter(item)))
                 .ToArray()
         );
-        return new ExecuteStatement(_dbAccessFactory, sql, CancellationToken.None);
+        return new ExecuteStatement(_dbConnector, sql, CancellationToken.None);
     }
 }

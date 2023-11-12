@@ -1,14 +1,13 @@
 using System.Data.Common;
-using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel.CommandFactories;
+namespace Cooke.Gnissel.Services.Implementations;
 
-public sealed class ConnectionDbAccessFactory : IDbAccessFactory
+public sealed class FixedConnectionDbConnector : IDbConnector
 {
     private readonly DbConnection _connection;
     private readonly IDbAdapter _adapter;
 
-    public ConnectionDbAccessFactory(DbConnection connection, IDbAdapter adapter)
+    public FixedConnectionDbConnector(DbConnection connection, IDbAdapter adapter)
     {
         _connection = connection;
         _adapter = adapter;

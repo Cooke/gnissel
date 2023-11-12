@@ -2,7 +2,7 @@
 
 public class DbNameAttribute : Attribute
 {
-    public string DbName { get; init; }
+    public string DbName { get; }
 
     public DbNameAttribute(string dbName)
     {

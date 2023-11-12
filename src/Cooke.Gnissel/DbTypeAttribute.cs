@@ -2,7 +2,7 @@
 
 public class DbTypeAttribute : Attribute
 {
-    public string DbType { get; init; }
+    public string DbType { get; }
 
     public DbTypeAttribute(string dbType)
     {

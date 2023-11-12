@@ -3,8 +3,9 @@
 using System.Collections.Immutable;
 using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
-using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Services.Implementations;
+using Cooke.Gnissel.Utils;
 
 #endregion
 
@@ -16,9 +17,8 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
     private readonly string _fromTable;
     private readonly string? _condition;
     private readonly ImmutableArray<Column<T>> _columns;
-    private readonly IRowReader _rowReader;
-    private readonly IDbAccessFactory _dbAccessFactory;
-    private readonly IQueryExecutor _queryExecutor;
+    private readonly IDbConnector _dbConnector;
+    private readonly IObjectReaderProvider _objectReaderProvider;
 
     public TableQueryStatement(
         DbOptions options,
@@ -27,10 +27,9 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
         ImmutableArray<Column<T>> columns
     )
     {
+        _objectReaderProvider = options.ObjectReaderProvider;
         _dbAdapter = options.DbAdapter;
-        _rowReader = options.RowReader;
-        _dbAccessFactory = options.DbAccessFactory;
-        _queryExecutor = options.QueryExecutor;
+        _dbConnector = options.DbConnector;
         _fromTable = fromTable;
         _condition = condition;
         Columns = columns;
@@ -88,21 +87,19 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
 
     public IAsyncEnumerator<T> GetAsyncEnumerator(
         CancellationToken cancellationToken = new CancellationToken()
-    )
-    {
-        return ExecuteAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
-    }
+    ) =>
+        ExecuteAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
 
     public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral("SELECT * FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(_fromTable));
-        return _queryExecutor.Query(
-            _dbAdapter.CompileSql(sql),
-            _rowReader.Read<T>,
-            _dbAccessFactory,
-            cancellationToken
+        var objectReader = _objectReaderProvider.Get<T>();
+        return new QueryStatement<T>(
+            _dbAdapter.RenderSql(sql),
+            (reader, ct) => reader.ReadRows(objectReader, ct),
+            _dbConnector
         );
     }
 

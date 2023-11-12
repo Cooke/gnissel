@@ -103,7 +103,7 @@ public class QueryTests
             results
         );
     }
-
+    
     [Test]
     [Timeout(1000)]
     public async Task CancelOperations()
@@ -113,7 +113,7 @@ public class QueryTests
         for (var i = 0; i < 100; i++)
         {
             using var cts = new CancellationTokenSource();
-            var enumerator = _db.Query<(int, string, int)>($"SELECT * FROM users", cts.Token)
+            var enumerator = _db.Query<(int, string, int)>($"SELECT * FROM users")
                 .GetAsyncEnumerator(cts.Token);
             await enumerator.MoveNextAsync(cts.Token);
             cts.Cancel();

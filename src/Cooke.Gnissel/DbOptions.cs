@@ -1,6 +1,5 @@
 #region
 
-using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 
@@ -10,19 +9,21 @@ namespace Cooke.Gnissel;
 
 public record DbOptions(
     IDbAdapter DbAdapter,
-    IRowReader RowReader,
-    IQueryExecutor QueryExecutor,
-    IDbAccessFactory DbAccessFactory
+    IObjectReaderProvider ObjectReaderProvider,
+    IDbConnector DbConnector
 )
 {
     public DbOptions(IDbAdapter dbAdapter)
-        : this(dbAdapter, new DefaultRowReader(new DefaultObjectReaderProvider(dbAdapter.DefaultIdentifierMapper))) { }
+        : this(dbAdapter, new DefaultObjectReaderProvider(dbAdapter.DefaultIdentifierMapper))
+    {
+    }
 
-    public DbOptions(IDbAdapter dbAdapter, IRowReader rowReader)
+    public DbOptions(IDbAdapter dbAdapter, IObjectReaderProvider objectReaderProvider)
         : this(
             dbAdapter,
-            rowReader,
-            new DefaultQueryExecutor(),
-            dbAdapter.CreateAccessFactory()
-        ) { }
+            objectReaderProvider,
+            dbAdapter.CreateConnector()
+        )
+    {
+    }
 }

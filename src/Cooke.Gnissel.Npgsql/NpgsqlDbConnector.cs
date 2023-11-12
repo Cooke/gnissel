@@ -1,14 +1,14 @@
 using System.Data.Common;
-using Cooke.Gnissel.CommandFactories;
+using Cooke.Gnissel.Services;
 using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public class NpgsqlDbAccessFactory : IDbAccessFactory
+public class NpgsqlDbConnector : IDbConnector
 {
     private readonly NpgsqlDataSource _dataSource;
 
-    public NpgsqlDbAccessFactory(NpgsqlDataSource dataSource)
+    public NpgsqlDbConnector(NpgsqlDataSource dataSource)
     {
         _dataSource = dataSource;
     }

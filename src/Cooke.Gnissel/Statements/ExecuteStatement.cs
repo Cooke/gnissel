@@ -1,27 +1,26 @@
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel.CommandFactories;
-using Cooke.Gnissel.Statements;
+using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel.Services.Implementations;
+namespace Cooke.Gnissel.Statements;
 
 public class ExecuteStatement
 {
-    private readonly IDbAccessFactory _dbAccessFactory;
+    private readonly IDbConnector _dbConnector;
     private readonly CancellationToken _cancellationToken;
-    private readonly CompiledSql _compiledSql;
+    private readonly RenderedSql _renderedSql;
 
     public ExecuteStatement(
-        IDbAccessFactory dbAccessFactory,
-        CompiledSql compiledSql,
+        IDbConnector dbConnector,
+        RenderedSql renderedSql,
         CancellationToken cancellationToken
     )
     {
-        _compiledSql = compiledSql;
-        _dbAccessFactory = dbAccessFactory;
+        _renderedSql = renderedSql;
+        _dbConnector = dbConnector;
         _cancellationToken = cancellationToken;
     }
 
-    public CompiledSql CompiledSql => _compiledSql;
+    public RenderedSql RenderedSql => _renderedSql;
 
     public ValueTaskAwaiter<int> GetAwaiter()
     {
@@ -30,9 +29,9 @@ public class ExecuteStatement
 
     public async ValueTask<int> ExecuteAsync()
     {
-        await using var cmd = _dbAccessFactory.CreateCommand();
-        cmd.CommandText = _compiledSql.CommandText;
-        cmd.Parameters.AddRange(_compiledSql.Parameters);
+        await using var cmd = _dbConnector.CreateCommand();
+        cmd.CommandText = _renderedSql.CommandText;
+        cmd.Parameters.AddRange(_renderedSql.Parameters);
         return await cmd.ExecuteNonQueryAsync(_cancellationToken);
     }
 }

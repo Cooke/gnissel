@@ -3,7 +3,6 @@
 using System.Data.Common;
 using System.Reflection;
 using System.Text;
-using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Npgsql;
 using Npgsql.NameTranslation;
@@ -28,7 +27,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
             ? new NpgsqlParameter { Value = value, DataTypeName = dbType }
             : new NpgsqlParameter<TValue> { TypedValue = value, DataTypeName = dbType };
 
-    public CompiledSql CompileSql(Sql sql)
+    public RenderedSql RenderSql(Sql sql)
     {
         var sb = new StringBuilder(
             sql.Fragments.Sum(
@@ -59,14 +58,14 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
             }
         }
 
-        return new CompiledSql(sb.ToString(), parameters.ToArray());
+        return new RenderedSql(sb.ToString(), parameters.ToArray());
     }
 
     public DbBatchCommand CreateBatchCommand() => new NpgsqlBatchCommand();
 
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
-    public IDbAccessFactory CreateAccessFactory() => new NpgsqlDbAccessFactory(_dataSource);
+    public IDbConnector CreateConnector() => new NpgsqlDbConnector(_dataSource);
 
     public IIdentifierMapper DefaultIdentifierMapper { get; } =
         new DefaultPostgresIdentifierMapper();

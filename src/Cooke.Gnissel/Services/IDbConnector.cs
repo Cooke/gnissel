@@ -1,8 +1,8 @@
 using System.Data.Common;
 
-namespace Cooke.Gnissel.CommandFactories;
+namespace Cooke.Gnissel.Services;
 
-public interface IDbAccessFactory
+public interface IDbConnector
 {
     DbCommand CreateCommand();
 

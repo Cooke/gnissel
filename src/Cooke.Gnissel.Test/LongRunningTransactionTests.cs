@@ -1,8 +1,8 @@
 #region
 
 using System.Data.Common;
-using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Npgsql;
 
 #endregion
@@ -140,13 +140,13 @@ public class LongRunningTransactionTests
         )
         {
             var dbAdapter = _options.DbAdapter;
-            await using var connection = _options.DbAccessFactory.CreateConnection();
+            await using var connection = _options.DbConnector.CreateConnection();
             await connection.OpenAsync(cancellationToken);
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            var transactionCommandFactory = new ConnectionDbAccessFactory(connection, dbAdapter);
+            var transactionCommandFactory = new FixedConnectionDbConnector(connection, dbAdapter);
             var transactionDbOptions = _options with
             {
-                DbAccessFactory = transactionCommandFactory
+                DbConnector = transactionCommandFactory
             };
             await action(new TestDbContext(this, transactionDbOptions));
             await transaction.CommitAsync(cancellationToken);

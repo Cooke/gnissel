@@ -2,10 +2,10 @@
 
 using System.Data.Common;
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel.CommandFactories;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Statements;
+using Cooke.Gnissel.Utils;
 
 #endregion
 
@@ -13,75 +13,50 @@ namespace Cooke.Gnissel;
 
 public class DbContext
 {
-    private readonly IRowReader _rowReader;
     private readonly IDbAdapter _dbAdapter;
-    private readonly IDbAccessFactory _dbAccessFactory;
-    private readonly IQueryExecutor _queryExecutor;
+    private readonly IDbConnector _dbConnector;
+    private readonly IObjectReaderProvider _objectReaderProvider;
 
     public DbContext(DbOptions dbOptions)
     {
-        _rowReader = dbOptions.RowReader;
         _dbAdapter = dbOptions.DbAdapter;
-        _dbAccessFactory = dbOptions.DbAccessFactory;
-        _queryExecutor = dbOptions.QueryExecutor;
+        _dbConnector = dbOptions.DbConnector;
+        _objectReaderProvider = dbOptions.ObjectReaderProvider;
     }
 
     public IAsyncEnumerable<TOut> Query<TOut>(
-        Sql sql,
-        CancellationToken cancellationToken = default
-    ) => Query(sql, _rowReader.Read<TOut>, cancellationToken);
-
-    public IAsyncEnumerable<TOut> Query<TOut>(
-        Sql sql,
-        Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> mapper,
-        CancellationToken cancellationToken = default
+        Sql sql
     ) =>
-        _queryExecutor.Query(
-            _dbAdapter.CompileSql(sql),
-            mapper,
-            _dbAccessFactory,
-            cancellationToken
-        );
+        _objectReaderProvider.Get<TOut>().Let(objectReader =>
+            new QueryStatement<TOut>(
+                _dbAdapter.RenderSql(sql),
+                (reader, ct) => reader.ReadRows(objectReader, ct),
+                _dbConnector
+            ));
 
     public IAsyncEnumerable<TOut> Query<TOut>(
         Sql sql,
-        Func<DbDataReader, TOut> mapper,
-        CancellationToken cancellationToken = default
-    )
-    {
-        return _queryExecutor.Query(
-            _dbAdapter.CompileSql(sql),
-            Mapper,
-            _dbAccessFactory,
-            cancellationToken
+        Func<DbDataReader, TOut> mapper
+    ) =>
+        new QueryStatement<TOut>(
+            _dbAdapter.RenderSql(sql),
+            (reader, ct) => reader.ReadRows(mapper, ct),
+            _dbConnector
         );
-
-        async IAsyncEnumerable<TOut> Mapper(
-            DbDataReader reader,
-            [EnumeratorCancellation] CancellationToken cancellationToken
-        )
-        {
-            while (await reader.ReadAsync(cancellationToken))
-            {
-                yield return mapper(reader);
-            }
-        }
-    }
 
     public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
-        new ExecuteStatement(_dbAccessFactory, _dbAdapter.CompileSql(sql), cancellationToken);
+        new ExecuteStatement(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
 
     public Task Batch(params ExecuteStatement[] statements) =>
         Batch((IEnumerable<ExecuteStatement>)statements);
 
     public async Task Batch(IEnumerable<ExecuteStatement> statements)
     {
-        await using var batch = _dbAccessFactory.CreateBatch();
-        foreach (var statement in statements)
-        {
+        await using var batch = _dbConnector.CreateBatch();
+        foreach (var statement in statements) {
             var batchCommand = _dbAdapter.CreateBatchCommand();
-            batchCommand.CommandText = statement.CompiledSql.CommandText;
-            batchCommand.Parameters.AddRange(statement.CompiledSql.Parameters);
+            batchCommand.CommandText = statement.RenderedSql.CommandText;
+            batchCommand.Parameters.AddRange(statement.RenderedSql.Parameters);
             batch.BatchCommands.Add(batchCommand);
         }
         await batch.ExecuteNonQueryAsync();
@@ -92,13 +67,12 @@ public class DbContext
 
     public async Task Transaction(IEnumerable<ExecuteStatement> statements)
     {
-        await using var connection = _dbAccessFactory.CreateConnection();
+        await using var connection = _dbConnector.CreateConnection();
         await using var batch = connection.CreateBatch();
-        foreach (var statement in statements)
-        {
+        foreach (var statement in statements) {
             var batchCommand = _dbAdapter.CreateBatchCommand();
-            batchCommand.CommandText = statement.CompiledSql.CommandText;
-            batchCommand.Parameters.AddRange(statement.CompiledSql.Parameters);
+            batchCommand.CommandText = statement.RenderedSql.CommandText;
+            batchCommand.Parameters.AddRange(statement.RenderedSql.Parameters);
             batch.BatchCommands.Add(batchCommand);
         }
         await connection.OpenAsync();

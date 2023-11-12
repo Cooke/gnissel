@@ -2,7 +2,6 @@
 
 using System.Data.Common;
 using System.Reflection;
-using Cooke.Gnissel.CommandFactories;
 
 #endregion
 
@@ -14,13 +13,13 @@ public interface IDbAdapter
 
     DbParameter CreateParameter<TValue>(TValue value, string? dbType = null);
 
-    CompiledSql CompileSql(Sql sql);
+    RenderedSql RenderSql(Sql sql);
 
     DbBatchCommand CreateBatchCommand();
     
     DbCommand CreateCommand();
     
-    IDbAccessFactory CreateAccessFactory();
+    IDbConnector CreateConnector();
     
     IIdentifierMapper DefaultIdentifierMapper { get; }
 }

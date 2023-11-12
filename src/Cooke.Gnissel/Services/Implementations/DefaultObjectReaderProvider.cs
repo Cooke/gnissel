@@ -21,7 +21,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
         _identifierMapper = identifierMapper;
     }
 
-    public ObjectReader<TOut> GetReader<TOut>() => (ObjectReader<TOut>)GetReader(typeof(TOut));
+    public ObjectReader<TOut> Get<TOut>() => (ObjectReader<TOut>)GetReader(typeof(TOut));
 
     private object GetReader(Type type) => _readers.GetOrAdd(type, _ => CreateReader(type));
 
