@@ -6,36 +6,41 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 
 - Thread safe database context (can be used as a singleton)
 - Async enumerable interface (combines well with System.Async.Linq)
-- Utilizes the new DataSource API added in .NET 7
+- Utilizes the DataSource API introduced in .NET 7
 - No change tracking
 - No navigation properties
 
 ## Limitations
 
-- Currently only Postgres via Npgsql is supported
+- Currently only a Postgres adapter exists
 - Not battle tested
 
 ## Installation
 
 `dotnet add Cooke.Gnissel`
 
-For postgres support:
+Postgres adapter:
 `dotnet add Cooke.Gnissel.Npgsql`
 
-Recommended addition (examples below uses this library):
+Recommended addition:
 `dotnet add System.Async.Linq`
 
 ## Setup
 
-Postgres:
+Setup adapter (provider specific):
 
 ```csharp
 var connectionString = "...";
 var adapter = new NpgsqlDbAdapter(NpgsqlDataSource.Create(connectionString));
+```
+
+Setup DbContext (general)
+
+```csharp
 var dbContext = new DbContext(new DbOptions(adapter));
 ```
 
-## Examples
+## Usage examples
 
 #### Example types
 
