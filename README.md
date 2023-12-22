@@ -9,7 +9,7 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 - Utilizes the DataSource API introduced in .NET 7
 - No change tracking
 - No navigation properties
-- Typed query support avaiable in [PlusPlus package]
+- Typed query support avaiable in [PlusPlus package](#plusplus-package)
 
 ## Limitations
 
