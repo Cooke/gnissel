@@ -1,11 +1,14 @@
-﻿using System.Linq.Expressions;
+﻿using System.Data.Common;
+using System.Linq.Expressions;
 using System.Reflection;
+using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Orm;
 
 public static class ExpressionRenderer
 {
     public static string RenderExpression(
+        IIdentifierMapper identifierMapper,
         Expression expression,
         ParameterExpression parameterExpression,
         IReadOnlyCollection<IColumn> columns
@@ -13,7 +16,7 @@ public static class ExpressionRenderer
         expression switch
         {
             BinaryExpression binaryExpression
-                => $"{RenderExpression(binaryExpression.Left, parameterExpression, columns)} {RenderBinaryOperator(binaryExpression.NodeType)} {RenderExpression(binaryExpression.Right, parameterExpression, columns)}",
+                => $"{RenderExpression(identifierMapper, binaryExpression.Left, parameterExpression, columns)} {RenderBinaryOperator(binaryExpression.NodeType)} {RenderExpression(identifierMapper, binaryExpression.Right, parameterExpression, columns)}",
 
             ConstantExpression constExp => RenderConstant(constExp.Value),
 
@@ -27,6 +30,19 @@ public static class ExpressionRenderer
                 Member: FieldInfo field
             }
                 => RenderConstant(field.GetValue(constantExpression.Value)),
+
+            NewExpression newExpression
+                => string.Join(
+                    ", ",
+                    newExpression.Arguments.Select(
+                        (arg, i) =>
+                            RenderExpression(identifierMapper, arg, parameterExpression, columns)
+                            + " AS "
+                            + identifierMapper.ToColumnName(
+                                newExpression.Constructor!.GetParameters()[i]
+                            )
+                    )
+                ),
 
             _ => throw new NotSupportedException()
         };

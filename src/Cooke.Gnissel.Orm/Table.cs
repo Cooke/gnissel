@@ -21,7 +21,7 @@ public class Table<T> : IAsyncEnumerable<T>
     {
         var dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
-        Columns = CreateColumns(options.DbAdapter);
+        Columns = CreateColumns(options);
         _whereQuery = new WhereQuery<T>(options, Name, null, Columns);
         _insertCommandText = dbAdapter.RenderSql(CreateInsertSql(dbAdapter)).CommandText;
     }
@@ -38,7 +38,7 @@ public class Table<T> : IAsyncEnumerable<T>
 
     public string Name { get; } = typeof(T).Name.ToLower() + "s";
 
-    private static ImmutableArray<Column<T>> CreateColumns(IDbAdapter dbAdapter)
+    private static ImmutableArray<Column<T>> CreateColumns(DbOptions dbOptions)
     {
         var objectParameter = Expression.Parameter(typeof(T));
         return typeof(T)
@@ -46,7 +46,7 @@ public class Table<T> : IAsyncEnumerable<T>
             .SelectMany(
                 p =>
                     CreateColumns(
-                        dbAdapter,
+                        dbOptions,
                         p,
                         objectParameter,
                         Expression.Property(objectParameter, p)
@@ -56,16 +56,16 @@ public class Table<T> : IAsyncEnumerable<T>
     }
 
     private static IEnumerable<Column<T>> CreateColumns(
-        IDbAdapter dbAdapter,
+        DbOptions dbOptions,
         PropertyInfo p,
         ParameterExpression rootExpression,
         Expression memberExpression
     )
     {
         if (p.GetDbType() != null)
-            yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
+            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression);
         else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-            yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
+            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression);
         else if (p.PropertyType.IsClass)
             foreach (
                 var column in p.PropertyType
@@ -73,7 +73,7 @@ public class Table<T> : IAsyncEnumerable<T>
                     .SelectMany<PropertyInfo, Column<T>>(
                         innerProperty =>
                             CreateColumns(
-                                dbAdapter,
+                                dbOptions,
                                 innerProperty,
                                 rootExpression,
                                 Expression.Property(memberExpression, innerProperty)
@@ -82,22 +82,27 @@ public class Table<T> : IAsyncEnumerable<T>
             )
                 yield return column;
         else
-            yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
+            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression);
     }
 
     private static Column<T> CreateColumn(
-        IDbAdapter dbAdapter,
+        DbOptions dbOptions,
         PropertyInfo p,
         ParameterExpression objectExpression,
         Expression memberExpression
     )
     {
         return new Column<T>(
-            p.GetDbName() ?? dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
+            p.GetDbName() ?? dbOptions.DbAdapter.DefaultIdentifierMapper.ToColumnName(p),
             p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                 ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
             p,
-            CreateParameterFactory(dbAdapter, memberExpression, p.GetDbType(), objectExpression)
+            CreateParameterFactory(
+                dbOptions.DbAdapter,
+                memberExpression,
+                p.GetDbType(),
+                objectExpression
+            )
         );
     }
 

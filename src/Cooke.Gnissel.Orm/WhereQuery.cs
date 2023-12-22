@@ -44,7 +44,12 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         new(
             _options,
             _table,
-            ExpressionRenderer.RenderExpression(predicate.Body, predicate.Parameters[0], Columns),
+            ExpressionRenderer.RenderExpression(
+                _options.IdentifierMapper,
+                predicate.Body,
+                predicate.Parameters[0],
+                Columns
+            ),
             Columns
         );
 
@@ -54,6 +59,7 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
             new[]
             {
                 ExpressionRenderer.RenderExpression(
+                    _options.IdentifierMapper,
                     selector.Body,
                     selector.Parameters.Single(),
                     Columns
