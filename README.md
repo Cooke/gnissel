@@ -9,6 +9,7 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 - Utilizes the DataSource API introduced in .NET 7
 - No change tracking
 - No navigation properties
+- Typed query support avaiable in [PlusPlus package](#plusplus-package)
 
 ## Limitations
 
@@ -122,4 +123,58 @@ Currently only non queries are supported.
 await dbContext.Batch(
     dbContext.Execute($"INSERT INTO users(name) VALUES('foo')"),
     dbContext.Execute($"INSERT INTO users(name) VALUES('bar')"));
+```
+
+# PlusPlus package
+
+The PlusPlus package includes addtional features like typed quries.
+
+> [!NOTE]
+> The PlusPlus package is in "alpha state" and may be changed significantly. Depending on the outcome it may be merged into the main package, dropped or left as is.
+
+## Installation
+`dotnet add Cooke.Gnissel.PlusPlus`
+
+## Setup
+Adapter setup is the same as in regular Gnissel.
+
+Create a custom DbContext
+
+```csharp
+public record User(int Id, string Name);
+public record Device(int Id, string Name, int UserId);
+
+public class AppDbContext : DbContext
+{
+    public AppDbContext(DbOptions options) : base(options)
+    {
+        Users = new Table<User>(options);
+        Devices = new Table<Device>(options);
+    }
+
+    public Table<User> Users { get; }
+
+    public Table<Device> Devices { get; }
+}
+```
+
+```csharp
+var dbContext = new AppDbContext(new DbOptions(adapter));
+```
+
+## Usage examples
+
+#### Query
+
+```csharp
+var allUsers = await dbContext.Users.ToArrayAsync();
+var usersWithNameBob = await dbContext.Users.Where(x => x.Name == "Bob").ToArrayAsync();
+var allUserNames = await dbContext.Users.Select(x => x.Name).ToArrayAsync();
+var partialDevcies = await dbContext.Devices.Select(x => new { x.Id, DeviceName = x.Name }).ToArrayAsync();
+```
+
+#### Insert
+
+```csharp
+await dbContext.Users.Insert(new User(0, "Bob"));
 ```
