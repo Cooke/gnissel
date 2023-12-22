@@ -30,7 +30,7 @@ public class Table<T> : IAsyncEnumerable<T>
 
     public Table(Table<T> source, DbOptions options)
     {
-        var dbAdapter = options.DbAdapter;
+        _whereQuery = source._whereQuery;
         _dbConnector = options.DbConnector;
         _insertCommandText = source._insertCommandText;
         Columns = source.Columns;

@@ -5,6 +5,13 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Henrik Cooke</Authors>
+        <Version>0.1.0</Version>
+        <Description>An alternative database mapper for .NET, instead of Dapper or Entity Framework.</Description>
+        <Copyright>Cooke Software Solutions AB</Copyright>
+        <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/Cooke/gnissel?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <PackageTags>ORM, SQL, database</PackageTags>
+        <Company>Cooke Software Solutions AB</Company>
     </PropertyGroup>
 
     <ItemGroup>

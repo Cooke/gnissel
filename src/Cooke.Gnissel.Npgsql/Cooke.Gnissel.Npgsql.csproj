@@ -4,6 +4,13 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <Authors>Henrik Cooke</Authors>
+        <Description>Postgres/Npgsql adapter for Cooke.Gnissel ORM.  </Description>
+        <Copyright>Cooke Software Solutions AB</Copyright>
+        <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
+        <PackageLicenseUrl>https://github.com/Cooke/gnissel?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <Company>Cooke Software Solutions AB</Company>
+        <Version>0.1.0</Version>
     </PropertyGroup>
 
     <ItemGroup>
