@@ -129,6 +129,9 @@ await dbContext.Batch(
 
 The PlusPlus package includes addtional features like typed quries.
 
+> [!NOTE]
+> The PlusPlus package is in "alpha state" and may be changed significantly. Depending on the outcome it may be merged into the main package, dropped or left as is.
+
 ## Installation
 `dotnet add Cooke.Gnissel.PlusPlus`
 
