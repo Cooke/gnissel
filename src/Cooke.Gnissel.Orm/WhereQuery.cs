@@ -37,7 +37,7 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         Columns = columns;
     }
 
-    public ImmutableArray<Column<T>> Columns { get; init; }
+    public ImmutableArray<Column<T>> Columns { get; }
 
     [Pure]
     public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) =>
@@ -49,7 +49,7 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         );
 
     [Pure]
-    public QueryStatement<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+    public RetrieveQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
         CreateQuery<TOut>(
             new[]
             {
@@ -61,17 +61,16 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
             }
         );
 
-    private QueryStatement<TOut> CreateQuery<TOut>(string[] expressions)
-    {
-        return new(
+    [Pure]
+    private RetrieveQuery<TOut> CreateQuery<TOut>(string[] expressions) =>
+        new(
             _dbAdapter.RenderSql(CreateSql(expressions)),
             _objectReaderProvider.GetReaderFunc<TOut>(),
             _dbConnector
         );
-    }
 
-    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default) =>
-        CreateQuery<T>(new[] { "*" });
+    [Pure]
+    public IAsyncEnumerable<T> CreateQuery() => CreateQuery<T>(new[] { "*" });
 
     private Sql CreateSql(IEnumerable<string> expressions)
     {
@@ -90,5 +89,5 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
     }
 
     public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new()) =>
-        ExecuteAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
+        CreateQuery().GetAsyncEnumerator(cancellationToken);
 }

@@ -23,32 +23,7 @@ public class Table<T> : IAsyncEnumerable<T>
         _dbConnector = options.DbConnector;
         Columns = CreateColumns(options.DbAdapter);
         _whereQuery = new WhereQuery<T>(options, Name, null, Columns);
-
-        var sql = new Sql(20 + Columns.Length * 4);
-        sql.AppendLiteral("INSERT INTO ");
-        sql.AppendLiteral(dbAdapter.EscapeIdentifier(Name));
-        sql.AppendLiteral(" (");
-        var firstColumn = true;
-        foreach (var column in Columns.Where(x => !x.IsIdentity))
-        {
-            if (!firstColumn)
-                sql.AppendLiteral(", ");
-            sql.AppendLiteral(dbAdapter.EscapeIdentifier(column.Name));
-            firstColumn = false;
-        }
-
-        sql.AppendLiteral(") VALUES(");
-        var firstParam = true;
-        foreach (var dbParameter in Columns.Where(x => !x.IsIdentity))
-        {
-            if (!firstParam)
-                sql.AppendLiteral(", ");
-            sql.AppendFormatted(dbParameter);
-            firstParam = false;
-        }
-
-        sql.AppendLiteral(")");
-        _insertCommandText = dbAdapter.RenderSql(sql).CommandText;
+        _insertCommandText = dbAdapter.RenderSql(CreateInsertSql(dbAdapter)).CommandText;
     }
 
     public ImmutableArray<Column<T>> Columns { get; set; }
@@ -148,7 +123,7 @@ public class Table<T> : IAsyncEnumerable<T>
     }
 
     [Pure]
-    public ExecuteStatement Insert(T item)
+    public ExecuteQuery Insert(T item)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity);
 
@@ -156,17 +131,17 @@ public class Table<T> : IAsyncEnumerable<T>
             _insertCommandText,
             insertColumns.Select(col => col.CreateParameter(item)).ToArray()
         );
-        return new ExecuteStatement(_dbConnector, sql, CancellationToken.None);
+        return new ExecuteQuery(_dbConnector, sql, CancellationToken.None);
     }
 
     [Pure]
-    public ExecuteStatement Insert(params T[] items)
+    public ExecuteQuery Insert(params T[] items)
     {
         return Insert((IEnumerable<T>)items);
     }
 
     [Pure]
-    public ExecuteStatement Insert(IEnumerable<T> items)
+    public ExecuteQuery Insert(IEnumerable<T> items)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity).ToArray();
         var itemsArray = items as ICollection<T> ?? items.ToArray();
@@ -195,13 +170,43 @@ public class Table<T> : IAsyncEnumerable<T>
                 .SelectMany(item => insertColumns.Select(col => col.CreateParameter(item)))
                 .ToArray()
         );
-        return new ExecuteStatement(_dbConnector, sql, CancellationToken.None);
+        return new ExecuteQuery(_dbConnector, sql, CancellationToken.None);
+    }
+
+    private Sql CreateInsertSql(IDbAdapter dbAdapter)
+    {
+        var sql = new Sql(20 + Columns.Length * 4);
+        sql.AppendLiteral("INSERT INTO ");
+        sql.AppendLiteral(dbAdapter.EscapeIdentifier(Name));
+        sql.AppendLiteral(" (");
+        var firstColumn = true;
+        foreach (var column in Columns.Where(x => !x.IsIdentity))
+        {
+            if (!firstColumn)
+                sql.AppendLiteral(", ");
+            sql.AppendLiteral(dbAdapter.EscapeIdentifier(column.Name));
+            firstColumn = false;
+        }
+
+        sql.AppendLiteral(") VALUES(");
+        var firstParam = true;
+        foreach (var dbParameter in Columns.Where(x => !x.IsIdentity))
+        {
+            if (!firstParam)
+                sql.AppendLiteral(", ");
+            sql.AppendFormatted(dbParameter);
+            firstParam = false;
+        }
+
+        sql.AppendLiteral(")");
+        return sql;
     }
 
     [Pure]
-    public QueryStatement<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+    public RetrieveQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
         _whereQuery.Select(selector);
 
+    [Pure]
     public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) => _whereQuery.Where(predicate);
 
     public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>

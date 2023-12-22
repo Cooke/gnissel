@@ -3,13 +3,13 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Statements;
 
-public class ExecuteStatement
+public class ExecuteQuery
 {
     private readonly IDbConnector _dbConnector;
     private readonly CancellationToken _cancellationToken;
     private readonly RenderedSql _renderedSql;
 
-    public ExecuteStatement(
+    public ExecuteQuery(
         IDbConnector dbConnector,
         RenderedSql renderedSql,
         CancellationToken cancellationToken

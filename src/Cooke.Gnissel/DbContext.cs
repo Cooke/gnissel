@@ -28,7 +28,7 @@ public class DbContext
         Sql sql
     ) =>
         _objectReaderProvider.Get<TOut>().Let(objectReader =>
-            new QueryStatement<TOut>(
+            new RetrieveQuery<TOut>(
                 _dbAdapter.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
                 _dbConnector
@@ -38,19 +38,19 @@ public class DbContext
         Sql sql,
         Func<DbDataReader, TOut> mapper
     ) =>
-        new QueryStatement<TOut>(
+        new RetrieveQuery<TOut>(
             _dbAdapter.RenderSql(sql),
             (reader, ct) => reader.ReadRows(mapper, ct),
             _dbConnector
         );
 
-    public ExecuteStatement Execute(Sql sql, CancellationToken cancellationToken = default) =>
-        new ExecuteStatement(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
+    public ExecuteQuery Execute(Sql sql, CancellationToken cancellationToken = default) =>
+        new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
 
-    public Task Batch(params ExecuteStatement[] statements) =>
-        Batch((IEnumerable<ExecuteStatement>)statements);
+    public Task Batch(params ExecuteQuery[] statements) =>
+        Batch((IEnumerable<ExecuteQuery>)statements);
 
-    public async Task Batch(IEnumerable<ExecuteStatement> statements)
+    public async Task Batch(IEnumerable<ExecuteQuery> statements)
     {
         await using var batch = _dbConnector.CreateBatch();
         foreach (var statement in statements) {
@@ -62,10 +62,10 @@ public class DbContext
         await batch.ExecuteNonQueryAsync();
     }
 
-    public Task Transaction(params ExecuteStatement[] statements) =>
-        Transaction((IEnumerable<ExecuteStatement>)statements);
+    public Task Transaction(params ExecuteQuery[] statements) =>
+        Transaction((IEnumerable<ExecuteQuery>)statements);
 
-    public async Task Transaction(IEnumerable<ExecuteStatement> statements)
+    public async Task Transaction(IEnumerable<ExecuteQuery> statements)
     {
         await using var connection = _dbConnector.CreateConnection();
         await using var batch = connection.CreateBatch();

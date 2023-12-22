@@ -8,12 +8,13 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Statements;
 
-public class QueryStatement<TOut> : IAsyncEnumerable<TOut>
+public class RetrieveQuery<TOut> : IAsyncEnumerable<TOut>
 {
     private readonly RenderedSql _renderedSql;
     private readonly Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> _rowReader;
     private readonly IDbConnector _dbConnector;
-    public QueryStatement(
+
+    public RetrieveQuery(
         RenderedSql renderedSql,
         Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
         IDbConnector dbConnector
@@ -24,7 +25,7 @@ public class QueryStatement<TOut> : IAsyncEnumerable<TOut>
         _dbConnector = dbConnector;
     }
 
-    public async IAsyncEnumerable<TOut> Query(
+    public async IAsyncEnumerable<TOut> ExecuteAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken
     )
     {
@@ -33,11 +34,13 @@ public class QueryStatement<TOut> : IAsyncEnumerable<TOut>
         cmd.Parameters.AddRange(_renderedSql.Parameters);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
         cancellationToken.Register(reader.Close);
-        await foreach (var value in _rowReader(reader, cancellationToken)) {
+        await foreach (var value in _rowReader(reader, cancellationToken))
+        {
             yield return value;
         }
     }
 
-    public IAsyncEnumerator<TOut> GetAsyncEnumerator(CancellationToken cancellationToken
-        = new CancellationToken()) => Query(cancellationToken).GetAsyncEnumerator(cancellationToken);
+    public IAsyncEnumerator<TOut> GetAsyncEnumerator(
+        CancellationToken cancellationToken = default
+    ) => ExecuteAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
 }
