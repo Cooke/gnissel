@@ -121,6 +121,18 @@ public class TableTests
     }
 
     [Test]
+    public async Task SelectRecord()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var users = await _db.Users.Select(x => new User(x.Id, x.Name, x.Age)).ToArrayAsync();
+        CollectionAssert.AreEqual(
+            new[] { (1, "Bob"), (2, "Sara") },
+            users.Select(x => (x.Id, x.Name))
+        );
+    }
+
+    [Test]
     public async Task SelectWhere()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
