@@ -3,14 +3,13 @@
 using System.Collections.Immutable;
 using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
-using System.Reflection;
-using Cooke.Gnissel.Orm;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
 
 #endregion
 
-namespace Cooke.Gnissel.Statements;
+namespace Cooke.Gnissel.PlusPlus;
 
 public class WhereQuery<T> : IAsyncEnumerable<T>
 {

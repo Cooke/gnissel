@@ -5,11 +5,11 @@ using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Statements;
 using Cooke.Gnissel.Utils;
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.PlusPlus;
 
 public class Table<T> : IAsyncEnumerable<T>
 {

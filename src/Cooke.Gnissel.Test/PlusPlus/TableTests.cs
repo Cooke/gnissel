@@ -2,11 +2,12 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.PlusPlus;
 using Npgsql;
 
 #endregion
 
-namespace Cooke.Gnissel.Test;
+namespace Cooke.Gnissel.Test.PlusPlus;
 
 public class TableTests
 {

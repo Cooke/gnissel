@@ -1,7 +1,7 @@
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel.Statements;
+namespace Cooke.Gnissel.Queries;
 
 public class ExecuteQuery
 {

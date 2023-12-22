@@ -3,6 +3,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.PlusPlus;
 using Npgsql;
 
 #endregion

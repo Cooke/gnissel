@@ -2,9 +2,9 @@
 
 using System.Data.Common;
 using System.Runtime.CompilerServices;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
-using Cooke.Gnissel.Statements;
 using Cooke.Gnissel.Utils;
 
 #endregion

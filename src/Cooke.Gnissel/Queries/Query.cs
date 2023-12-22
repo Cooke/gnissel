@@ -6,7 +6,7 @@ using Cooke.Gnissel.Services;
 
 #endregion
 
-namespace Cooke.Gnissel.Statements;
+namespace Cooke.Gnissel.Queries;
 
 public class Query<TOut> : IAsyncEnumerable<TOut>
 {

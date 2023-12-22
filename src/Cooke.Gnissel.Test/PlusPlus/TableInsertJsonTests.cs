@@ -3,12 +3,13 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.PlusPlus;
 using Dapper;
 using Npgsql;
 
 #endregion
 
-namespace Cooke.Gnissel.Test;
+namespace Cooke.Gnissel.Test.PlusPlus;
 
 public class TableInsertJsonTests
 {
