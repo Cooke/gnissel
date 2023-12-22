@@ -4,6 +4,10 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <AssemblyName>Cooke.Gnissel.PlusPlus</AssemblyName>
+        <RootNamespace>Cooke.Gnissel.PlusPlus</RootNamespace>
+        <PackageId>Cooke.Gnissel.PlusPlus</PackageId>
+        <Authors>Henrik Cooke</Authors>
     </PropertyGroup>
 
     <ItemGroup>

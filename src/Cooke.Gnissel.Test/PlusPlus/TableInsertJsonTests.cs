@@ -10,7 +10,7 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class InsertJsonTests
+public class TableInsertJsonTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
     // .EnableDynamicJsonMappings()

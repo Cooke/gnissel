@@ -4,11 +4,12 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
+        <Authors>Henrik Cooke</Authors>
     </PropertyGroup>
 
     <ItemGroup>
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
-            <_Parameter1>Cooke.Gnissel.Orm</_Parameter1>
+            <_Parameter1>Cooke.Gnissel.PlusPlus</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
 </Project>
