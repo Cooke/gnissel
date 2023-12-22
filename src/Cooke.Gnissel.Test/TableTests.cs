@@ -48,7 +48,17 @@ public class TableTests
     public async Task Query()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 26));
         var users = await _db.Users.ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25), new User(2, "Sara", 26) }, users);
+    }
+
+    [Test]
+    public async Task Where()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var users = await _db.Users.Where(x => x.Name == "Bob").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, users);
     }
 
@@ -64,7 +74,8 @@ public class TableTests
     }
 
     private record User(
-        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
+        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)]
+        int Id,
         string Name,
         int Age
     );

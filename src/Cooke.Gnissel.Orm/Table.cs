@@ -5,9 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
-using System.Text.RegularExpressions;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Statements;
 using Cooke.Gnissel.Utils;
 
@@ -17,7 +15,6 @@ public class Table<T> : TableQueryStatement<T>
 {
     private readonly IDbAdapter _dbAdapter;
     private readonly IDbConnector _dbConnector;
-    private readonly string _name = typeof(T).Name.ToLower() + "s";
     private readonly string _insertCommandText;
 
     public Table(DbOptions options)
@@ -33,37 +30,33 @@ public class Table<T> : TableQueryStatement<T>
         var firstColumn = true;
         foreach (var column in Columns.Where(x => !x.IsIdentity))
         {
-            if (!firstColumn)
-            {
-                sql.AppendLiteral(", ");
-            }
+            if (!firstColumn) sql.AppendLiteral(", ");
             sql.AppendLiteral(_dbAdapter.EscapeIdentifier(column.Name));
             firstColumn = false;
         }
+
         sql.AppendLiteral(") VALUES(");
-        bool firstParam = true;
+        var firstParam = true;
         foreach (var dbParameter in Columns.Where(x => !x.IsIdentity))
         {
-            if (!firstParam)
-            {
-                sql.AppendLiteral(", ");
-            }
+            if (!firstParam) sql.AppendLiteral(", ");
             sql.AppendFormatted(dbParameter);
             firstParam = false;
         }
+
         sql.AppendLiteral(")");
         _insertCommandText = _dbAdapter.RenderSql(sql).CommandText;
     }
 
     public Table(Table<T> source, DbOptions options)
-        : base(options, source._name, null, source.Columns)
+        : base(options, source.Name, null, source.Columns)
     {
         _dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
         _insertCommandText = source._insertCommandText;
     }
 
-    public string Name => _name;
+    public string Name { get; } = typeof(T).Name.ToLower() + "s";
 
     private static ImmutableArray<Column<T>> CreateColumns(IDbAdapter dbAdapter)
     {
@@ -90,15 +83,10 @@ public class Table<T> : TableQueryStatement<T>
     )
     {
         if (p.GetDbType() != null)
-        {
             yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
-        }
         else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-        {
             yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
-        }
         else if (p.PropertyType.IsClass)
-        {
             foreach (
                 var column in p.PropertyType
                     .GetProperties()
@@ -112,14 +100,9 @@ public class Table<T> : TableQueryStatement<T>
                             )
                     )
             )
-            {
                 yield return column;
-            }
-        }
         else
-        {
             yield return CreateColumn(dbAdapter, p, rootExpression, memberExpression);
-        }
     }
 
     private static Column<T> CreateColumn(
@@ -133,6 +116,7 @@ public class Table<T> : TableQueryStatement<T>
             p.GetDbName() ?? dbAdapter.DefaultIdentifierMapper.ToColumnName(p),
             p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                 ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
+            p,
             CreateParameterFactory(dbAdapter, memberExpression, p.GetDbType(), objectExpression)
         );
     }
@@ -171,13 +155,16 @@ public class Table<T> : TableQueryStatement<T>
     }
 
     [Pure]
-    public ExecuteStatement Insert(params T[] items) => Insert((IEnumerable<T>)items);
+    public ExecuteStatement Insert(params T[] items)
+    {
+        return Insert((IEnumerable<T>)items);
+    }
 
     [Pure]
     public ExecuteStatement Insert(IEnumerable<T> items)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity).ToArray();
-        var itemsArray = items as ICollection<T> ?? (ICollection<T>)items.ToArray();
+        var itemsArray = items as ICollection<T> ?? items.ToArray();
         var sb = new StringBuilder(
             _insertCommandText.Length + insertColumns.Length * 6 * itemsArray.Count
         );
@@ -187,14 +174,12 @@ public class Table<T> : TableQueryStatement<T>
             sb.Append(", (");
             for (var j = 0; j < insertColumns.Length; j++)
             {
-                if (j > 0)
-                {
-                    sb.Append(", ");
-                }
+                if (j > 0) sb.Append(", ");
 
                 sb.Append('$');
                 sb.Append(i * insertColumns.Length + j + 1);
             }
+
             sb.Append(") ");
         }
 
