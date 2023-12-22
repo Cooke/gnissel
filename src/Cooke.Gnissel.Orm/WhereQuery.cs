@@ -54,7 +54,7 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         );
 
     [Pure]
-    public RetrieveQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+    public Query<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
         CreateQuery<TOut>(
             new[]
             {
@@ -68,7 +68,7 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         );
 
     [Pure]
-    private RetrieveQuery<TOut> CreateQuery<TOut>(string[] expressions) =>
+    private Query<TOut> CreateQuery<TOut>(string[] expressions) =>
         new(
             _dbAdapter.RenderSql(CreateSql(expressions)),
             _objectReaderProvider.GetReaderFunc<TOut>(),

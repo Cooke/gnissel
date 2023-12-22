@@ -8,13 +8,13 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Statements;
 
-public class RetrieveQuery<TOut> : IAsyncEnumerable<TOut>
+public class Query<TOut> : IAsyncEnumerable<TOut>
 {
     private readonly RenderedSql _renderedSql;
     private readonly Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> _rowReader;
     private readonly IDbConnector _dbConnector;
 
-    public RetrieveQuery(
+    public Query(
         RenderedSql renderedSql,
         Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
         IDbConnector dbConnector

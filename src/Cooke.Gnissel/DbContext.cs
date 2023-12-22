@@ -28,7 +28,7 @@ public class DbContext
         Sql sql
     ) =>
         _objectReaderProvider.Get<TOut>().Let(objectReader =>
-            new RetrieveQuery<TOut>(
+            new Query<TOut>(
                 _dbAdapter.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
                 _dbConnector
@@ -38,7 +38,7 @@ public class DbContext
         Sql sql,
         Func<DbDataReader, TOut> mapper
     ) =>
-        new RetrieveQuery<TOut>(
+        new Query<TOut>(
             _dbAdapter.RenderSql(sql),
             (reader, ct) => reader.ReadRows(mapper, ct),
             _dbConnector

@@ -208,7 +208,7 @@ public class Table<T> : IAsyncEnumerable<T>
     }
 
     [Pure]
-    public RetrieveQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+    public Query<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
         _whereQuery.Select(selector);
 
     [Pure]
