@@ -7,7 +7,13 @@ using System.Reflection;
 
 namespace Cooke.Gnissel;
 
-public class Column<TTable>
+public interface IColumn
+{
+    string Name { get; }
+    MemberInfo Member { get; }
+}
+
+public class Column<TTable> : IColumn
 {
     private readonly Func<TTable, DbParameter> _parameterFactory;
 

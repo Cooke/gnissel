@@ -99,6 +99,15 @@ public class TableTests
         CollectionAssert.AreEqual(new[] { new User(2, "Sara", 25) }, users);
     }
 
+    [Test]
+    public async Task SelectScalars()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var userIds = await _db.Users.Select(x => x.Id).ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { 1, 2 }, userIds);
+    }
+
     private class TestDbContext : DbContext
     {
         public TestDbContext(DbOptions options)

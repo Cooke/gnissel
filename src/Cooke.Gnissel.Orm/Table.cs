@@ -11,27 +11,29 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel;
 
-public class Table<T> : TableQueryStatement<T>
+public class Table<T> : IAsyncEnumerable<T>
 {
-    private readonly IDbAdapter _dbAdapter;
     private readonly IDbConnector _dbConnector;
     private readonly string _insertCommandText;
+    private readonly WhereQuery<T> _whereQuery;
 
     public Table(DbOptions options)
-        : base(options, typeof(T).Name.ToLower() + "s", null, CreateColumns(options.DbAdapter))
     {
-        _dbAdapter = options.DbAdapter;
+        var dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
+        Columns = CreateColumns(options.DbAdapter);
+        _whereQuery = new WhereQuery<T>(options, Name, null, Columns);
 
         var sql = new Sql(20 + Columns.Length * 4);
         sql.AppendLiteral("INSERT INTO ");
-        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(Name));
+        sql.AppendLiteral(dbAdapter.EscapeIdentifier(Name));
         sql.AppendLiteral(" (");
         var firstColumn = true;
         foreach (var column in Columns.Where(x => !x.IsIdentity))
         {
-            if (!firstColumn) sql.AppendLiteral(", ");
-            sql.AppendLiteral(_dbAdapter.EscapeIdentifier(column.Name));
+            if (!firstColumn)
+                sql.AppendLiteral(", ");
+            sql.AppendLiteral(dbAdapter.EscapeIdentifier(column.Name));
             firstColumn = false;
         }
 
@@ -39,21 +41,24 @@ public class Table<T> : TableQueryStatement<T>
         var firstParam = true;
         foreach (var dbParameter in Columns.Where(x => !x.IsIdentity))
         {
-            if (!firstParam) sql.AppendLiteral(", ");
+            if (!firstParam)
+                sql.AppendLiteral(", ");
             sql.AppendFormatted(dbParameter);
             firstParam = false;
         }
 
         sql.AppendLiteral(")");
-        _insertCommandText = _dbAdapter.RenderSql(sql).CommandText;
+        _insertCommandText = dbAdapter.RenderSql(sql).CommandText;
     }
 
+    public ImmutableArray<Column<T>> Columns { get; set; }
+
     public Table(Table<T> source, DbOptions options)
-        : base(options, source.Name, null, source.Columns)
     {
-        _dbAdapter = options.DbAdapter;
+        var dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
         _insertCommandText = source._insertCommandText;
+        Columns = source.Columns;
     }
 
     public string Name { get; } = typeof(T).Name.ToLower() + "s";
@@ -174,7 +179,8 @@ public class Table<T> : TableQueryStatement<T>
             sb.Append(", (");
             for (var j = 0; j < insertColumns.Length; j++)
             {
-                if (j > 0) sb.Append(", ");
+                if (j > 0)
+                    sb.Append(", ");
 
                 sb.Append('$');
                 sb.Append(i * insertColumns.Length + j + 1);
@@ -191,4 +197,13 @@ public class Table<T> : TableQueryStatement<T>
         );
         return new ExecuteStatement(_dbConnector, sql, CancellationToken.None);
     }
+
+    [Pure]
+    public SelectQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+        _whereQuery.Select(selector);
+
+    public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) => _whereQuery.Where(predicate);
+
+    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
+        _whereQuery.GetAsyncEnumerator(cancellationToken);
 }
