@@ -108,6 +108,18 @@ public class TableTests
         CollectionAssert.AreEqual(new[] { 1, 2 }, userIds);
     }
 
+    [Test]
+    public async Task SelectWhere()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var userIds = await _db.Users
+            .Where(x => x.Name == "Bob")
+            .Select(x => x.Name)
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { "Bob" }, userIds);
+    }
+
     private class TestDbContext : DbContext
     {
         public TestDbContext(DbOptions options)

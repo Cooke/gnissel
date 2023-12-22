@@ -199,7 +199,7 @@ public class Table<T> : IAsyncEnumerable<T>
     }
 
     [Pure]
-    public SelectQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+    public QueryStatement<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
         _whereQuery.Select(selector);
 
     public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) => _whereQuery.Where(predicate);

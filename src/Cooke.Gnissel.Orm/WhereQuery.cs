@@ -19,7 +19,6 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
     private readonly IDbConnector _dbConnector;
     private readonly string _table;
     private readonly IObjectReaderProvider _objectReaderProvider;
-    private readonly SelectQuery<T> _selectQuery;
     private readonly DbOptions _options;
 
     public WhereQuery(
@@ -36,7 +35,6 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         _table = table;
         _condition = condition;
         Columns = columns;
-        _selectQuery = new SelectQuery<T>(options, table, new[] { "*" });
     }
 
     public ImmutableArray<Column<T>> Columns { get; init; }
@@ -51,10 +49,8 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
         );
 
     [Pure]
-    public SelectQuery<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
-        new(
-            _options,
-            _table,
+    public QueryStatement<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
+        CreateQuery<TOut>(
             new[]
             {
                 ExpressionRenderer.RenderExpression(
@@ -65,21 +61,32 @@ public class WhereQuery<T> : IAsyncEnumerable<T>
             }
         );
 
-    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default)
+    private QueryStatement<TOut> CreateQuery<TOut>(string[] expressions)
     {
-        var sql = _selectQuery.CreateSql();
+        return new(
+            _dbAdapter.RenderSql(CreateSql(expressions)),
+            _objectReaderProvider.GetReaderFunc<TOut>(),
+            _dbConnector
+        );
+    }
+
+    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default) =>
+        CreateQuery<T>(new[] { "*" });
+
+    private Sql CreateSql(IEnumerable<string> expressions)
+    {
+        var sql = new Sql(100, 2);
+        sql.AppendLiteral(
+            $"SELECT {string.Join(", ", expressions)} FROM {_dbAdapter.EscapeIdentifier(_table)}"
+        );
+
         if (_condition != null)
         {
             sql.AppendLiteral(" WHERE ");
             sql.AppendLiteral(_condition);
         }
 
-        var objectReader = _objectReaderProvider.Get<T>();
-        return new QueryStatement<T>(
-            _dbAdapter.RenderSql(sql),
-            (reader, ct) => reader.ReadRows(objectReader, ct),
-            _dbConnector
-        );
+        return sql;
     }
 
     public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new()) =>
