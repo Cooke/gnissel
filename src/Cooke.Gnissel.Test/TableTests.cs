@@ -54,12 +54,49 @@ public class TableTests
     }
 
     [Test]
-    public async Task Where()
+    public async Task WhereStringConstant()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         await _db.Users.Insert(new User(0, "Sara", 25));
         var users = await _db.Users.Where(x => x.Name == "Bob").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, users);
+    }
+
+    [Test]
+    public async Task WhereIntConstant()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var users = await _db.Users.Where(x => x.Id == 1).ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, users);
+    }
+
+    [Test]
+    public async Task WhereVariable()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var name = "Bob";
+        var users = await _db.Users.Where(x => x.Name == name).ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, users);
+    }
+
+    [Test]
+    public async Task WhereLessThan()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var users = await _db.Users.Where(x => x.Id < 2).ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, users);
+    }
+
+    [Test]
+    public async Task WhereGreaterThan()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var users = await _db.Users.Where(x => x.Id > 1).ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new User(2, "Sara", 25) }, users);
     }
 
     private class TestDbContext : DbContext
@@ -74,8 +111,7 @@ public class TableTests
     }
 
     private record User(
-        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)]
-        int Id,
+        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age
     );

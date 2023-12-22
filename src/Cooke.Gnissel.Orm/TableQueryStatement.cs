@@ -3,6 +3,7 @@
 using System.Collections.Immutable;
 using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
+using System.Reflection;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
 
@@ -12,11 +13,11 @@ namespace Cooke.Gnissel.Statements;
 
 public class TableQueryStatement<T> : IAsyncEnumerable<T>
 {
+    private readonly string? _condition;
     private readonly IDbAdapter _dbAdapter;
     private readonly IDbConnector _dbConnector;
     private readonly string _fromTable;
     private readonly IObjectReaderProvider _objectReaderProvider;
-    private string? _condition;
 
     public TableQueryStatement(
         DbOptions options,
@@ -41,36 +42,53 @@ public class TableQueryStatement<T> : IAsyncEnumerable<T>
     }
 
     [Pure]
-    public TableQueryStatement<T> Where(Expression<Func<T, bool>> predicate)
-    {
-        var condition = "";
-        switch (predicate.Body)
+    public TableQueryStatement<T> Where(Expression<Func<T, bool>> predicate) =>
+        new(
+            new DbOptions(_dbAdapter, _objectReaderProvider, _dbConnector),
+            _fromTable,
+            RenderExpression(predicate.Body, predicate.Parameters[0]),
+            Columns
+        );
+
+    private string RenderExpression(
+        Expression expression,
+        ParameterExpression parameterExpression
+    ) =>
+        expression switch
         {
-            case BinaryExpression exp:
+            BinaryExpression binaryExpression
+                => $"{RenderExpression(binaryExpression.Left, parameterExpression)} {RenderBinaryOperator(binaryExpression.NodeType)} {RenderExpression(binaryExpression.Right, parameterExpression)}",
+
+            ConstantExpression constExp => RenderConstant(constExp.Value),
+
+            MemberExpression memberExpression
+                when memberExpression.Expression == parameterExpression
+                => Columns.First(x => x.Member == memberExpression.Member).Name,
+
+            MemberExpression
             {
-                Column<T> leftColumn;
-                if (exp.Left is MemberExpression memberExp)
-                    leftColumn = Columns.First(x => x.Member == memberExp.Member);
-                else
-                    throw new NotSupportedException();
-
-                object right;
-                if (exp.Right is ConstantExpression constExp)
-                    right = RenderConstant(constExp.Value);
-                else
-                    throw new NotSupportedException();
-
-                condition = $"{leftColumn.Name} = {right}";
-                break;
+                Expression: ConstantExpression constantExpression,
+                Member: FieldInfo field
             }
+                => RenderConstant(field.GetValue(constantExpression.Value)),
 
-            default:
-                throw new NotSupportedException();
-        }
+            _ => throw new NotSupportedException()
+        };
 
-        _condition = condition;
-        return this;
-    }
+    private string RenderBinaryOperator(ExpressionType expressionType) =>
+        expressionType switch
+        {
+            ExpressionType.Equal => "=",
+            ExpressionType.GreaterThan => ">",
+            ExpressionType.GreaterThanOrEqual => ">=",
+            ExpressionType.LessThan => "<",
+            ExpressionType.LessThanOrEqual => "<=",
+            ExpressionType.Multiply => "*",
+            ExpressionType.NotEqual => "<>",
+            ExpressionType.Or => "OR",
+            ExpressionType.Subtract => "-",
+            _ => throw new ArgumentOutOfRangeException(nameof(expressionType), expressionType, null)
+        };
 
     private string RenderConstant(object? value)
     {
