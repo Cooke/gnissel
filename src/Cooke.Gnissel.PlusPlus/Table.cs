@@ -11,19 +11,22 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.PlusPlus;
 
-public class Table<T> : IAsyncEnumerable<T>
+public class Table<T> : IToAsyncEnumerable<T>
 {
     private readonly IDbConnector _dbConnector;
     private readonly string _insertCommandText;
     private readonly WhereQuery<T> _whereQuery;
+    private readonly IDbAdapter _dbAdapter;
+    private readonly IIdentifierMapper _identifierMapper;
 
     public Table(DbOptions options)
     {
-        var dbAdapter = options.DbAdapter;
+        _identifierMapper = options.IdentifierMapper;
+        _dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
         Columns = CreateColumns(options);
         _whereQuery = new WhereQuery<T>(options, Name, null, Columns);
-        _insertCommandText = dbAdapter.RenderSql(CreateInsertSql(dbAdapter)).CommandText;
+        _insertCommandText = _dbAdapter.RenderSql(CreateInsertSql(_dbAdapter)).CommandText;
     }
 
     public ImmutableArray<Column<T>> Columns { get; set; }
@@ -212,8 +215,30 @@ public class Table<T> : IAsyncEnumerable<T>
         _whereQuery.Select(selector);
 
     [Pure]
-    public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) => _whereQuery.Where(predicate);
+    public WhereQuery<T> Where(Expression<Predicate<T>> predicate) => _whereQuery.Where(predicate);
 
-    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = default) =>
-        _whereQuery.GetAsyncEnumerator(cancellationToken);
+    [Pure]
+    public ValueTask<T?> FirstOrDefaultAsync(
+        Expression<Predicate<T>> predicate,
+        CancellationToken cancellationToken = default
+    ) => _whereQuery.FirstOrDefaultAsync(predicate, cancellationToken);
+
+    public IAsyncEnumerable<T> ToAsyncEnumerable() => _whereQuery.ToAsyncEnumerable();
+
+    public ExecuteQuery Delete(Expression<Predicate<T>> predicate)
+    {
+        var sql = new Sql(100, 2);
+        sql.AppendLiteral("DELETE FROM ");
+        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(Name));
+        sql.AppendLiteral(" WHERE ");
+        sql.AppendLiteral(
+            ExpressionRenderer.RenderExpression(
+                _identifierMapper,
+                predicate.Body,
+                predicate.Parameters[0],
+                _whereQuery.Columns
+            )
+        );
+        return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+    }
 }

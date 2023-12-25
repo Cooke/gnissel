@@ -101,6 +101,33 @@ public class TableTests
     }
 
     [Test]
+    public async Task FirstOrDefaultOneMatch()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id > 1);
+        Assert.That(user, Is.EqualTo(new User(2, "Sara", 25)));
+    }
+
+    [Test]
+    public async Task FirstOrDefaultOfTwoMatching()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id > 0);
+        Assert.That(user, Is.EqualTo(new User(1, "Bob", 25)));
+    }
+
+    [Test]
+    public async Task FirstOrDefaultOfNoMatching()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id > 9999);
+        Assert.That(user, Is.Null);
+    }
+
+    [Test]
     public async Task SelectScalars()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
@@ -143,6 +170,18 @@ public class TableTests
             .Select(x => x.Name)
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { "Bob" }, userIds);
+    }
+    
+    [Test]
+    public async Task Delete()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        await _db.Users.Delete(x => x.Name == "Bob");
+        var userIds = await _db.Users
+            .Select(x => x.Name)
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { "Sara" }, userIds);
     }
 
     private class TestDbContext : DbContext

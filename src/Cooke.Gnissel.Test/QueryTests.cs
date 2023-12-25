@@ -116,7 +116,7 @@ public class QueryTests
             using var cts = new CancellationTokenSource();
             var enumerator = _db.Query<(int, string, int)>($"SELECT * FROM users")
                 .GetAsyncEnumerator(cts.Token);
-            await enumerator.MoveNextAsync(cts.Token);
+            await enumerator.MoveNextAsync();
             cts.Cancel();
         }
     }
