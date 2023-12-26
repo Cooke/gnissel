@@ -4,6 +4,7 @@ using System.Data.Common;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.PlusPlus;
 using Cooke.Gnissel.Services.Implementations;
+using Cooke.Gnissel.Utils;
 using Npgsql;
 
 #endregion

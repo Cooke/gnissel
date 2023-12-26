@@ -3,6 +3,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.PlusPlus;
+using Cooke.Gnissel.Utils;
 using Npgsql;
 
 #endregion

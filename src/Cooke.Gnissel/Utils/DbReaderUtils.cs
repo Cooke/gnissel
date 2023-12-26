@@ -4,7 +4,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Utils;
 
-public static class DbReaderUtils
+internal static class DbReaderUtils
 {
     public static async IAsyncEnumerable<TOut> ReadRows<TOut>(
         this DbDataReader reader,

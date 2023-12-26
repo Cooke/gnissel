@@ -1,6 +1,6 @@
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Utils;
 
-public static class AsyncEnumerableExtensions
+public static class AsyncEnumerable
 {
     public static async ValueTask<T[]> ToArrayAsync<T>(
         this IAsyncEnumerable<T> source,
@@ -56,24 +56,5 @@ public static class AsyncEnumerableExtensions
         }
 
         return result;
-    }
-
-    public static async ValueTask<T?> FirstOrDefaultAsync<T>(
-        this IAsyncEnumerable<T> source,
-        Predicate<T> predicate,
-        CancellationToken cancellationToken = default
-    )
-    {
-        await foreach (
-            var element in source.WithCancellation(cancellationToken).ConfigureAwait(false)
-        )
-        {
-            if (predicate(element))
-            {
-                return element;
-            }
-        }
-
-        return default;
     }
 }

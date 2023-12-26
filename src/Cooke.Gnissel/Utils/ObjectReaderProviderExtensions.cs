@@ -3,7 +3,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Utils;
 
-public static class ObjectReaderProviderExtensions
+internal static class ObjectReaderProviderExtensions
 {
     public static Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> GetReaderFunc<TOut>(
         this IObjectReaderProvider provider
