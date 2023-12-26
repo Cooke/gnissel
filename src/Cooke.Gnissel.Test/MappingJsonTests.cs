@@ -20,10 +20,11 @@ public class MappingJsonTests
     public async Task Setup()
     {
         _dataSource = Fixture.DataSourceBuilder
-        // .EnableDynamicJsonMappings(
-        //     new JsonSerializerOptions { Converters = { new GameClassConverter() } }
-        // )
-        .Build();
+            .ConfigureJsonOptions(
+                new JsonSerializerOptions { Converters = { new GameClassConverter() } }
+            )
+            .EnableDynamicJson()
+            .Build();
         _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
