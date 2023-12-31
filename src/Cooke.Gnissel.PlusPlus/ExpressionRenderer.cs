@@ -58,6 +58,7 @@ public static class ExpressionRenderer
             ExpressionType.NotEqual => "<>",
             ExpressionType.Or => "OR",
             ExpressionType.Subtract => "-",
+            ExpressionType.Add => "+",
             _ => throw new ArgumentOutOfRangeException(nameof(expressionType), expressionType, null)
         };
 

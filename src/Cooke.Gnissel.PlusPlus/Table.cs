@@ -241,4 +241,57 @@ public class Table<T> : IToAsyncEnumerable<T>
         );
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }
+
+    public ExecuteQuery Update(
+        Expression<Predicate<T>> predicate,
+        Func<ISetCalls<T>, ISetCalls<T>> setCaller
+    )
+    {
+        var sql = new Sql(100, 2);
+        sql.AppendLiteral("UPDATE ");
+        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(Name));
+
+        var calls = new SetCalls<T>();
+        setCaller(calls);
+
+        sql.AppendLiteral(" SET ");
+        for (var index = 0; index < calls.Calls.Count; index++)
+        {
+            var call = calls.Calls[index];
+
+            if (index > 0)
+            {
+                sql.AppendLiteral(", ");
+            }
+
+            sql.AppendLiteral(
+                ExpressionRenderer.RenderExpression(
+                    _identifierMapper,
+                    call.property.Body,
+                    call.property.Parameters[0],
+                    _whereQuery.Columns
+                )
+            );
+            sql.AppendLiteral(" = ");
+            sql.AppendLiteral(
+                ExpressionRenderer.RenderExpression(
+                    _identifierMapper,
+                    call.value.Body,
+                    call.value.Parameters[0],
+                    _whereQuery.Columns
+                )
+            );
+        }
+
+        sql.AppendLiteral(" WHERE ");
+        sql.AppendLiteral(
+            ExpressionRenderer.RenderExpression(
+                _identifierMapper,
+                predicate.Body,
+                predicate.Parameters[0],
+                _whereQuery.Columns
+            )
+        );
+        return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+    }
 }

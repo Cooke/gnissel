@@ -172,17 +172,27 @@ public class TableTests
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { "Bob" }, userIds);
     }
-    
+
     [Test]
     public async Task Delete()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         await _db.Users.Insert(new User(0, "Sara", 25));
         await _db.Users.Delete(x => x.Name == "Bob");
-        var userIds = await _db.Users
-            .Select(x => x.Name)
-            .ToArrayAsync();
+        var userIds = await _db.Users.Select(x => x.Name).ToArrayAsync();
         CollectionAssert.AreEqual(new[] { "Sara" }, userIds);
+    }
+
+    [Test]
+    public async Task Update()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Update(
+            x => x.Name == "Bob",
+            op => op.Set(x => x.Name, "Big Bob").Set(x => x.Age, x => x.Age + 1)
+        );
+        var user = await _db.Users.FirstOrDefaultAsync(x => x.Id == 1);
+        Assert.That(user, Is.EqualTo(new User(1, "Big Bob", 26)));
     }
 
     private class TestDbContext : DbContext
