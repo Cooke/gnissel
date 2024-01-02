@@ -52,6 +52,11 @@ public class Sql
 
     public void AppendFormatted<T>(T t)
     {
+        AppendParameter(t);
+    }
+
+    public void AppendParameter<T>(T t)
+    {
         _fragments.Add(new Parameter<T>(t, null));
     }
 

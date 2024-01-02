@@ -29,6 +29,11 @@ public class TableTests
                         name text,
                         age  integer
                     );
+
+                    create table timestamps
+                    (
+                        stamp1 timestamp with time zone
+                    );
                 """
             )
             .ExecuteNonQueryAsync();
@@ -195,15 +200,21 @@ public class TableTests
         Assert.That(user, Is.EqualTo(new User(1, "Big Bob", 26)));
     }
 
-    private class TestDbContext : DbContext
+    [Test]
+    public async Task InsertUpdateDateTime()
     {
-        public TestDbContext(DbOptions options)
-            : base(options)
-        {
-            Users = new Table<User>(options);
-        }
+        var firstStamp = DateTime.UtcNow;
+        await _db.Timestamps.Insert(new Timestamp(firstStamp));
+        await _db.Timestamps.Update(x => true, op => op.Set(x => x.Stamp1, DateTime.UtcNow));
+        var stamp = await _db.Timestamps.FirstAsync(x => true);
+        Assert.That(stamp.Stamp1, Is.GreaterThan(firstStamp));
+    }
 
-        public Table<User> Users { get; }
+    private class TestDbContext(DbOptions options) : DbContext(options)
+    {
+        public Table<User> Users { get; } = new(options);
+
+        public Table<Timestamp> Timestamps { get; } = new(options);
     }
 
     private record User(
@@ -211,4 +222,6 @@ public class TableTests
         string Name,
         int Age
     );
+
+    private record Timestamp(DateTime Stamp1) { }
 }

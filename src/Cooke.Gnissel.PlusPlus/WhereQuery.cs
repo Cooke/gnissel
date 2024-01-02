@@ -13,7 +13,7 @@ namespace Cooke.Gnissel.PlusPlus;
 
 public class WhereQuery<T> : IToAsyncEnumerable<T>
 {
-    private readonly string? _condition;
+    private readonly Expression<Predicate<T>>? _condition;
     private readonly IDbAdapter _dbAdapter;
     private readonly IDbConnector _dbConnector;
     private readonly string _table;
@@ -23,7 +23,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     public WhereQuery(
         DbOptions options,
         string table,
-        string? condition,
+        Expression<Predicate<T>>? condition,
         ImmutableArray<Column<T>> columns
     )
     {
@@ -40,17 +40,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
 
     [Pure]
     public WhereQuery<T> Where(Expression<Predicate<T>> predicate) =>
-        new(
-            _options,
-            _table,
-            ExpressionRenderer.RenderExpression(
-                _options.IdentifierMapper,
-                predicate.Body,
-                predicate.Parameters[0],
-                Columns
-            ),
-            Columns
-        );
+        new(_options, _table, predicate, Columns);
 
     [Pure]
     public async ValueTask<T?> FirstOrDefaultAsync(
@@ -59,7 +49,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     )
     {
         var query = new Query<T>(
-            _dbAdapter.RenderSql(Where(predicate).CreateSql(limit: 1)),
+            _dbAdapter.RenderSql(Where(predicate).CreateSql<T>(limit: 1)),
             _objectReaderProvider.GetReaderFunc<T>(),
             _dbConnector
         );
@@ -73,43 +63,59 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     }
 
     [Pure]
-    public Query<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) =>
-        CreateQuery<TOut>(
-            new[]
-            {
-                ExpressionRenderer.RenderExpression(
-                    _options.IdentifierMapper,
-                    selector.Body,
-                    selector.Parameters.Single(),
-                    Columns
-                )
-            }
-        );
+    public async ValueTask<T> FirstAsync(
+        Expression<Predicate<T>> predicate,
+        CancellationToken cancellationToken = default
+    ) =>
+        await FirstOrDefaultAsync(predicate, cancellationToken)
+        ?? throw new InvalidOperationException("Sequence contains no elements");
 
     [Pure]
-    private Query<TOut> CreateQuery<TOut>(string[] expressions) =>
+    public Query<TOut> Select<TOut>(Expression<Func<T, TOut>> selector) => CreateQuery(selector);
+
+    [Pure]
+    private Query<TOut> CreateQuery<TOut>(Expression<Func<T, TOut>> selector) =>
         new(
-            _dbAdapter.RenderSql(CreateSql(expressions)),
+            _dbAdapter.RenderSql(CreateSql(selector)),
             _objectReaderProvider.GetReaderFunc<TOut>(),
             _dbConnector
         );
 
     [Pure]
-    public IAsyncEnumerable<T> CreateQuery() => CreateQuery<T>(new[] { "*" });
+    public IAsyncEnumerable<T> CreateQuery() => CreateQuery<T>(selector: null!);
 
-    private Sql CreateSql(IEnumerable<string>? expressions = null, int? limit = null)
+    private Sql CreateSql<TOut>(Expression<Func<T, TOut>>? selector = null, int? limit = null)
     {
         var sql = new Sql(100, 2);
 
-        expressions ??= new[] { "*" };
-        sql.AppendLiteral(
-            $"SELECT {string.Join(", ", expressions)} FROM {_dbAdapter.EscapeIdentifier(_table)}"
-        );
+        sql.AppendLiteral("SELECT ");
+        if (selector == null)
+        {
+            sql.AppendLiteral("*");
+        }
+        else
+        {
+            ExpressionRenderer.RenderExpression(
+                _options.IdentifierMapper,
+                selector.Body,
+                selector.Parameters.Single(),
+                Columns,
+                sql
+            );
+        }
+
+        sql.AppendLiteral($" FROM {_dbAdapter.EscapeIdentifier(_table)}");
 
         if (_condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            sql.AppendLiteral(_condition);
+            ExpressionRenderer.RenderExpression(
+                _options.IdentifierMapper,
+                _condition.Body,
+                _condition.Parameters.Single(),
+                Columns,
+                sql
+            );
         }
 
         if (limit != null)

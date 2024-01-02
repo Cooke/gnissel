@@ -223,6 +223,12 @@ public class Table<T> : IToAsyncEnumerable<T>
         CancellationToken cancellationToken = default
     ) => _whereQuery.FirstOrDefaultAsync(predicate, cancellationToken);
 
+    [Pure]
+    public ValueTask<T> FirstAsync(
+        Expression<Predicate<T>> predicate,
+        CancellationToken cancellationToken = default
+    ) => _whereQuery.FirstAsync(predicate, cancellationToken);
+
     public IAsyncEnumerable<T> ToAsyncEnumerable() => _whereQuery.ToAsyncEnumerable();
 
     public ExecuteQuery Delete(Expression<Predicate<T>> predicate)
@@ -231,14 +237,15 @@ public class Table<T> : IToAsyncEnumerable<T>
         sql.AppendLiteral("DELETE FROM ");
         sql.AppendLiteral(_dbAdapter.EscapeIdentifier(Name));
         sql.AppendLiteral(" WHERE ");
-        sql.AppendLiteral(
-            ExpressionRenderer.RenderExpression(
-                _identifierMapper,
-                predicate.Body,
-                predicate.Parameters[0],
-                _whereQuery.Columns
-            )
+
+        ExpressionRenderer.RenderExpression(
+            _identifierMapper,
+            predicate.Body,
+            predicate.Parameters[0],
+            _whereQuery.Columns,
+            sql
         );
+
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }
 
@@ -264,33 +271,32 @@ public class Table<T> : IToAsyncEnumerable<T>
                 sql.AppendLiteral(", ");
             }
 
-            sql.AppendLiteral(
-                ExpressionRenderer.RenderExpression(
-                    _identifierMapper,
-                    call.property.Body,
-                    call.property.Parameters[0],
-                    _whereQuery.Columns
-                )
+            ExpressionRenderer.RenderExpression(
+                _identifierMapper,
+                call.property.Body,
+                call.property.Parameters[0],
+                _whereQuery.Columns,
+                sql
             );
             sql.AppendLiteral(" = ");
-            sql.AppendLiteral(
-                ExpressionRenderer.RenderExpression(
-                    _identifierMapper,
-                    call.value.Body,
-                    call.value.Parameters[0],
-                    _whereQuery.Columns
-                )
+
+            ExpressionRenderer.RenderExpression(
+                _identifierMapper,
+                call.value.Body,
+                call.value.Parameters[0],
+                _whereQuery.Columns,
+                sql,
+                constantsAsParameters: true
             );
         }
 
         sql.AppendLiteral(" WHERE ");
-        sql.AppendLiteral(
-            ExpressionRenderer.RenderExpression(
-                _identifierMapper,
-                predicate.Body,
-                predicate.Parameters[0],
-                _whereQuery.Columns
-            )
+        ExpressionRenderer.RenderExpression(
+            _identifierMapper,
+            predicate.Body,
+            predicate.Parameters[0],
+            _whereQuery.Columns,
+            sql
         );
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }

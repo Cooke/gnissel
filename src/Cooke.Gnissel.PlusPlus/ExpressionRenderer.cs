@@ -6,45 +6,85 @@ namespace Cooke.Gnissel.PlusPlus;
 
 public static class ExpressionRenderer
 {
-    public static string RenderExpression(
+    public static void RenderExpression(
         IIdentifierMapper identifierMapper,
         Expression expression,
         ParameterExpression parameterExpression,
-        IReadOnlyCollection<IColumn> columns
-    ) =>
-        expression switch
+        IReadOnlyCollection<IColumn> columns,
+        Sql sql,
+        bool constantsAsParameters = false
+    )
+    {
+        switch (expression)
         {
-            BinaryExpression binaryExpression
-                => $"{RenderExpression(identifierMapper, binaryExpression.Left, parameterExpression, columns)} {RenderBinaryOperator(binaryExpression.NodeType)} {RenderExpression(identifierMapper, binaryExpression.Right, parameterExpression, columns)}",
+            case BinaryExpression binaryExpression:
+                RenderExpression(
+                    identifierMapper,
+                    binaryExpression.Left,
+                    parameterExpression,
+                    columns,
+                    sql
+                );
+                sql.AppendLiteral(" ");
+                sql.AppendLiteral(RenderBinaryOperator(binaryExpression.NodeType));
+                sql.AppendLiteral(" ");
+                RenderExpression(
+                    identifierMapper,
+                    binaryExpression.Right,
+                    parameterExpression,
+                    columns,
+                    sql
+                );
+                return;
 
-            ConstantExpression constExp => RenderConstant(constExp.Value),
+            case ConstantExpression constExp:
+                if (constantsAsParameters)
+                {
+                    sql.AppendParameter(constExp.Value);
+                }
+                else
+                {
+                    sql.AppendLiteral(FormatValue(constExp.Value));
+                }
+                return;
 
-            MemberExpression memberExpression
-                when memberExpression.Expression == parameterExpression
-                => columns.First(x => x.Member == memberExpression.Member).Name,
+            case MemberExpression memberExpression
+                when memberExpression.Expression == parameterExpression:
+                sql.AppendLiteral(columns.First(x => x.Member == memberExpression.Member).Name);
+                return;
 
-            MemberExpression
+            case MemberExpression
             {
                 Expression: ConstantExpression constantExpression,
                 Member: FieldInfo field
-            }
-                => RenderConstant(field.GetValue(constantExpression.Value)),
+            }:
+                sql.AppendParameter(field.GetValue(constantExpression.Value));
+                return;
 
-            NewExpression newExpression
-                => string.Join(
-                    ", ",
-                    newExpression.Arguments.Select(
-                        (arg, i) =>
-                            RenderExpression(identifierMapper, arg, parameterExpression, columns)
-                            + " AS "
-                            + identifierMapper.ToColumnName(
-                                newExpression.Constructor!.GetParameters()[i]
-                            )
-                    )
-                ),
+            case NewExpression newExpression:
+                for (var index = 0; index < newExpression.Arguments.Count; index++)
+                {
+                    var arg = newExpression.Arguments[index];
+                    if (index > 0)
+                    {
+                        sql.AppendLiteral(", ");
+                    }
 
-            _ => throw new NotSupportedException()
-        };
+                    RenderExpression(identifierMapper, arg, parameterExpression, columns, sql);
+                    sql.AppendLiteral(" AS ");
+                    sql.AppendLiteral(
+                        identifierMapper.ToColumnName(
+                            newExpression.Constructor!.GetParameters()[index]
+                        )
+                    );
+                }
+
+                return;
+
+            default:
+                throw new NotSupportedException();
+        }
+    }
 
     private static string RenderBinaryOperator(ExpressionType expressionType) =>
         expressionType switch
@@ -62,7 +102,7 @@ public static class ExpressionRenderer
             _ => throw new ArgumentOutOfRangeException(nameof(expressionType), expressionType, null)
         };
 
-    private static string RenderConstant(object? value) =>
+    private static string FormatValue(object? value) =>
         value switch
         {
             string => $"'{value}'",
