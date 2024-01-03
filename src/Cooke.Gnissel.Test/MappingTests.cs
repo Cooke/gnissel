@@ -35,7 +35,7 @@ public class MappingTests
                     (
                         id   text primary key,
                         name text,
-                        user_id  integer
+                        user_id  integer references users(id)
                     );
 
                     create table dates
@@ -51,8 +51,8 @@ public class MappingTests
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
-        _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
         _dataSource.CreateCommand("DROP TABLE devices").ExecuteNonQuery();
+        _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
         _dataSource.CreateCommand("DROP TABLE dates").ExecuteNonQuery();
     }
 
@@ -82,6 +82,14 @@ public class MappingTests
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+    }
+    
+    [Test]
+    public async Task ClassConstructorWithParameterColumnOrderMissMatchMapping()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new UserWithParametersInDifferentOrder(25, 1, "Bob") }, results);
     }
 
     [Test]
@@ -150,6 +158,13 @@ public class MappingTests
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age
+    );
+    
+    
+    private record UserWithParametersInDifferentOrder(
+        int Age,
+        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
+        string Name
     );
 
     public record Device(string Id, string Name, int UserId);

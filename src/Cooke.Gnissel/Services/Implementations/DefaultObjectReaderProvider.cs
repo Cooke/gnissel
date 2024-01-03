@@ -2,6 +2,7 @@
 
 using System.Collections.Concurrent;
 using System.Data.Common;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Utils;
@@ -92,7 +93,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
                 {
                     var (body, innerWidth) = CreateReader(
                         dataReader,
-                        Expression.Add(ordinalOffset, Expression.Constant(width)),
+                        ordinalOffset,
                         p.ParameterType,
                         p.GetDbName() ?? _identifierMapper.ToColumnName(p),
                         p.GetDbType()
@@ -117,12 +118,12 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
             ctor.GetParameters()
                 .Select(p =>
                 {
-                    var (reader, width) = CreateReader(
+                    var (reader, innerWidth) = CreateReader(
                         dataReader,
                         Expression.Add(ordinalOffset, Expression.Constant(totalWidth)),
                         p.ParameterType
                     );
-                    totalWidth += width;
+                    totalWidth += innerWidth;
                     return reader;
                 })
         );
