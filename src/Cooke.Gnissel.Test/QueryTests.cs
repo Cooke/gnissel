@@ -141,6 +141,7 @@ public class QueryTests
         string Name,
         int Age
     );
+    
 
     public record Device(DeviceId Id, string Name, int UserId);
 

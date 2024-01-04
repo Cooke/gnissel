@@ -45,6 +45,11 @@ public class Sql
         _fragments.Add(new Literal(s));
     }
 
+    public void AppendIdentifier(string identifier)
+    {
+        _fragments.Add(new Identifier(identifier));
+    }
+
     public void AppendFormatted(Raw raw)
     {
         _fragments.Add(new Literal(raw.Value));
@@ -72,11 +77,15 @@ public class Sql
 
     public static Raw Inject(string raw) => new(raw);
 
+    public static Identifier Id(string identifier) => new(identifier);
+
     public readonly record struct Raw(String Value);
 
-    public interface IFragment { }
+    public interface IFragment;
 
     public record Literal(string Value) : IFragment;
+
+    public record Identifier(string Value) : IFragment;
 
     public interface IParameter : IFragment
     {

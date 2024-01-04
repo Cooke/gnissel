@@ -30,6 +30,12 @@ public class TableTests
                         age  integer
                     );
 
+                    create table devices
+                    (
+                        name text,
+                        user_id  integer references users(id)
+                    );
+
                     create table timestamps
                     (
                         stamp1 timestamp with time zone
@@ -42,13 +48,17 @@ public class TableTests
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
+        _dataSource.CreateCommand("DROP TABLE devices").ExecuteNonQuery();
         _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
+        _dataSource.CreateCommand("DROP TABLE timestamps").ExecuteNonQuery();
     }
 
     [TearDown]
     public void TearDown()
     {
+        _dataSource.CreateCommand("TRUNCATE devices RESTART IDENTITY CASCADE").ExecuteNonQuery();
         _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
+        _dataSource.CreateCommand("TRUNCATE timestamps RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
     [Test]
@@ -210,9 +220,45 @@ public class TableTests
         Assert.That(stamp.Stamp1, Is.GreaterThan(firstStamp));
     }
 
+    [Test]
+    public async Task Join()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Devices.Insert(new Device(1, "Bobs device"));
+        var users = await _db.Users.Join(_db.Devices, (u, d) => u.Id == d.UserId).ToArrayAsync();
+        var (user, device) = users.Single();
+        Assert.That(user, Is.EqualTo(new User(1, "Bob", 25)));
+        Assert.That(device, Is.EqualTo(new Device(1, "Bobs device")));
+    }
+
+    [Test]
+    public async Task JoinFirst()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Devices.Insert(new Device(1, "Bobs device"));
+        var (user, device) = await _db.Users
+            .Join(_db.Devices, (u, d) => u.Id == d.UserId)
+            .FirstAsync();
+        Assert.That(user, Is.EqualTo(new User(1, "Bob", 25)));
+        Assert.That(device, Is.EqualTo(new Device(1, "Bobs device")));
+    }
+
+    [Test]
+    public async Task JoinFirstPredicate()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Devices.Insert(new Device(1, "Bobs device"));
+        var (user, device) = await _db.Users
+            .Join(_db.Devices, (u, d) => u.Id == d.UserId)
+            .FirstAsync((u, d) => u.Name == "Bob" && d.Name == "Bobs device");
+        Assert.That(user, Is.EqualTo(new User(1, "Bob", 25)));
+        Assert.That(device, Is.EqualTo(new Device(1, "Bobs device")));
+    }
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
+        public Table<Device> Devices { get; } = new(options);
 
         public Table<Timestamp> Timestamps { get; } = new(options);
     }
@@ -222,6 +268,8 @@ public class TableTests
         string Name,
         int Age
     );
+
+    private record Device(int UserId, string Name);
 
     private record Timestamp(DateTime Stamp1) { }
 }

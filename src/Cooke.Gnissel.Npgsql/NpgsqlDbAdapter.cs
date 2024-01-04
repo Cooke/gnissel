@@ -3,6 +3,7 @@
 using System.Data.Common;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using Cooke.Gnissel.Services;
 using Npgsql;
 using Npgsql.NameTranslation;
@@ -22,6 +23,11 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
+    public string EscapeIdentifierIfNeeded(string identifier) =>
+        Regex.IsMatch(identifier, @"[^a-zA-Z0-9_]")
+            ? $"\"{identifier.Replace("\"", "\"\"")}\""
+            : identifier;
+
     public DbParameter CreateParameter<TValue>(TValue value, string? dbType) =>
         typeof(TValue) == typeof(object)
             ? new NpgsqlParameter { Value = value, DataTypeName = dbType }
@@ -36,6 +42,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                     {
                         Sql.Literal { Value: var s } => s.Length,
                         Sql.IParameter => 3,
+                        Sql.Identifier { Value: var s } => s.Length + 2,
                         _ => 0
                     }
             )
@@ -54,6 +61,10 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                     sb.Append('$');
                     sb.Append(parameters.Count + 1);
                     parameters.Add(p.ToParameter(this));
+                    break;
+
+                case Sql.Identifier { Value: var identifier }:
+                    sb.Append(EscapeIdentifierIfNeeded(identifier));
                     break;
             }
         }

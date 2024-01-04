@@ -11,8 +11,14 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.PlusPlus;
 
-public class Table<T> : IToAsyncEnumerable<T>
+public interface ITable
 {
+    string Name { get; }
+}
+
+public class Table<T> : IToAsyncEnumerable<T>, ITable
+{
+    private readonly DbOptions _options;
     private readonly IDbConnector _dbConnector;
     private readonly string _insertCommandText;
     private readonly WhereQuery<T> _whereQuery;
@@ -21,11 +27,18 @@ public class Table<T> : IToAsyncEnumerable<T>
 
     public Table(DbOptions options)
     {
+        _options = options;
         _identifierMapper = options.IdentifierMapper;
         _dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
-        Columns = CreateColumns(options);
-        _whereQuery = new WhereQuery<T>(options, Name, null, Columns);
+        Columns = CreateColumns(options, this);
+        _whereQuery = new WhereQuery<T>(
+            options,
+            Name,
+            [],
+            null,
+            Columns.Cast<IColumn>().ToImmutableArray()
+        );
         _insertCommandText = _dbAdapter.RenderSql(CreateInsertSql(_dbAdapter)).CommandText;
     }
 
@@ -36,12 +49,15 @@ public class Table<T> : IToAsyncEnumerable<T>
         _whereQuery = source._whereQuery;
         _dbConnector = options.DbConnector;
         _insertCommandText = source._insertCommandText;
+        _options = options;
+        _identifierMapper = options.IdentifierMapper;
+        _dbAdapter = options.DbAdapter;
         Columns = source.Columns;
     }
 
     public string Name { get; } = typeof(T).Name.ToLower() + "s";
 
-    private static ImmutableArray<Column<T>> CreateColumns(DbOptions dbOptions)
+    private static ImmutableArray<Column<T>> CreateColumns(DbOptions dbOptions, Table<T> table)
     {
         var objectParameter = Expression.Parameter(typeof(T));
         return typeof(T)
@@ -52,23 +68,22 @@ public class Table<T> : IToAsyncEnumerable<T>
                         dbOptions,
                         p,
                         objectParameter,
-                        Expression.Property(objectParameter, p)
+                        Expression.Property(objectParameter, p),
+                        table
                     )
             )
             .ToImmutableArray();
     }
 
-    private static IEnumerable<Column<T>> CreateColumns(
-        DbOptions dbOptions,
+    private static IEnumerable<Column<T>> CreateColumns(DbOptions dbOptions,
         PropertyInfo p,
         ParameterExpression rootExpression,
-        Expression memberExpression
-    )
+        Expression memberExpression, Table<T> table)
     {
         if (p.GetDbType() != null)
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression);
+            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
         else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression);
+            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
         else if (p.PropertyType.IsClass)
             foreach (
                 var column in p.PropertyType
@@ -79,23 +94,22 @@ public class Table<T> : IToAsyncEnumerable<T>
                                 dbOptions,
                                 innerProperty,
                                 rootExpression,
-                                Expression.Property(memberExpression, innerProperty)
+                                Expression.Property(memberExpression, innerProperty), table
                             )
                     )
             )
                 yield return column;
         else
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression);
+            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
     }
 
-    private static Column<T> CreateColumn(
-        DbOptions dbOptions,
+    private static Column<T> CreateColumn(DbOptions dbOptions,
         PropertyInfo p,
         ParameterExpression objectExpression,
-        Expression memberExpression
-    )
+        Expression memberExpression, Table<T> table)
     {
         return new Column<T>(
+            table,
             p.GetDbName() ?? dbOptions.DbAdapter.DefaultIdentifierMapper.ToColumnName(p),
             p.GetCustomAttribute<DatabaseGeneratedAttribute>()
                 ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
@@ -185,14 +199,14 @@ public class Table<T> : IToAsyncEnumerable<T>
     {
         var sql = new Sql(20 + Columns.Length * 4);
         sql.AppendLiteral("INSERT INTO ");
-        sql.AppendLiteral(dbAdapter.EscapeIdentifier(Name));
+        sql.AppendIdentifier(Name);
         sql.AppendLiteral(" (");
         var firstColumn = true;
         foreach (var column in Columns.Where(x => !x.IsIdentity))
         {
             if (!firstColumn)
                 sql.AppendLiteral(", ");
-            sql.AppendLiteral(dbAdapter.EscapeIdentifier(column.Name));
+            sql.AppendIdentifier(column.Name);
             firstColumn = false;
         }
 
@@ -234,14 +248,13 @@ public class Table<T> : IToAsyncEnumerable<T>
     public ExecuteQuery Delete(Expression<Predicate<T>> predicate)
     {
         var sql = new Sql(100, 2);
-        sql.AppendLiteral("DELETE FROM ");
-        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(Name));
+        sql.AppendLiteral($"DELETE FROM ");
+        sql.AppendIdentifier(Name);
         sql.AppendLiteral(" WHERE ");
 
         ExpressionRenderer.RenderExpression(
             _identifierMapper,
-            predicate.Body,
-            predicate.Parameters[0],
+            predicate,
             _whereQuery.Columns,
             sql
         );
@@ -256,7 +269,7 @@ public class Table<T> : IToAsyncEnumerable<T>
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral("UPDATE ");
-        sql.AppendLiteral(_dbAdapter.EscapeIdentifier(Name));
+        sql.AppendIdentifier(Name);
 
         var calls = new SetCalls<T>();
         setCaller(calls);
@@ -273,8 +286,7 @@ public class Table<T> : IToAsyncEnumerable<T>
 
             ExpressionRenderer.RenderExpression(
                 _identifierMapper,
-                call.property.Body,
-                call.property.Parameters[0],
+                call.property,
                 _whereQuery.Columns,
                 sql
             );
@@ -282,8 +294,7 @@ public class Table<T> : IToAsyncEnumerable<T>
 
             ExpressionRenderer.RenderExpression(
                 _identifierMapper,
-                call.value.Body,
-                call.value.Parameters[0],
+                call.value,
                 _whereQuery.Columns,
                 sql,
                 constantsAsParameters: true
@@ -293,11 +304,19 @@ public class Table<T> : IToAsyncEnumerable<T>
         sql.AppendLiteral(" WHERE ");
         ExpressionRenderer.RenderExpression(
             _identifierMapper,
-            predicate.Body,
-            predicate.Parameters[0],
+            predicate,
             _whereQuery.Columns,
             sql
         );
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+    }
+
+    public WhereQuery<T, TJoin> Join<TJoin>(
+        Table<TJoin> outer,
+        Expression<Func<T, TJoin, bool>> predicate
+    )
+    {
+        return new WhereQuery<T, TJoin>(_options, Name, [new Join(outer.Name, predicate)], null,
+            Columns.As<IColumn>().AddRange(outer.Columns));
     }
 }
