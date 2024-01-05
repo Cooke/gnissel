@@ -229,24 +229,24 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         _whereQuery.Select(selector);
 
     [Pure]
-    public WhereQuery<T> Where(Expression<Predicate<T>> predicate) => _whereQuery.Where(predicate);
+    public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) => _whereQuery.Where(predicate);
 
     [Pure]
     public ValueTask<T?> FirstOrDefaultAsync(
-        Expression<Predicate<T>> predicate,
+        Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default
     ) => _whereQuery.FirstOrDefaultAsync(predicate, cancellationToken);
 
     [Pure]
     public ValueTask<T> FirstAsync(
-        Expression<Predicate<T>> predicate,
+        Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default
     ) => _whereQuery.FirstAsync(predicate, cancellationToken);
 
     public IAsyncEnumerable<T> ToAsyncEnumerable() => _whereQuery.ToAsyncEnumerable();
 
     [Pure]
-    public ExecuteQuery Delete(Expression<Predicate<T>> predicate)
+    public ExecuteQuery Delete(Expression<Func<T, bool>> predicate)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral($"DELETE FROM ");
@@ -265,7 +265,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
 
     [Pure]
     public ExecuteQuery Update(
-        Expression<Predicate<T>> predicate,
+        Expression<Func<T, bool>> predicate,
         Func<ISetCalls<T>, ISetCalls<T>> setCaller
     )
     {

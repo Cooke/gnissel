@@ -12,8 +12,54 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.PlusPlus;
 
+public class WhereQuery<T1, T2, T3> : IToAsyncEnumerable<ValueTuple<T1, T2, T3>>
+{
+    private readonly WhereQuery<ValueTuple<T1, T2, T3>> _inner;
+
+    public WhereQuery(
+        DbOptions options,
+        string table,
+        ImmutableArray<Join> joins,
+        Expression<Func<T1, T2, T3, bool>>? predicate,
+        ImmutableArray<IColumn> columns
+    )
+    {
+        _inner = new WhereQuery<ValueTuple<T1, T2, T3>>(
+            options,
+            table,
+            joins,
+            predicate?.Let(_ => CreateTuplePredicate(predicate)),
+            columns
+        );
+    }
+
+    [Pure]
+    public ValueTask<(T1, T2, T3)> FirstAsync(CancellationToken cancellationToken = default) =>
+        _inner.FirstAsync(cancellationToken);
+
+    [Pure]
+    public ValueTask<(T1, T2, T3)> FirstAsync(
+        Expression<Func<T1, T2, T3, bool>> predicate,
+        CancellationToken cancellationToken = default
+    ) => _inner.FirstAsync(CreateTuplePredicate(predicate), cancellationToken);
+
+    [Pure]
+    public WhereQuery<(T1, T2, T3)> Where(Expression<Func<T1, T2, T3, bool>> predicate) =>
+        _inner.Where(CreateTuplePredicate(predicate));
+
+    public IAsyncEnumerable<(T1, T2, T3)> ToAsyncEnumerable() => _inner.ToAsyncEnumerable();
+
+    private static Expression<Func<(T1, T2, T3), bool>> CreateTuplePredicate(
+        Expression<Func<T1, T2, T3, bool>> predicate
+    ) => PredicateTransformer.CreateTuplePredicate<(T1, T2, T3)>(predicate);
+}
+
 public class WhereQuery<T1, T2> : IToAsyncEnumerable<ValueTuple<T1, T2>>
 {
+    private readonly DbOptions _options;
+    private readonly string _table;
+    private readonly ImmutableArray<Join> _joins;
+    private readonly ImmutableArray<IColumn> _columns;
     private readonly WhereQuery<ValueTuple<T1, T2>> _inner;
 
     public WhereQuery(
@@ -21,39 +67,57 @@ public class WhereQuery<T1, T2> : IToAsyncEnumerable<ValueTuple<T1, T2>>
         string table,
         ImmutableArray<Join> joins,
         Expression<Func<T1, T2, bool>>? predicate,
-        ImmutableArray<IColumn> columns)
+        ImmutableArray<IColumn> columns
+    )
     {
-        _inner = new WhereQuery<ValueTuple<T1, T2>>(options, table, joins, predicate?.Let(_ => CreateInnerPredicate(predicate)), columns);
+        _options = options;
+        _table = table;
+        _joins = joins;
+        _columns = columns;
+        _inner = new WhereQuery<ValueTuple<T1, T2>>(
+            options,
+            table,
+            joins,
+            predicate?.Let(_ => CreateTuplePredicate(predicate)),
+            columns
+        );
     }
-    
+
+    [Pure]
+    public ValueTask<(T1, T2)> FirstAsync(CancellationToken cancellationToken = default) =>
+        _inner.FirstAsync(cancellationToken);
+
     [Pure]
     public ValueTask<(T1, T2)> FirstAsync(
-        CancellationToken cancellationToken = default) => _inner.FirstAsync(cancellationToken);
-    
+        Expression<Func<T1, T2, bool>> predicate,
+        CancellationToken cancellationToken = default
+    ) => _inner.FirstAsync(CreateTuplePredicate(predicate), cancellationToken);
+
     [Pure]
-    public ValueTask<(T1, T2)> FirstAsync(Expression<Func<T1, T2, bool>> predicate,
-        CancellationToken cancellationToken = default) => _inner.FirstAsync(CreateInnerPredicate(predicate), cancellationToken);
-
-    public IAsyncEnumerable<ValueTuple<T1, T2>> ToAsyncEnumerable() => _inner.ToAsyncEnumerable();
-    
-    private Expression<Predicate<(T1, T2)>> CreateInnerPredicate(Expression<Func<T1, T2, bool>> predicate)
+    public WhereQuery<T1, T2, TJoin> Join<TJoin>(
+        Table<TJoin> outer,
+        Expression<Func<T1, T2, TJoin, bool>> predicate
+    )
     {
-        var innerParameter = Expression.Parameter(typeof(ValueTuple<T1, T2>));
-        var parameterTransformer = new ParameterTransformer([
-            (predicate.Parameters[0], Expression.PropertyOrField(innerParameter, "Item1")),
-            (predicate.Parameters[1], Expression.PropertyOrField(innerParameter, "Item2"))
-        ]);
-
-        var innerBody = parameterTransformer.Visit(predicate.Body);
-        var innerCondition = Expression.Lambda<Predicate<ValueTuple<T1, T2>>>(innerBody, innerParameter);
-        return innerCondition;
+        return new WhereQuery<T1, T2, TJoin>(
+            _options,
+            _table,
+            _joins.Add(new Join(outer.Name, predicate)),
+            null,
+            _columns.As<IColumn>().AddRange(outer.Columns)
+        );
     }
 
+    public IAsyncEnumerable<ValueTuple<T1, T2>> ToAsyncEnumerable() => _inner.ToAsyncEnumerable();
+
+    private static Expression<Func<(T1, T2), bool>> CreateTuplePredicate(
+        Expression<Func<T1, T2, bool>> predicate
+    ) => PredicateTransformer.CreateTuplePredicate<(T1, T2)>(predicate);
 }
 
 public class WhereQuery<T> : IToAsyncEnumerable<T>
 {
-    private readonly Expression<Predicate<T>>? _condition;
+    private readonly Expression<Func<T, bool>>? _condition;
     private readonly IDbAdapter _dbAdapter;
     private readonly IDbConnector _dbConnector;
     private readonly string _table;
@@ -65,7 +129,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
         DbOptions options,
         string table,
         ImmutableArray<Join> joins,
-        Expression<Predicate<T>>? condition,
+        Expression<Func<T, bool>>? condition,
         ImmutableArray<IColumn> columns
     )
     {
@@ -82,12 +146,10 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     public ImmutableArray<IColumn> Columns { get; }
 
     [Pure]
-    public WhereQuery<T> Where(Expression<Predicate<T>> predicate) =>
+    public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) =>
         new(_options, _table, _joins, predicate, Columns);
-    
-    public async ValueTask<T?> FirstOrDefaultAsync(
-        CancellationToken cancellationToken = default
-    )
+
+    public async ValueTask<T?> FirstOrDefaultAsync(CancellationToken cancellationToken = default)
     {
         var query = new Query<T>(
             _dbAdapter.RenderSql(CreateSql<T>(limit: 1)),
@@ -104,7 +166,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     }
 
     public async ValueTask<T?> FirstOrDefaultAsync(
-        Expression<Predicate<T>> predicate,
+        Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default
     )
     {
@@ -121,15 +183,13 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
 
         return default;
     }
-    
-    public async ValueTask<T> FirstAsync(
-        CancellationToken cancellationToken = default
-    ) =>
+
+    public async ValueTask<T> FirstAsync(CancellationToken cancellationToken = default) =>
         await FirstOrDefaultAsync(cancellationToken)
         ?? throw new InvalidOperationException("Sequence contains no elements");
 
     public async ValueTask<T> FirstAsync(
-        Expression<Predicate<T>> predicate,
+        Expression<Func<T, bool>> predicate,
         CancellationToken cancellationToken = default
     ) =>
         await FirstOrDefaultAsync(predicate, cancellationToken)
@@ -171,7 +231,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
 
         sql.AppendLiteral(" FROM ");
         sql.AppendIdentifier(_table);
-        
+
         if (_joins.Any())
         {
             foreach (var join in _joins)
@@ -211,8 +271,6 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     }
 
     public IAsyncEnumerable<T> ToAsyncEnumerable() => CreateQuery();
-
-    
 }
 
 public record Join(string Table, LambdaExpression Condition);
