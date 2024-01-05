@@ -245,6 +245,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
 
     public IAsyncEnumerable<T> ToAsyncEnumerable() => _whereQuery.ToAsyncEnumerable();
 
+    [Pure]
     public ExecuteQuery Delete(Expression<Predicate<T>> predicate)
     {
         var sql = new Sql(100, 2);
@@ -262,6 +263,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }
 
+    [Pure]
     public ExecuteQuery Update(
         Expression<Predicate<T>> predicate,
         Func<ISetCalls<T>, ISetCalls<T>> setCaller
@@ -311,6 +313,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }
 
+    [Pure]
     public WhereQuery<T, TJoin> Join<TJoin>(
         Table<TJoin> outer,
         Expression<Func<T, TJoin, bool>> predicate
