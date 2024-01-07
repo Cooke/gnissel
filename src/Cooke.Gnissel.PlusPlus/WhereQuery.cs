@@ -212,6 +212,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     private Sql CreateSql<TOut>(Expression<Func<T, TOut>>? selector = null, int? limit = null)
     {
         var sql = new Sql(100, 2);
+        var tableIndices = CreateTableIndicesMap();
 
         sql.AppendLiteral("SELECT ");
         if (selector == null)
@@ -230,14 +231,15 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
         }
 
         sql.AppendLiteral(" FROM ");
-        sql.AppendIdentifier(_table);
+        AppendTableIdentifier(_table);
 
         if (_joins.Any())
         {
             foreach (var join in _joins)
             {
                 sql.AppendLiteral($" JOIN ");
-                sql.AppendIdentifier(join.Table);
+                AppendTableIdentifier(join.Table);
+
                 sql.AppendLiteral($" ON ");
                 ExpressionRenderer.RenderExpression(
                     _options.IdentifierMapper,
@@ -268,6 +270,28 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
         }
 
         return sql;
+        Dictionary<string, int> CreateTableIndicesMap()
+        {
+            var tableCount = new Dictionary<string, int> { { _table, 1 } };
+            foreach (var join in _joins)
+            {
+                tableCount.TryAdd(join.Table, 0);
+                tableCount[join.Table]++;
+            }
+
+            return tableCount.Where(x => x.Value > 1).ToDictionary(x => x.Key, _ => 0);
+        }
+
+        void AppendTableIdentifier(string table)
+        {
+            sql.AppendIdentifier(table);
+            if (tableIndices.ContainsKey(table))
+            {
+                sql.AppendLiteral($" AS ");
+                sql.AppendIdentifier($"{table}{tableIndices[table]}");
+                tableIndices[table]++;
+            }
+        }
     }
 
     public IAsyncEnumerable<T> ToAsyncEnumerable() => CreateQuery();

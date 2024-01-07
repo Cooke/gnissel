@@ -68,6 +68,7 @@ public static class AsyncEnumerable
         [EnumeratorCancellation] CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
+        
         var groups = new Dictionary<TKey, List<(T1, T2)>>();
         var results = new List<(TKey key, List<(T1, T2)> list)>();
         await foreach (var element in source.WithCancellation(cancellationToken))
@@ -123,37 +124,15 @@ public static class AsyncEnumerable
         }
     }
     
-    public static async IAsyncEnumerable<TResult> GroupBy<T1, T2, T3, TKey, TResult>(
+    public static IAsyncEnumerable<TResult> GroupBy<T1, T2, T3, TKey, TResult>(
         this IAsyncEnumerable<(T1, T2, T3)> source,
         Func<T1, T2, T3, TKey> keySelector,
         Func<TKey, IEnumerable<(T1, T2, T3)>, TResult> resultSelector,
         IEqualityComparer<TKey>? keyComparer = default,
-        [EnumeratorCancellation] CancellationToken cancellationToken = default
-    ) where TKey : notnull
-    {
-        var groups = new Dictionary<TKey, List<(T1, T2, T3)>>(keyComparer);
-        var results = new List<(TKey key, List<(T1, T2, T3)> list)>();
-        await foreach (var element in source.WithCancellation(cancellationToken))
-        {
-            var key = keySelector(element.Item1, element.Item2, element.Item3);
-            if (groups.TryGetValue(key, out var list))
-            {
-                list.Add(element);
-            }
-            else
-            {
-                list = [element];
-                groups.Add(key, list);
-                results.Add((key, list));
-            }
-        }
+         CancellationToken cancellationToken = default
+    ) where TKey : notnull =>
+        source.GroupBy(keySelector, (t1, t2, t3) => (t1, t2, t3), resultSelector, keyComparer, cancellationToken);
 
-        foreach (var result in results)
-        {
-            yield return resultSelector(result.key, result.list);
-        }
-    }
-    
     public static IAsyncEnumerable<TResult> GroupBy<T1, T2, T3, TKey, TInnerKey, TElement, TResult>(
         this IAsyncEnumerable<(T1, T2, T3)> source,
         Func<T1, T2, T3, TKey> keySelector,
@@ -163,6 +142,12 @@ public static class AsyncEnumerable
         CancellationToken cancellationToken = default
     ) where TKey : notnull
     {
-       return source.GroupBy(keySelector, elementSelector, resultSelector, innerKeySelector?.Let(FuncEqualityComparer.Create!), cancellationToken);
+       return source.GroupBy(keySelector, elementSelector, resultSelector, innerKeySelector?.Let(CreateEqualityComparer!), cancellationToken);
     }
+    
+    private static IEqualityComparer<T> CreateEqualityComparer<T, TKey>(Func<T?, TKey?> selector) =>
+        EqualityComparer<T>.Create(
+            (l, r) => Equals(selector(l), selector(r)),
+            x => selector(x)?.GetHashCode() ?? 0
+        );
 }
