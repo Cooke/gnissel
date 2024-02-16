@@ -24,20 +24,19 @@ public class DbContext
         _objectReaderProvider = dbOptions.ObjectReaderProvider;
     }
 
-    public IAsyncEnumerable<TOut> Query<TOut>(
-        Sql sql
-    ) =>
-        _objectReaderProvider.Get<TOut>().Let(objectReader =>
-            new Query<TOut>(
-                _dbAdapter.RenderSql(sql),
-                (reader, ct) => reader.ReadRows(objectReader, ct),
-                _dbConnector
-            ));
+    public IAsyncEnumerable<TOut> Query<TOut>(Sql sql) =>
+        _objectReaderProvider
+            .Get<TOut>()
+            .Let(
+                objectReader =>
+                    new Query<TOut>(
+                        _dbAdapter.RenderSql(sql),
+                        (reader, ct) => reader.ReadRows(objectReader, ct),
+                        _dbConnector
+                    )
+            );
 
-    public IAsyncEnumerable<TOut> Query<TOut>(
-        Sql sql,
-        Func<DbDataReader, TOut> mapper
-    ) =>
+    public IAsyncEnumerable<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
         new Query<TOut>(
             _dbAdapter.RenderSql(sql),
             (reader, ct) => reader.ReadRows(mapper, ct),
@@ -53,7 +52,8 @@ public class DbContext
     public async Task Batch(IEnumerable<ExecuteQuery> statements)
     {
         await using var batch = _dbConnector.CreateBatch();
-        foreach (var statement in statements) {
+        foreach (var statement in statements)
+        {
             var batchCommand = _dbAdapter.CreateBatchCommand();
             batchCommand.CommandText = statement.RenderedSql.CommandText;
             batchCommand.Parameters.AddRange(statement.RenderedSql.Parameters);
@@ -69,7 +69,8 @@ public class DbContext
     {
         await using var connection = _dbConnector.CreateConnection();
         await using var batch = connection.CreateBatch();
-        foreach (var statement in statements) {
+        foreach (var statement in statements)
+        {
             var batchCommand = _dbAdapter.CreateBatchCommand();
             batchCommand.CommandText = statement.RenderedSql.CommandText;
             batchCommand.Parameters.AddRange(statement.RenderedSql.Parameters);

@@ -8,27 +8,8 @@ public static class ExpressionRenderer
 {
     public static void RenderExpression(
         IIdentifierMapper identifierMapper,
-        LambdaExpression expression,
-        IReadOnlyCollection<IColumn> columns,
-        Sql sql,
-        bool constantsAsParameters = false
-    )
-    {
-        RenderExpression(
-            identifierMapper,
-            expression.Body,
-            expression.Parameters,
-            columns,
-            sql,
-            constantsAsParameters
-        );
-    }
-
-    public static void RenderExpression(
-        IIdentifierMapper identifierMapper,
         Expression expression,
-        IReadOnlyCollection<ParameterExpression> parameterExpressions,
-        IReadOnlyCollection<IColumn> columns,
+        IReadOnlyCollection<(TableSource Source, string? Alias)> sources,
         Sql sql,
         bool constantsAsParameters = false
     )
@@ -36,23 +17,11 @@ public static class ExpressionRenderer
         switch (expression)
         {
             case BinaryExpression binaryExpression:
-                RenderExpression(
-                    identifierMapper,
-                    binaryExpression.Left,
-                    parameterExpressions,
-                    columns,
-                    sql
-                );
+                RenderExpression(identifierMapper, binaryExpression.Left, sources, sql);
                 sql.AppendLiteral(" ");
                 sql.AppendLiteral(RenderBinaryOperator(binaryExpression.NodeType));
                 sql.AppendLiteral(" ");
-                RenderExpression(
-                    identifierMapper,
-                    binaryExpression.Right,
-                    parameterExpressions,
-                    columns,
-                    sql
-                );
+                RenderExpression(identifierMapper, binaryExpression.Right, sources, sql);
                 return;
 
             case ConstantExpression constExp:
@@ -74,18 +43,22 @@ public static class ExpressionRenderer
                 sql.AppendParameter(GetValue(memberExpression.Member, constantExpression.Value));
                 return;
 
-            // Support one level of nesting in tuples
-            case MemberExpression
-            {
-                Expression: MemberExpression { Expression: ParameterExpression }
-            } innerMemberExpression:
-
-                AppendColumn(columns, sql, innerMemberExpression.Member);
-                return;
-
             case MemberExpression memberExpression:
+                var source = sources.First(x => x.Source.Expression == memberExpression);
+                var column = source.Source.Table.Columns.First(
+                    x => x.Member == memberExpression.Member
+                );
+                if (
+                    sources.Any(
+                        x => x != source && x.Source.Table.Columns.Any(c => c.Name == column.Name)
+                    )
+                )
+                {
+                    sql.AppendIdentifier(source.Alias ?? source.Source.Table.Name);
+                    sql.AppendLiteral(".");
+                }
 
-                AppendColumn(columns, sql, memberExpression.Member);
+                sql.AppendIdentifier(column.Name);
                 return;
 
             case NewExpression newExpression:
@@ -97,7 +70,7 @@ public static class ExpressionRenderer
                         sql.AppendLiteral(", ");
                     }
 
-                    RenderExpression(identifierMapper, arg, parameterExpressions, columns, sql);
+                    RenderExpression(identifierMapper, arg, sources, sql);
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
                         identifierMapper.ToColumnName(
@@ -113,22 +86,6 @@ public static class ExpressionRenderer
                     $"Expression of type {expression.NodeType} not supported"
                 );
         }
-    }
-
-    private static void AppendColumn(
-        IReadOnlyCollection<IColumn> columns,
-        Sql sql,
-        MemberInfo memberInfo
-    )
-    {
-        var column = columns.First(x => x.Member == memberInfo);
-        if (columns.Any(x => x.Name == column.Name && x != column))
-        {
-            sql.AppendIdentifier(column.Table.Name);
-            sql.AppendLiteral(".");
-        }
-
-        sql.AppendIdentifier(column.Name);
     }
 
     private static object? GetValue(MemberInfo memberInfo, object? instance)

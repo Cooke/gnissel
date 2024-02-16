@@ -83,13 +83,17 @@ public class MappingTests
         var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
     }
-    
+
     [Test]
     public async Task ClassConstructorWithParameterColumnOrderMissMatchMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new UserWithParametersInDifferentOrder(25, 1, "Bob") }, results);
+        var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users")
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(
+            new[] { new UserWithParametersInDifferentOrder(25, 1, "Bob") },
+            results
+        );
     }
 
     [Test]
@@ -159,8 +163,7 @@ public class MappingTests
         string Name,
         int Age
     );
-    
-    
+
     private record UserWithParametersInDifferentOrder(
         int Age,
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,

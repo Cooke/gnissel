@@ -105,7 +105,7 @@ public class QueryTests
             results
         );
     }
-    
+
     [Test]
     [Timeout(1000)]
     public async Task CancelOperations()
@@ -141,7 +141,6 @@ public class QueryTests
         string Name,
         int Age
     );
-    
 
     public record Device(DeviceId Id, string Name, int UserId);
 

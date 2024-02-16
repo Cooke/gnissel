@@ -4,7 +4,9 @@ namespace Cooke.Gnissel.PlusPlus.Utils;
 
 internal static class PredicateTransformer
 {
-    public static Expression<Func<T, bool>> CreateTuplePredicate<T>(LambdaExpression parameterPredicate)
+    public static Expression<Func<T, bool>> CreateTuplePredicate<T>(
+        LambdaExpression parameterPredicate
+    )
     {
         var tupleType = typeof(ValueTuple<,>).MakeGenericType(
             parameterPredicate.Parameters.Select(x => x.Type).ToArray()

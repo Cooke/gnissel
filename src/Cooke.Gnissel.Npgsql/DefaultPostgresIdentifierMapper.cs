@@ -18,4 +18,6 @@ public class DefaultPostgresIdentifierMapper : IIdentifierMapper
             propertyInfo.Name ?? throw new InvalidOperationException(),
             CultureInfo.CurrentCulture
         );
+
+    public string ToTableName(Type type) => type.Name.ToLower() + "s";
 }

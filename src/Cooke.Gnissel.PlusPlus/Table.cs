@@ -5,6 +5,7 @@ using System.Diagnostics.Contracts;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
+using Cooke.Gnissel.PlusPlus.Utils;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
@@ -14,6 +15,8 @@ namespace Cooke.Gnissel.PlusPlus;
 public interface ITable
 {
     string Name { get; }
+    
+    IReadOnlyCollection<IColumn> Columns { get; }
 }
 
 public class Table<T> : IToAsyncEnumerable<T>, ITable
@@ -24,6 +27,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
     private readonly WhereQuery<T> _whereQuery;
     private readonly IDbAdapter _dbAdapter;
     private readonly IIdentifierMapper _identifierMapper;
+    private readonly IReadOnlyCollection<Column<T>> _columns;
 
     public Table(DbOptions options)
     {
@@ -31,18 +35,19 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         _identifierMapper = options.IdentifierMapper;
         _dbAdapter = options.DbAdapter;
         _dbConnector = options.DbConnector;
-        Columns = CreateColumns(options, this);
+        _columns = CreateColumns(options, this);
         _whereQuery = new WhereQuery<T>(
             options,
-            Name,
+            new TableSource(this, Expression.Parameter(typeof(T))),
             [],
-            null,
-            Columns.Cast<IColumn>().ToImmutableArray()
+            null
         );
         _insertCommandText = _dbAdapter.RenderSql(CreateInsertSql(_dbAdapter)).CommandText;
     }
 
-    public ImmutableArray<Column<T>> Columns { get; set; }
+    IReadOnlyCollection<IColumn> ITable.Columns => _columns;
+
+    public IReadOnlyCollection<Column<T>> Columns => _columns;
 
     public Table(Table<T> source, DbOptions options)
     {
@@ -52,7 +57,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         _options = options;
         _identifierMapper = options.IdentifierMapper;
         _dbAdapter = options.DbAdapter;
-        Columns = source.Columns;
+        _columns = source.Columns;
     }
 
     public string Name { get; } = typeof(T).Name.ToLower() + "s";
@@ -197,7 +202,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
 
     private Sql CreateInsertSql(IDbAdapter dbAdapter)
     {
-        var sql = new Sql(20 + Columns.Length * 4);
+        var sql = new Sql(20 + Columns.Count * 4);
         sql.AppendLiteral("INSERT INTO ");
         sql.AppendIdentifier(Name);
         sql.AppendLiteral(" (");
@@ -255,8 +260,8 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
 
         ExpressionRenderer.RenderExpression(
             _identifierMapper,
-            predicate,
-            _whereQuery.Columns,
+            predicate.Body,
+            [(new TableSource(this, predicate.Parameters[0]), null)],
             sql
         );
 
@@ -289,7 +294,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             ExpressionRenderer.RenderExpression(
                 _identifierMapper,
                 call.property,
-                _whereQuery.Columns,
+                [(new TableSource(this, predicate.Parameters[0]), null)],
                 sql
             );
             sql.AppendLiteral(" = ");
@@ -297,7 +302,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             ExpressionRenderer.RenderExpression(
                 _identifierMapper,
                 call.value,
-                _whereQuery.Columns,
+                [(new TableSource(this, predicate.Parameters[0]), null)],
                 sql,
                 constantsAsParameters: true
             );
@@ -306,8 +311,8 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         sql.AppendLiteral(" WHERE ");
         ExpressionRenderer.RenderExpression(
             _identifierMapper,
-            predicate,
-            _whereQuery.Columns,
+            predicate.Body,
+            [(new TableSource(this, predicate.Parameters[0]), null)],
             sql
         );
         return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
@@ -319,7 +324,8 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
         Expression<Func<T, TJoin, bool>> predicate
     )
     {
-        return new WhereQuery<T, TJoin>(_options, Name, [new Join(outer.Name, predicate)], null,
-            Columns.As<IColumn>().AddRange(outer.Columns));
+        return new WhereQuery<T, TJoin>(_options,
+            new TableSource(this, predicate.Parameters[0]),
+            [new Join(outer, predicate.Parameters[1], predicate.Body)], null);
     }
 }

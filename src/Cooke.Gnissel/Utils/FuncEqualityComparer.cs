@@ -1,6 +1,3 @@
 ﻿namespace Cooke.Gnissel.Utils;
 
-public class FuncEqualityComparer
-{
-    
-}
+public class FuncEqualityComparer { }

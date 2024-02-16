@@ -17,7 +17,7 @@ internal static class DbReaderUtils
             yield return objectReader.Read(reader, 0);
         }
     }
-    
+
     public static async IAsyncEnumerable<TOut> ReadRows<TOut>(
         this DbDataReader reader,
         Func<DbDataReader, TOut> mapper,

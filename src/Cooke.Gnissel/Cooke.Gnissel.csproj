@@ -19,5 +19,8 @@
         <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
             <_Parameter1>Cooke.Gnissel.PlusPlus</_Parameter1>
         </AssemblyAttribute>
+        <AssemblyAttribute Include="System.Runtime.CompilerServices.InternalsVisibleToAttribute">
+            <_Parameter1>PlusPlusLab</_Parameter1>
+        </AssemblyAttribute>
     </ItemGroup>
 </Project>

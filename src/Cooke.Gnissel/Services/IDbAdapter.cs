@@ -16,10 +16,10 @@ public interface IDbAdapter
     RenderedSql RenderSql(Sql sql);
 
     DbBatchCommand CreateBatchCommand();
-    
+
     DbCommand CreateCommand();
-    
+
     IDbConnector CreateConnector();
-    
+
     IIdentifierMapper DefaultIdentifierMapper { get; }
 }
