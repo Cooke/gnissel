@@ -7,5 +7,6 @@ public interface IInsertQuery
     ITable Table { get; }
 
     IReadOnlyCollection<IColumn> Columns { get; }
-    IReadOnlyCollection<DbParameter> Parameters { get; }
+
+    IReadOnlyCollection<DbParameter> Values { get; }
 }

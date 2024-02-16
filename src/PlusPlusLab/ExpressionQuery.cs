@@ -8,7 +8,9 @@ public record TableSource(ITable Table, string? Alias = null)
 }
 
 public record ExpressionQuery(
-    TableSource Table,
+    TableSource TableSource,
     Expression? Selector,
-    IReadOnlyCollection<TableSource> Joins
+    IReadOnlyCollection<TableSource> Joins,
+    IReadOnlyCollection<Expression> Conditions,
+    int? Limit = null
 );

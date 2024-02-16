@@ -6,5 +6,7 @@ public interface ISqlGenerator
 {
     Sql Generate(IInsertQuery query);
 
+    Sql Generate(IDeleteQuery query);
+
     Sql Generate(ExpressionQuery query);
 }

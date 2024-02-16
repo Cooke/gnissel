@@ -1,16 +1,14 @@
-using System.Data.Common;
+using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Queries;
 
 namespace PlusPlusLab;
 
-public class InsertQuery<T>(Table<T> table, IReadOnlyCollection<Column<T>> columns, DbOptionsPlus options, IReadOnlyCollection<DbParameter> parameters) : IInsertQuery
+public class DeleteQuery<T>(Table<T> table, DbOptionsPlus options, Expression? condition) : IDeleteQuery
 {
     public ITable Table { get; } = table;
     
-    public IReadOnlyCollection<IColumn> Columns { get; } = columns;
-    
-    public IReadOnlyCollection<DbParameter> Values { get; } = parameters;
+    public Expression? Condition { get; } = condition;
 
     public ValueTaskAwaiter<int> GetAwaiter()
     {

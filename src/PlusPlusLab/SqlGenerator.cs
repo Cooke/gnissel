@@ -24,7 +24,7 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
 
         sql.AppendLiteral(") VALUES(");
         var firstParam = true;
-        foreach (var par in query.Parameters)
+        foreach (var par in query.Values)
         {
             if (!firstParam)
                 sql.AppendLiteral(", ");
@@ -35,10 +35,26 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
         sql.AppendLiteral(")");
         return sql;
     }
-    
+    public Sql Generate(IDeleteQuery query)
+    {
+        var sql = new Sql(100, 2);
+        sql.AppendLiteral($"DELETE FROM ");
+        sql.AppendIdentifier(query.Table.Name);
+        sql.AppendLiteral(" WHERE ");
+
+        if (query.Condition != null) {
+            RenderExpression(
+                query.Condition,
+                sql
+            );
+        }
+
+        return sql;
+    }
+
     public Sql Generate(ExpressionQuery expressionQuery)
     {
-        var tableSource = expressionQuery.Table;
+        var tableSource = expressionQuery.TableSource;
         var joins = expressionQuery.Joins;
         var selector = expressionQuery.Selector;
         
@@ -78,16 +94,23 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
         //     }
         // }
         //
-        // if (_condition != null)
-        // {
-        //     sql.AppendLiteral(" WHERE ");
-        //     ExpressionRenderer.RenderExpression(
-        //         _options.IdentifierMapper,
-        //         _condition,
-        //         tableSourcesWithAliases,
-        //         sql
-        //     );
-        // }
+        
+        if (expressionQuery.Conditions.Any())
+        {
+            sql.AppendLiteral(" WHERE ");
+            bool first = true;
+            foreach (var queryCondition in expressionQuery.Conditions) {
+                if (!first) {
+                    sql.AppendLiteral(" AND ");
+                }
+                
+                RenderExpression(
+                    queryCondition,
+                    sql
+                );
+                first = false;
+            }
+        }
         //
         // if (limit != null)
         // {
