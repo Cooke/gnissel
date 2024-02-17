@@ -36,13 +36,13 @@ public class DbContext(DbOptions dbOptions)
             _dbConnector
         );
 
-    public ExecuteQuery Execute(Sql sql, CancellationToken cancellationToken = default) =>
-        new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
+    public NonQuery Execute(Sql sql, CancellationToken cancellationToken = default) =>
+        new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
 
-    public Task Batch(params ExecuteQuery[] statements) =>
-        Batch((IEnumerable<ExecuteQuery>)statements);
+    public Task Batch(params NonQuery[] statements) =>
+        Batch((IEnumerable<NonQuery>)statements);
 
-    public async Task Batch(IEnumerable<ExecuteQuery> statements)
+    public async Task Batch(IEnumerable<NonQuery> statements)
     {
         await using var batch = _dbConnector.CreateBatch();
         foreach (var statement in statements)
@@ -55,10 +55,10 @@ public class DbContext(DbOptions dbOptions)
         await batch.ExecuteNonQueryAsync();
     }
 
-    public Task Transaction(params ExecuteQuery[] statements) =>
-        Transaction((IEnumerable<ExecuteQuery>)statements);
+    public Task Transaction(params NonQuery[] statements) =>
+        Transaction((IEnumerable<NonQuery>)statements);
 
-    public async Task Transaction(IEnumerable<ExecuteQuery> statements)
+    public async Task Transaction(IEnumerable<NonQuery> statements)
     {
         await using var connection = _dbConnector.CreateConnection();
         await using var batch = connection.CreateBatch();

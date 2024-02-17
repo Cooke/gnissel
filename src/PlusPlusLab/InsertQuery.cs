@@ -20,7 +20,7 @@ public class InsertQuery<T>(Table<T> table, IReadOnlyCollection<Column<T>> colum
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var sql = options.SqlGenerator.Generate(this);
-        var q = new ExecuteQuery(options.DbConnector, options.DbAdapter.RenderSql(sql), cancellationToken);
+        var q = new NonQuery(options.DbConnector, options.DbAdapter.RenderSql(sql), cancellationToken);
         return q.ExecuteAsync();
     }
 }

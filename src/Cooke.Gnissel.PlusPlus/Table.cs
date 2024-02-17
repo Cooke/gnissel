@@ -150,7 +150,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
     }
 
     [Pure]
-    public ExecuteQuery Insert(T item)
+    public NonQuery Insert(T item)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity);
 
@@ -158,17 +158,17 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             _insertCommandText,
             insertColumns.Select(col => col.CreateParameter(item)).ToArray()
         );
-        return new ExecuteQuery(_dbConnector, sql, CancellationToken.None);
+        return new NonQuery(_dbConnector, sql, CancellationToken.None);
     }
 
     [Pure]
-    public ExecuteQuery Insert(params T[] items)
+    public NonQuery Insert(params T[] items)
     {
         return Insert((IEnumerable<T>)items);
     }
 
     [Pure]
-    public ExecuteQuery Insert(IEnumerable<T> items)
+    public NonQuery Insert(IEnumerable<T> items)
     {
         var insertColumns = Columns.Where(x => !x.IsIdentity).ToArray();
         var itemsArray = items as ICollection<T> ?? items.ToArray();
@@ -197,7 +197,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
                 .SelectMany(item => insertColumns.Select(col => col.CreateParameter(item)))
                 .ToArray()
         );
-        return new ExecuteQuery(_dbConnector, sql, CancellationToken.None);
+        return new NonQuery(_dbConnector, sql, CancellationToken.None);
     }
 
     private Sql CreateInsertSql(IDbAdapter dbAdapter)
@@ -251,7 +251,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
     public IAsyncEnumerable<T> ToAsyncEnumerable() => _whereQuery.ToAsyncEnumerable();
 
     [Pure]
-    public ExecuteQuery Delete(Expression<Func<T, bool>> predicate)
+    public NonQuery Delete(Expression<Func<T, bool>> predicate)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral($"DELETE FROM ");
@@ -265,11 +265,11 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             sql
         );
 
-        return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+        return new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }
 
     [Pure]
-    public ExecuteQuery Update(
+    public NonQuery Update(
         Expression<Func<T, bool>> predicate,
         Func<ISetCalls<T>, ISetCalls<T>> setCaller
     )
@@ -315,7 +315,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             [(new TableSource(this, predicate.Parameters[0]), null)],
             sql
         );
-        return new ExecuteQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+        return new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
     }
 
     [Pure]

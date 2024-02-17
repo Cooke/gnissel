@@ -3,10 +3,11 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Queries;
 
-public class ExecuteQuery(
+public class NonQuery(
     IDbConnector dbConnector,
     RenderedSql renderedSql,
-    CancellationToken cancellationToken)
+    CancellationToken cancellationToken
+)
 {
     public RenderedSql RenderedSql => renderedSql;
 

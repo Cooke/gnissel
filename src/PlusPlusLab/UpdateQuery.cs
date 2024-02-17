@@ -25,7 +25,7 @@ public class UpdateQuery<T>(
 
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var q = new ExecuteQuery(
+        var q = new NonQuery(
             options.DbConnector,
             options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this)),
             cancellationToken

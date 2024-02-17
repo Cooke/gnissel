@@ -121,6 +121,7 @@ public class QueryTests
             cts.Cancel();
         }
     }
+    
 
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
