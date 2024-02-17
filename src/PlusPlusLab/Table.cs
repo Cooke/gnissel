@@ -37,6 +37,23 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
     public DeleteQuery<T> Delete(Expression<Func<T, bool>> predicate) => new DeleteQuery<T>(this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
         (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
     ]));
+    
+    public UpdateQuery<T> Update(Expression<Func<T, bool>> predicate, Func<ISetCollector<T>, ISetCollector<T>> collectSetters)
+    {
+        var collector = new SetCollector<T>(this);
+        collectSetters(collector);
+        
+        return new UpdateQuery<T>(
+            this, options, GetTransformedExpression(predicate),
+            collector.Setters);
+    }
+
+    private Expression GetTransformedExpression(Expression<Func<T, bool>> predicate)
+    {
+        return ParameterExpressionReplacer.Replace(predicate.Body, [
+            (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
+        ]);
+    }
 
     public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector)
     {
@@ -173,4 +190,54 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
         );
     }
     
+}
+
+public interface ISetCollector<T>
+{
+    ISetCollector<T> Set<TProperty>(Expression<Func<T, TProperty>> propertySelector, TProperty value);
+
+    ISetCollector<T> Set<TProperty>(
+        Expression<Func<T, TProperty>> propertySelector,
+        Expression<Func<T, TProperty>> value
+    );
+}
+
+internal class SetCollector<T>(Table<T> table) : ISetCollector<T>
+{
+    public List<Setter> Setters { get; } = [];
+
+    public ISetCollector<T> Set<TProperty>(Expression<Func<T, TProperty>> propertySelector, TProperty value)
+    {
+        Setters.Add(
+            new(
+                FindColumn(propertySelector),
+                
+                Expression.Constant(value)
+                
+            )
+        );
+        return this;
+    }
+
+    public ISetCollector<T> Set<TProperty>(
+        Expression<Func<T, TProperty>> propertySelector,
+        Expression<Func<T, TProperty>> value
+    )
+    {
+        Setters.Add(new(FindColumn(propertySelector), ParameterExpressionReplacer.Replace(value.Body, [
+            (value.Parameters.Single(), new TableExpression(new TableSource(table)))
+        ])));
+        return this;
+    }
+
+    private Column<T> FindColumn<TProperty>(Expression<Func<T, TProperty>> columnSelector)
+    {
+        if (!(columnSelector.Body is MemberExpression { Member: { } memberInfo }))
+        {
+            throw new ArgumentException("Expected a member expression", nameof(columnSelector));
+        }
+
+        var column = table.Columns.FirstOrDefault(x => x.Member == memberInfo) ?? throw new ArgumentException("Column not found", nameof(columnSelector));
+        return column;
+    }
 }

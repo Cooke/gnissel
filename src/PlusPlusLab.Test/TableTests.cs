@@ -23,19 +23,13 @@ public class TableTests : IDisposable
                         name text,
                         age  integer
                     );
-                
-                    create table devices
-                    (
-                        name text,
-                        user_id  integer references users(id)
-                    );
                 """
             ).GetAwaiter().GetResult();
     }
     
     public void Dispose()
     {
-        db.Batch(db.Execute($"DROP TABLE devices"), db.Execute($"DROP TABLE users")).GetAwaiter().GetResult();
+        db.Execute($"DROP TABLE users").GetAwaiter().GetResult();
     }
     
     [Fact]
@@ -219,11 +213,26 @@ public class TableTests : IDisposable
         );
     }
     
+    [Fact]
+    public async Task Update()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+        
+        var result = await db.Users.Update(x => x.Id == 1, s => s.Set(x => x.Name, "Bubba").Set(x => x.Age, x => x.Age + 1));
+        Assert.Equal(1, result);
+        
+        var user = await db.Users.FirstOrDefault(x => x.Id == 1);
+        
+        Assert.Equal(
+            new User(1, "Bubba", 26),
+            user
+        );
+    }
+    
     private class TestDbContext(DbOptionsPlus options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
-        
-        public Table<Device> Devices { get; } = new(options);
     }
     
     private record User(
@@ -231,8 +240,4 @@ public class TableTests : IDisposable
         string Name,
         int Age
     );
-
-    private record Device(int UserId, string Name);
-
-    
 }
