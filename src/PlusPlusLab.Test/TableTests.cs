@@ -15,7 +15,7 @@ public class TableTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(new DbOptionsPlus(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
-        db.Execute(
+        db.NonQuery(
                 $"""
                     create table users
                     (
@@ -29,7 +29,7 @@ public class TableTests : IDisposable
     
     public void Dispose()
     {
-        db.Execute($"DROP TABLE users").GetAwaiter().GetResult();
+        db.NonQuery($"DROP TABLE users").GetAwaiter().GetResult();
     }
     
     [Fact]

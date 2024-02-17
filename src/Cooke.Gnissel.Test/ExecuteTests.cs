@@ -49,7 +49,7 @@ public class ExecuteTests
     public async Task InsertOne()
     {
         var name = "Bob";
-        var result = await _db.Execute($"INSERT INTO users(name, age) VALUES({name}, 25)");
+        var result = await _db.NonQuery($"INSERT INTO users(name, age) VALUES({name}, 25)");
         Assert.That(result, Is.EqualTo(1));
 
         var fetched = _dataSource.OpenConnection().QuerySingle<User>("SELECT * FROM users");

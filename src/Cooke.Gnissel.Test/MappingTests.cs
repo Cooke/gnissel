@@ -125,7 +125,7 @@ public class MappingTests
     {
         DateTime withTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Utc);
         DateTime withoutTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Local);
-        await _db.Execute(
+        await _db.NonQuery(
             $"INSERT INTO dates (timestamp_with_timezone, timestamp_without_timezone) VALUES ({withTimeZone}, {withoutTimeZone})"
         );
         var results = await _db.Query<(DateTime WithTimezone, DateTime WithoutTimezone)>(

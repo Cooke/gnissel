@@ -36,7 +36,7 @@ public class DbContext(DbOptions dbOptions)
             _dbConnector
         );
 
-    public NonQuery Execute(Sql sql, CancellationToken cancellationToken = default) =>
+    public NonQuery NonQuery(Sql sql, CancellationToken cancellationToken = default) =>
         new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
 
     public Task Batch(params NonQuery[] statements) =>
