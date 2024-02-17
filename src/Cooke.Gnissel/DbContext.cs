@@ -11,18 +11,11 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel;
 
-public class DbContext
+public class DbContext(DbOptions dbOptions)
 {
-    private readonly IDbAdapter _dbAdapter;
-    private readonly IDbConnector _dbConnector;
-    private readonly IObjectReaderProvider _objectReaderProvider;
-
-    public DbContext(DbOptions dbOptions)
-    {
-        _dbAdapter = dbOptions.DbAdapter;
-        _dbConnector = dbOptions.DbConnector;
-        _objectReaderProvider = dbOptions.ObjectReaderProvider;
-    }
+    private readonly IDbAdapter _dbAdapter = dbOptions.DbAdapter;
+    private readonly IDbConnector _dbConnector = dbOptions.DbConnector;
+    private readonly IObjectReaderProvider _objectReaderProvider = dbOptions.ObjectReaderProvider;
 
     public IAsyncEnumerable<TOut> Query<TOut>(Sql sql) =>
         _objectReaderProvider

@@ -14,36 +14,24 @@ public interface IColumn
     ITable Table { get; }
 }
 
-public class Column<TTable> : IColumn
+public class Column<TTable>(
+    Table<TTable> table,
+    string name,
+    bool isIdentity,
+    MemberInfo member,
+    Func<TTable, DbParameter> parameterFactory)
+    : IColumn
 {
-    private readonly Table<TTable> _table;
-    private readonly Func<TTable, DbParameter> _parameterFactory;
+    public ITable Table => table;
 
-    public Column(
-        Table<TTable> table,
-        string name,
-        bool isIdentity,
-        MemberInfo member,
-        Func<TTable, DbParameter> parameterFactory
-    )
-    {
-        _table = table;
-        _parameterFactory = parameterFactory;
-        Name = name;
-        IsIdentity = isIdentity;
-        Member = member;
-    }
+    public string Name { get; } = name;
 
-    public ITable Table => _table;
+    public bool IsIdentity { get; } = isIdentity;
 
-    public string Name { get; }
-
-    public bool IsIdentity { get; }
-
-    public MemberInfo Member { get; }
+    public MemberInfo Member { get; } = member;
 
     public DbParameter CreateParameter(TTable item)
     {
-        return _parameterFactory(item);
+        return parameterFactory(item);
     }
 }

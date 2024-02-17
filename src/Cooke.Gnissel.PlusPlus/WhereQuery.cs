@@ -47,31 +47,19 @@ public class WhereQuery<T1, T2, T3>(
     ) => PredicateTransformer.CreateTuplePredicate<(T1, T2, T3)>(predicate);
 }
 
-public class WhereQuery<T1, T2> : IToAsyncEnumerable<ValueTuple<T1, T2>>
+public class WhereQuery<T1, T2>(
+    DbOptions options,
+    TableSource source,
+    ImmutableArray<Join> joins,
+    Expression<Func<T1, T2, bool>>? predicate)
+    : IToAsyncEnumerable<ValueTuple<T1, T2>>
 {
-    private readonly DbOptions _options;
-    private readonly TableSource _source;
-    private readonly ImmutableArray<Join> _joins;
-    private readonly WhereQuery<ValueTuple<T1, T2>> _inner;
-
-    public WhereQuery(
-        DbOptions options,
-        TableSource source,
-        ImmutableArray<Join> joins,
-        Expression<Func<T1, T2, bool>>? predicate
-    )
-    {
-        _options = options;
-        _source = source;
-        _joins = joins;
-        _inner = new WhereQuery<ValueTuple<T1, T2>>(
-            options,
-            source,
-            joins,
-            predicate?.Let(_ => CreateTuplePredicate(predicate))
-        );
-        
-    }
+    private readonly WhereQuery<ValueTuple<T1, T2>> _inner = new(
+        options,
+        source,
+        joins,
+        predicate?.Let(_ => CreateTuplePredicate(predicate))
+    );
 
     [Pure]
     public ValueTask<(T1, T2)> FirstAsync(CancellationToken cancellationToken = default) =>
@@ -90,9 +78,9 @@ public class WhereQuery<T1, T2> : IToAsyncEnumerable<ValueTuple<T1, T2>>
     )
     {
         return new WhereQuery<T1, T2, TJoin>(
-            _options,
-            _source,
-            _joins.Add(new Join(outer, predicate.Parameters[2], predicate)),
+            options,
+            source,
+            joins.Add(new Join(outer, predicate.Parameters[2], predicate)),
             null
         );
     }
@@ -104,35 +92,20 @@ public class WhereQuery<T1, T2> : IToAsyncEnumerable<ValueTuple<T1, T2>>
     ) => PredicateTransformer.CreateTuplePredicate<(T1, T2)>(predicate);
 }
 
-public class WhereQuery<T> : IToAsyncEnumerable<T>
+public class WhereQuery<T>(
+    DbOptions options,
+    TableSource tableSource,
+    ImmutableArray<Join> joins,
+    Expression? condition)
+    : IToAsyncEnumerable<T>
 {
-    private readonly Expression? _condition;
-    private readonly IDbAdapter _dbAdapter;
-    private readonly IDbConnector _dbConnector;
-    private readonly TableSource _tableSource;
-    private readonly ImmutableArray<Join> _joins;
-    private readonly IObjectReaderProvider _objectReaderProvider;
-    private readonly DbOptions _options;
-
-    public WhereQuery(
-        DbOptions options,
-        TableSource tableSource,
-        ImmutableArray<Join> joins,
-        Expression? condition
-    )
-    {
-        _options = options;
-        _objectReaderProvider = options.ObjectReaderProvider;
-        _dbAdapter = options.DbAdapter;
-        _dbConnector = options.DbConnector;
-        _tableSource = tableSource;
-        _joins = joins;
-        _condition = condition;
-    }
+    private readonly IDbAdapter _dbAdapter = options.DbAdapter;
+    private readonly IDbConnector _dbConnector = options.DbConnector;
+    private readonly IObjectReaderProvider _objectReaderProvider = options.ObjectReaderProvider;
 
     [Pure]
     public WhereQuery<T> Where(Expression<Func<T, bool>> predicate) =>
-        new(_options, _tableSource, _joins, predicate.Body);
+        new(options, tableSource, joins, predicate.Body);
 
     public async ValueTask<T?> FirstOrDefaultAsync(CancellationToken cancellationToken = default)
     {
@@ -198,9 +171,9 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
     {
         var sql = new Sql(100, 2);
         var tableIndices = CreateTableIndicesMap();
-        var tableAlias = tableIndices.ContainsKey(_tableSource.Table.Name) ? $"{_tableSource.Table.Name}{tableIndices[_tableSource.Table.Name]++}" : null;
-        var joinAliases = _joins.Select(x => tableIndices.ContainsKey(x.Table.Name) ? $"{x.Table.Name}{tableIndices[x.Table.Name]++}" : null);
-        var tableSourcesWithAliases = ((IReadOnlyCollection<TableSource>)[_tableSource, .._joins]).Zip([tableAlias, ..joinAliases]).ToArray();
+        var tableAlias = tableIndices.ContainsKey(tableSource.Table.Name) ? $"{tableSource.Table.Name}{tableIndices[tableSource.Table.Name]++}" : null;
+        var joinAliases = joins.Select(x => tableIndices.ContainsKey(x.Table.Name) ? $"{x.Table.Name}{tableIndices[x.Table.Name]++}" : null);
+        var tableSourcesWithAliases = ((IReadOnlyCollection<TableSource>)[tableSource, ..joins]).Zip([tableAlias, ..joinAliases]).ToArray();
         
         sql.AppendLiteral("SELECT ");
         if (selector == null)
@@ -210,7 +183,7 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
         else
         {
             ExpressionRenderer.RenderExpression(
-                _options.IdentifierMapper,
+                options.IdentifierMapper,
                 selector.Body,
                 tableSourcesWithAliases,
                 sql
@@ -218,18 +191,18 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
         }
 
         sql.AppendLiteral(" FROM ");
-        AppendTableSource(_tableSource, tableAlias);
+        AppendTableSource(tableSource, tableAlias);
 
-        if (_joins.Any())
+        if (joins.Any())
         {
-            foreach (var (join, alias) in _joins.Zip(joinAliases))
+            foreach (var (join, alias) in joins.Zip(joinAliases))
             {
                 sql.AppendLiteral($" JOIN ");
                 AppendTableSource(join, alias);
 
                 sql.AppendLiteral($" ON ");
                 ExpressionRenderer.RenderExpression(
-                    _options.IdentifierMapper,
+                    options.IdentifierMapper,
                     join.Condition,
                     tableSourcesWithAliases,
                     sql
@@ -237,12 +210,12 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
             }
         }
 
-        if (_condition != null)
+        if (condition != null)
         {
             sql.AppendLiteral(" WHERE ");
             ExpressionRenderer.RenderExpression(
-                _options.IdentifierMapper,
-                _condition,
+                options.IdentifierMapper,
+                condition,
                 tableSourcesWithAliases,
                 sql
             );
@@ -269,8 +242,8 @@ public class WhereQuery<T> : IToAsyncEnumerable<T>
         
         Dictionary<string, int> CreateTableIndicesMap()
         {
-            var tableCount = new Dictionary<string, int> { { _tableSource.Table.Name, 1 } };
-            foreach (var join in _joins)
+            var tableCount = new Dictionary<string, int> { { tableSource.Table.Name, 1 } };
+            foreach (var join in joins)
             {
                 tableCount.TryAdd(join.Table.Name, 0);
                 tableCount[join.Table.Name]++;

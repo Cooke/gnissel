@@ -122,18 +122,11 @@ public class QueryTests
         }
     }
 
-    private class TestDbContext : DbContext
+    private class TestDbContext(DbOptions options) : DbContext(options)
     {
-        public TestDbContext(DbOptions options)
-            : base(options)
-        {
-            Users = new Table<User>(options);
-            Devices = new Table<Device>(options);
-        }
+        public Table<User> Users { get; } = new(options);
 
-        public Table<User> Users { get; }
-
-        public Table<Device> Devices { get; }
+        public Table<Device> Devices { get; } = new(options);
     }
 
     private record User(

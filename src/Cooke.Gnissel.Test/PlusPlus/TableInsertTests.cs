@@ -103,15 +103,9 @@ public class TableInsertTests
         );
     }
 
-    public class TestDbContext : DbContext
+    public class TestDbContext(DbOptions options) : DbContext(options)
     {
-        public TestDbContext(DbOptions options)
-            : base(options)
-        {
-            Users = new Table<User>(options);
-        }
-
-        public Table<User> Users { get; }
+        public Table<User> Users { get; } = new(options);
     }
 
     public record User(

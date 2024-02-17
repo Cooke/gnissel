@@ -4,18 +4,11 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public class NpgsqlDbConnector : IDbConnector
+public class NpgsqlDbConnector(NpgsqlDataSource dataSource) : IDbConnector
 {
-    private readonly NpgsqlDataSource _dataSource;
+    public DbCommand CreateCommand() => dataSource.CreateCommand();
 
-    public NpgsqlDbConnector(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
+    public DbBatch CreateBatch() => dataSource.CreateBatch();
 
-    public DbCommand CreateCommand() => _dataSource.CreateCommand();
-
-    public DbBatch CreateBatch() => _dataSource.CreateBatch();
-
-    public DbConnection CreateConnection() => _dataSource.CreateConnection();
+    public DbConnection CreateConnection() => dataSource.CreateConnection();
 }

@@ -12,15 +12,8 @@ using Npgsql.NameTranslation;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public sealed class NpgsqlDbAdapter : IDbAdapter
+public sealed class NpgsqlDbAdapter(NpgsqlDataSource dataSource) : IDbAdapter
 {
-    private readonly NpgsqlDataSource _dataSource;
-
-    public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
-    {
-        _dataSource = dataSource;
-    }
-
     public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
     public string EscapeIdentifierIfNeeded(string identifier) =>
@@ -76,7 +69,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
-    public IDbConnector CreateConnector() => new NpgsqlDbConnector(_dataSource);
+    public IDbConnector CreateConnector() => new NpgsqlDbConnector(dataSource);
 
     public IIdentifierMapper DefaultIdentifierMapper { get; } =
         new DefaultPostgresIdentifierMapper();

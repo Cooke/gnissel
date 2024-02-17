@@ -2,25 +2,16 @@ using System.Data.Common;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public sealed class FixedConnectionDbConnector : IDbConnector
+public sealed class FixedConnectionDbConnector(DbConnection connection, IDbAdapter adapter) : IDbConnector
 {
-    private readonly DbConnection _connection;
-    private readonly IDbAdapter _adapter;
-
-    public FixedConnectionDbConnector(DbConnection connection, IDbAdapter adapter)
-    {
-        _connection = connection;
-        _adapter = adapter;
-    }
-
     public DbCommand CreateCommand()
     {
-        var cmd = _adapter.CreateCommand();
-        cmd.Connection = _connection;
+        var cmd = adapter.CreateCommand();
+        cmd.Connection = connection;
         return cmd;
     }
 
-    public DbBatch CreateBatch() => _connection.CreateBatch();
+    public DbBatch CreateBatch() => connection.CreateBatch();
 
-    public DbConnection CreateConnection() => _connection;
+    public DbConnection CreateConnection() => connection;
 }

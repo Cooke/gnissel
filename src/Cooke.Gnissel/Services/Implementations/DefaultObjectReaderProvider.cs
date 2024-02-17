@@ -11,16 +11,10 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectReaderProvider : IObjectReaderProvider
+public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : IObjectReaderProvider
 {
-    private readonly IIdentifierMapper _identifierMapper;
     private readonly ConcurrentDictionary<Type, object> _readers =
         new ConcurrentDictionary<Type, object>();
-
-    public DefaultObjectReaderProvider(IIdentifierMapper identifierMapper)
-    {
-        _identifierMapper = identifierMapper;
-    }
 
     public ObjectReader<TOut> Get<TOut>() => (ObjectReader<TOut>)GetReader(typeof(TOut));
 
@@ -95,7 +89,7 @@ public class DefaultObjectReaderProvider : IObjectReaderProvider
                         dataReader,
                         ordinalOffset,
                         p.ParameterType,
-                        p.GetDbName() ?? _identifierMapper.ToColumnName(p),
+                        p.GetDbName() ?? identifierMapper.ToColumnName(p),
                         p.GetDbType()
                     );
                     width += innerWidth;

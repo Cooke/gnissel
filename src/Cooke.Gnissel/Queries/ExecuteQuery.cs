@@ -3,24 +3,12 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Queries;
 
-public class ExecuteQuery
+public class ExecuteQuery(
+    IDbConnector dbConnector,
+    RenderedSql renderedSql,
+    CancellationToken cancellationToken)
 {
-    private readonly IDbConnector _dbConnector;
-    private readonly CancellationToken _cancellationToken;
-    private readonly RenderedSql _renderedSql;
-
-    public ExecuteQuery(
-        IDbConnector dbConnector,
-        RenderedSql renderedSql,
-        CancellationToken cancellationToken
-    )
-    {
-        _renderedSql = renderedSql;
-        _dbConnector = dbConnector;
-        _cancellationToken = cancellationToken;
-    }
-
-    public RenderedSql RenderedSql => _renderedSql;
+    public RenderedSql RenderedSql => renderedSql;
 
     public ValueTaskAwaiter<int> GetAwaiter()
     {
@@ -29,9 +17,9 @@ public class ExecuteQuery
 
     public async ValueTask<int> ExecuteAsync()
     {
-        await using var cmd = _dbConnector.CreateCommand();
-        cmd.CommandText = _renderedSql.CommandText;
-        cmd.Parameters.AddRange(_renderedSql.Parameters);
-        return await cmd.ExecuteNonQueryAsync(_cancellationToken);
+        await using var cmd = dbConnector.CreateCommand();
+        cmd.CommandText = renderedSql.CommandText;
+        cmd.Parameters.AddRange(renderedSql.Parameters);
+        return await cmd.ExecuteNonQueryAsync(cancellationToken);
     }
 }

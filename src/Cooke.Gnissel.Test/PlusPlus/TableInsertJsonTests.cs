@@ -67,15 +67,9 @@ public class TableInsertJsonTests
         Assert.That(fetchedTyped, Is.EqualTo(new User(1, "Bob", 25, new UserData("bob", 1))));
     }
 
-    public class TestDbContext : DbContext
+    public class TestDbContext(DbOptions options) : DbContext(options)
     {
-        public TestDbContext(DbOptions options)
-            : base(options)
-        {
-            Users = new Table<User>(options);
-        }
-
-        public Table<User> Users { get; }
+        public Table<User> Users { get; } = new(options);
     }
 
     public record User(

@@ -1,11 +1,6 @@
 ﻿namespace Cooke.Gnissel;
 
-public class DbNameAttribute : Attribute
+public class DbNameAttribute(string dbName) : Attribute
 {
-    public string DbName { get; }
-
-    public DbNameAttribute(string dbName)
-    {
-        DbName = dbName;
-    }
+    public string DbName { get; } = dbName;
 }

@@ -1,11 +1,6 @@
 ﻿namespace Cooke.Gnissel;
 
-public class DbTypeAttribute : Attribute
+public class DbTypeAttribute(string dbType) : Attribute
 {
-    public string DbType { get; }
-
-    public DbTypeAttribute(string dbType)
-    {
-        DbType = dbType;
-    }
+    public string DbType { get; } = dbType;
 }

@@ -73,15 +73,9 @@ public class TransactionTests
         CollectionAssert.IsEmpty(results);
     }
 
-    private class TestDbContext : DbContext
+    private class TestDbContext(DbOptions options) : DbContext(options)
     {
-        public TestDbContext(DbOptions options)
-            : base(options)
-        {
-            Users = new Table<User>(options);
-        }
-
-        public Table<User> Users { get; }
+        public Table<User> Users { get; } = new(options);
     }
 
     public record User(int Id, string Name, int Age);
