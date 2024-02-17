@@ -11,9 +11,11 @@ namespace Cooke.Gnissel.Queries;
 public class Query<TOut>(
     RenderedSql renderedSql,
     Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
-    IDbConnector dbConnector)
-    : IAsyncEnumerable<TOut>
+    IDbConnector dbConnector
+) : IAsyncEnumerable<TOut>, IQuery
 {
+    public RenderedSql RenderedSql => renderedSql;
+
     public async IAsyncEnumerable<TOut> ExecuteAsync(
         [EnumeratorCancellation] CancellationToken cancellationToken
     )

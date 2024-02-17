@@ -17,7 +17,7 @@ public class DbContext(DbOptions dbOptions)
     private readonly IDbConnector _dbConnector = dbOptions.DbConnector;
     private readonly IObjectReaderProvider _objectReaderProvider = dbOptions.ObjectReaderProvider;
 
-    public IAsyncEnumerable<TOut> Query<TOut>(Sql sql) =>
+    public Query<TOut> Query<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
             .Let(
@@ -29,7 +29,7 @@ public class DbContext(DbOptions dbOptions)
                     )
             );
 
-    public IAsyncEnumerable<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
+    public Query<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
         new Query<TOut>(
             _dbAdapter.RenderSql(sql),
             (reader, ct) => reader.ReadRows(mapper, ct),
