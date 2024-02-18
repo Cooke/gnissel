@@ -274,6 +274,7 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
             ExpressionType.Multiply => "*",
             ExpressionType.NotEqual => "<>",
             ExpressionType.Or => "OR",
+            ExpressionType.OrElse => "OR",
             ExpressionType.Subtract => "-",
             ExpressionType.Add => "+",
             ExpressionType.And => "AND",

@@ -67,6 +67,27 @@ public class TableJoinTests : IDisposable
     }
     
     [Fact]
+    public async Task JoinWhere()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        var sarasDevice = new Device("b", "Sara's device", 2);
+        
+        await db.Users.Insert(bob);
+        await db.Users.Insert(sara);
+        await db.Devices.Insert(bobsDevice);
+        await db.Devices.Insert(sarasDevice);
+        
+        var usersDevices = await db.Users.Join(db.Devices, (u, d) => u.Id == d.UserId).Where((u, d) => d.UserId == 2 || d.UserId == 1).ToArrayAsync();
+        
+        Assert.Equal(
+            [(bob, bobsDevice), (sara, sarasDevice)],
+            usersDevices
+        );
+    }
+    
+    [Fact]
     public async Task SelfJoin()
     {
         var bob = new User(1, "Bob", 25);
@@ -105,6 +126,32 @@ public class TableJoinTests : IDisposable
         
         Assert.Equal(
             [(bob, bobsDevice, bobsDeviceKey), (sara, sarasDevice, sarasDeviceKey)],
+            usersDevices
+        );
+    }
+    
+    [Fact]
+    public async Task JoinJoinWhere()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        var bobsDeviceKey = new DeviceKey("a", "asdf");
+        var sarasDevice = new Device("b", "Sara's device", 2);
+        var sarasDeviceKey = new DeviceKey("b", "asdf");
+        
+        await db.Users.Insert(bob);
+        await db.Users.Insert(sara);
+        await db.Devices.Insert(bobsDevice);
+        await db.Devices.Insert(sarasDevice);
+        await db.DeviceKeys.Insert(bobsDeviceKey);
+        await db.DeviceKeys.Insert(sarasDeviceKey);
+        
+        var usersDevices = await db.Users.Join(db.Devices, (u, d) => u.Id == d.UserId)
+            .Join(db.DeviceKeys, (u, d, k) => d.Id == k.DeviceId).Where((u, d, k) => u.Name == "Sara").ToArrayAsync();
+        
+        Assert.Equal(
+            [(sara, sarasDevice, sarasDeviceKey)],
             usersDevices
         );
     }

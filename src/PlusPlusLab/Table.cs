@@ -12,34 +12,27 @@ using PlusPlusLab.Utils;
 
 namespace PlusPlusLab;
 
-public class Table<T> : ITable, IToAsyncEnumerable<T>
+public class Table<T>(DbOptionsPlus options) : ITable, IToAsyncEnumerable<T>
 {
-    private readonly DbOptionsPlus options;
-    private readonly ExpressionQuery _expressionQuery;
-
-    public Table(DbOptionsPlus options)
-    {
-        this.options = options;
-        Columns = ColumnBuilder.CreateColumns<T>(options);
-        Name = options.IdentifierMapper.ToTableName(typeof(T));
-        _expressionQuery = new ExpressionQuery(new TableSource(this), null, [],  []);
-    }
-
-    public string Name { get; }
+    public string Name { get; } = options.IdentifierMapper.ToTableName(typeof(T));
 
     IReadOnlyCollection<IColumn> ITable.Columns => Columns;
     
-    public IReadOnlyCollection<Column<T>> Columns { get; }
-    
+    public IReadOnlyCollection<Column<T>> Columns { get; } = ColumnBuilder.CreateColumns<T>(options);
+
     public Type Type => typeof(T);
     
-    public InsertQuery<T> Insert(T instance) => new(this, Columns, options, [new(Columns.Select(c => c.CreateParameter(instance)).ToArray())]);
+    public InsertQuery<T> Insert(T instance) 
+        => new(this, Columns, options, [new(Columns.Select(c => c.CreateParameter(instance)).ToArray())]);
     
-    public InsertQuery<T> Insert(params T[] instances) => new(this, Columns, options, instances.Select(instance => new RowParameters(Columns.Select(c => c.CreateParameter(instance)).ToArray())).ToArray());
+    public InsertQuery<T> Insert(params T[] instances) 
+        => new(this, Columns, options, instances.Select(instance => new RowParameters(Columns.Select(c => c.CreateParameter(instance)).ToArray())).ToArray());
     
-    public InsertQuery<T> Insert(IEnumerable<T> instances) => new(this, Columns, options, instances.Select(instance => new RowParameters(Columns.Select(c => c.CreateParameter(instance)).ToArray())).ToArray());
+    public InsertQuery<T> Insert(IEnumerable<T> instances) 
+        => new(this, Columns, options, instances.Select(instance => new RowParameters(Columns.Select(c => c.CreateParameter(instance)).ToArray())).ToArray());
     
-    public DeleteQuery<T> Delete(Expression<Func<T, bool>> predicate) => new DeleteQuery<T>(this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
+    public DeleteQuery<T> Delete(Expression<Func<T, bool>> predicate) 
+        => new DeleteQuery<T>(this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
         (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
     ]));
     
@@ -49,130 +42,35 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
         collectSetters(collector);
         
         return new UpdateQuery<T>(
-            this, options, GetTransformedExpression(predicate),
+            this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
+                (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
+            ]),
             collector.Setters);
     }
 
-    private Expression GetTransformedExpression(Expression<Func<T, bool>> predicate)
-    {
-        return ParameterExpressionReplacer.Replace(predicate.Body, [
-            (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
-        ]);
-    }
+    public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
+        => new (options, CreateExpressionQuery().WithSelect(selector));
 
-    public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector)
-    {
-        var tableSource = new TableSource(this);
-        var expressionQuery = new ExpressionQuery(
-            tableSource, 
-            ParameterExpressionReplacer.Replace(selector.Body, [
-                (selector.Parameters.Single(), new TableExpression(tableSource))
-            ])
-            , [], []);
-        return new TypedQuery<TSelect>(options, expressionQuery);
-    }
+    public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
+        => new (options, CreateExpressionQuery().WithCondition(predicate));
+
+    public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
+        => new (options, CreateExpressionQuery().WithCondition(predicate));
+
+    public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate) 
+        => new (options, CreateExpressionQuery().WithJoin(joinTable, predicate));
+
+
+    public FirstQuery<T> First() => new(options, CreateExpressionQuery());
     
-    public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
-    {
-        var tableSource = new TableSource(this);
-        var expressionQuery = new ExpressionQuery(
-            tableSource, 
-            null
-            , [],
-            [ParameterExpressionReplacer.Replace(predicate.Body, [
-                (predicate.Parameters.Single(), new TableExpression(tableSource))
-            ])]);
-        return new(options, expressionQuery);
-    }
-
-    public TypedQuery<T> Where(Expression<Func<T, bool>> predicate)
-    {
-        var tableSource = new TableSource(this);
-        var expressionQuery = new ExpressionQuery(
-            tableSource, 
-            null
-            , [],
-            [ParameterExpressionReplacer.Replace(predicate.Body, [
-                (predicate.Parameters.Single(), new TableExpression(tableSource))
-            ])]);
-        return new(options, expressionQuery);
-    }
+    private ExpressionQuery CreateExpressionQuery() => new ExpressionQuery(new TableSource(this), null, [],  []);
     
-    public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate)
-    {
-        var (tableAlias, joinAlias) = joinTable.Equals(this) ? (Name + "1", Name + "2") : (null, null);
-        var tableSource = new TableSource(this, tableAlias);
-        var joinSource = new TableSource(joinTable, joinAlias);
-        
-        var expressionQuery = new ExpressionQuery(
-            tableSource, 
-            null
-            , [new (joinSource, ParameterExpressionReplacer.Replace(predicate.Body, [
-                (predicate.Parameters[0], new TableExpression(tableSource)),
-                (predicate.Parameters[1], new TableExpression(joinSource))
-            ]))],
-            []);
-        return new(options, expressionQuery);
-    }
-
     public IAsyncEnumerable<T> ToAsyncEnumerable()
     {
         return new Query<T>(
-            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(_expressionQuery)),
+            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(CreateExpressionQuery())),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );
-    }
-
-    public FirstQuery<T> First() => new(options, _expressionQuery);
-}
-
-public interface ISetCollector<T>
-{
-    ISetCollector<T> Set<TProperty>(Expression<Func<T, TProperty>> propertySelector, TProperty value);
-
-    ISetCollector<T> Set<TProperty>(
-        Expression<Func<T, TProperty>> propertySelector,
-        Expression<Func<T, TProperty>> value
-    );
-}
-
-internal class SetCollector<T>(Table<T> table) : ISetCollector<T>
-{
-    public List<Setter> Setters { get; } = [];
-
-    public ISetCollector<T> Set<TProperty>(Expression<Func<T, TProperty>> propertySelector, TProperty value)
-    {
-        Setters.Add(
-            new(
-                FindColumn(propertySelector),
-                
-                Expression.Constant(value)
-                
-            )
-        );
-        return this;
-    }
-
-    public ISetCollector<T> Set<TProperty>(
-        Expression<Func<T, TProperty>> propertySelector,
-        Expression<Func<T, TProperty>> value
-    )
-    {
-        Setters.Add(new(FindColumn(propertySelector), ParameterExpressionReplacer.Replace(value.Body, [
-            (value.Parameters.Single(), new TableExpression(new TableSource(table)))
-        ])));
-        return this;
-    }
-
-    private Column<T> FindColumn<TProperty>(Expression<Func<T, TProperty>> columnSelector)
-    {
-        if (!(columnSelector.Body is MemberExpression { Member: { } memberInfo }))
-        {
-            throw new ArgumentException("Expected a member expression", nameof(columnSelector));
-        }
-
-        var column = table.Columns.FirstOrDefault(x => x.Member == memberInfo) ?? throw new ArgumentException("Column not found", nameof(columnSelector));
-        return column;
     }
 }
