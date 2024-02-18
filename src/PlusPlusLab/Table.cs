@@ -20,7 +20,7 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
     public Table(DbOptionsPlus options)
     {
         this.options = options;
-        Columns = ColumnBuilder.CreateColumns(options, this);
+        Columns = ColumnBuilder.CreateColumns<T>(options);
         Name = options.IdentifierMapper.ToTableName(typeof(T));
         _expressionQuery = new ExpressionQuery(new TableSource(this), null, [],  []);
     }

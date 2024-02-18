@@ -1,5 +1,4 @@
 using System.Collections.Immutable;
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -11,19 +10,18 @@ namespace PlusPlusLab;
 
 internal static class ColumnBuilder
 {
-    public static ImmutableArray<Column<T>> CreateColumns<T>(DbOptions dbOptions, Table<T> table)
+    public static ImmutableArray<Column<T>> CreateColumns<T>(DbOptions dbOptions)
     {
         var objectParameter = Expression.Parameter(typeof(T));
         return typeof(T)
             .GetProperties()
             .SelectMany(
                 p =>
-                    CreateColumns(
+                    CreateColumns<T>(
                         dbOptions,
                         p,
                         objectParameter,
-                        Expression.Property(objectParameter, p),
-                        table
+                        Expression.Property(objectParameter, p)
                     )
             )
             .ToImmutableArray();
@@ -32,41 +30,36 @@ internal static class ColumnBuilder
     private static IEnumerable<Column<T>> CreateColumns<T>(DbOptions dbOptions,
         PropertyInfo p,
         ParameterExpression rootExpression,
-        Expression memberExpression, Table<T> table)
+        Expression memberExpression)
     {
         if (p.GetDbType() != null)
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
+            yield return CreateColumn<T>(dbOptions, p, rootExpression, memberExpression);
         else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
+            yield return CreateColumn<T>(dbOptions, p, rootExpression, memberExpression);
         else if (p.PropertyType.IsClass)
             foreach (
                 var column in p.PropertyType
                     .GetProperties()
                     .SelectMany<PropertyInfo, Column<T>>(
                         innerProperty =>
-                            CreateColumns(
+                            CreateColumns<T>(
                                 dbOptions,
                                 innerProperty,
                                 rootExpression,
-                                Expression.Property(memberExpression, innerProperty), table
+                                Expression.Property(memberExpression, innerProperty)
                             )
                     )
             )
                 yield return column;
         else
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
+            yield return CreateColumn<T>(dbOptions, p, rootExpression, memberExpression);
     }
 
     private static Column<T> CreateColumn<T>(DbOptions dbOptions,
         PropertyInfo p,
         ParameterExpression objectExpression,
-        Expression memberExpression, Table<T> table)
-    {
-        return new Column<T>(
-            table,
-            p.GetDbName() ?? dbOptions.DbAdapter.DefaultIdentifierMapper.ToColumnName(p),
-            p.GetCustomAttribute<DatabaseGeneratedAttribute>()
-                ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
+        Expression memberExpression) =>
+        new Column<T>(p.GetDbName() ?? dbOptions.DbAdapter.DefaultIdentifierMapper.ToColumnName(p),
             p,
             CreateParameterFactory<T>(
                 dbOptions.DbAdapter,
@@ -75,7 +68,6 @@ internal static class ColumnBuilder
                 objectExpression
             )
         );
-    }
 
     private static Func<T, DbParameter> CreateParameterFactory<T>(
         IDbAdapter dbAdapter,
