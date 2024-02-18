@@ -1,8 +1,7 @@
 using Microsoft.Extensions.Logging;
 using Xunit.Abstractions;
-using Xunit.Sdk;
 
-namespace PlusPlusLab.Test;
+namespace PlusPlusLab.Test.Utils;
 
 public class TestOutputHelperLogProvider(Func<ITestOutputHelper?> testOutputHelperProvider) : ILoggerProvider
 {

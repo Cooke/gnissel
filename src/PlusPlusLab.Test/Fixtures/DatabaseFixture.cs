@@ -3,13 +3,13 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Npgsql;
-using PlusPlusLab.Test;
+using PlusPlusLab.Test.Utils;
 using Testcontainers.PostgreSql;
 using Xunit.Abstractions;
 
 #endregion
 
-namespace Cooke.Gnissel.Test;
+namespace PlusPlusLab.Test.Fixtures;
 
 public class DatabaseFixture : IDisposable
 {

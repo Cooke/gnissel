@@ -1,10 +1,9 @@
 using Cooke.Gnissel;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Test;
-using Cooke.Gnissel.Utils;
+using PlusPlusLab.Test.Fixtures;
 using Xunit.Abstractions;
 
-namespace PlusPlusLab.Fact;
+namespace PlusPlusLab.Test;
 
 [Collection("Database collection")]
 public class JsonTests : IDisposable
