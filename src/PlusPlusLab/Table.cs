@@ -12,7 +12,7 @@ using PlusPlusLab.Utils;
 
 namespace PlusPlusLab;
 
-public class Table<T>(DbOptionsPlus options) : ITable, IToAsyncEnumerable<T>
+public class Table<T>(DbOptionsPlus options) : ITable, IToQuery<T>
 {
     public string Name { get; } = options.IdentifierMapper.ToTableName(typeof(T));
 
@@ -65,12 +65,10 @@ public class Table<T>(DbOptionsPlus options) : ITable, IToAsyncEnumerable<T>
     
     private ExpressionQuery CreateExpressionQuery() => new ExpressionQuery(new TableSource(this), null, [],  []);
     
-    public IAsyncEnumerable<T> ToAsyncEnumerable()
-    {
-        return new Query<T>(
+    public Query<T> ToQuery() =>
+        new Query<T>(
             options.DbAdapter.RenderSql(options.SqlGenerator.Generate(CreateExpressionQuery())),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );
-    }
 }

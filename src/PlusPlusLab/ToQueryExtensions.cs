@@ -3,10 +3,10 @@ using PlusPlusLab.Querying;
 
 namespace PlusPlusLab;
 
-public static class ToAsyncEnumerableExtensions
+public static class ToQueryExtensions
 {
     public static ValueTask<T[]> ToArrayAsync<T>(
-        this IToAsyncEnumerable<T> source,
+        this IToQuery<T> source,
         CancellationToken cancellationToken = default
-    ) => source.ToAsyncEnumerable().ToArrayAsync(cancellationToken);
+    ) => source.ToQuery().ToArrayAsync(cancellationToken);
 }

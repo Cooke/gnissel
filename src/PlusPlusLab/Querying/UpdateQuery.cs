@@ -17,10 +17,7 @@ public class UpdateQuery<T>(
 
     public IReadOnlyCollection<Setter> Setters { get; } = setters;
 
-    public ValueTaskAwaiter<int> GetAwaiter()
-    {
-        return ExecuteAsync().GetAwaiter();
-    }
+    public ValueTaskAwaiter<int> GetAwaiter() => ExecuteAsync().GetAwaiter();
 
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(

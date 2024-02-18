@@ -5,13 +5,13 @@ using PlusPlusLab.Utils;
 
 namespace PlusPlusLab.Querying;
 
-public class TypedQuery<T1, T2, T3>(DbOptionsPlus options, ExpressionQuery expressionQuery) : IToAsyncEnumerable<(T1,T2,T3)>
+public class TypedQuery<T1, T2, T3>(DbOptionsPlus options, ExpressionQuery expressionQuery) : IToQuery<(T1,T2,T3)>
 {
     public TypedQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate) => 
         new (options, expressionQuery.WithCondition(predicate));
 
-    public IAsyncEnumerable<(T1, T2, T3)> ToAsyncEnumerable() =>
-        new Query<(T1, T2, T3)>(
+    public Query<(T1, T2, T3)> ToQuery() =>
+        new (
             options.DbAdapter.RenderSql(options.SqlGenerator.Generate(expressionQuery)),
             options.ObjectReaderProvider.GetReaderFunc<(T1, T2, T3)>(),
             options.DbConnector

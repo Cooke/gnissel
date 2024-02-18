@@ -11,10 +11,7 @@ public class DeleteQuery<T>(Table<T> table, DbOptionsPlus options, Expression? c
 
     public Expression? Condition { get; } = condition;
 
-    public ValueTaskAwaiter<int> GetAwaiter()
-    {
-        return ExecuteAsync().GetAwaiter();
-    }
+    public ValueTaskAwaiter<int> GetAwaiter() => ExecuteAsync().GetAwaiter();
 
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(
