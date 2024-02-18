@@ -30,14 +30,9 @@ public class DbContext(DbOptions dbOptions)
             );
 
     public Query<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
-        new Query<TOut>(
-            _dbAdapter.RenderSql(sql),
-            (reader, ct) => reader.ReadRows(mapper, ct),
-            _dbConnector
-        );
+        new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
-    public NonQuery NonQuery(Sql sql, CancellationToken cancellationToken = default) =>
-        new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
+    public NonQuery NonQuery(Sql sql) => new(_dbConnector, _dbAdapter.RenderSql(sql));
 
     public Task Batch(params INonQuery[] statements) => Batch((IEnumerable<INonQuery>)statements);
 

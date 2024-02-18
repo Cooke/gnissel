@@ -158,7 +158,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             _insertCommandText,
             insertColumns.Select(col => col.CreateParameter(item)).ToArray()
         );
-        return new NonQuery(_dbConnector, sql, CancellationToken.None);
+        return new NonQuery(_dbConnector, sql);
     }
 
     [Pure]
@@ -197,7 +197,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
                 .SelectMany(item => insertColumns.Select(col => col.CreateParameter(item)))
                 .ToArray()
         );
-        return new NonQuery(_dbConnector, sql, CancellationToken.None);
+        return new NonQuery(_dbConnector, sql);
     }
 
     private Sql CreateInsertSql(IDbAdapter dbAdapter)
@@ -265,7 +265,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             sql
         );
 
-        return new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+        return new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql));
     }
 
     [Pure]
@@ -315,7 +315,7 @@ public class Table<T> : IToAsyncEnumerable<T>, ITable
             [(new TableSource(this, predicate.Parameters[0]), null)],
             sql
         );
-        return new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), CancellationToken.None);
+        return new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql));
     }
 
     [Pure]

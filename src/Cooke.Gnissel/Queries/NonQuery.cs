@@ -3,11 +3,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Queries;
 
-public class NonQuery(
-    IDbConnector dbConnector,
-    RenderedSql renderedSql,
-    CancellationToken cancellationToken
-) : INonQuery
+public class NonQuery(IDbConnector dbConnector, RenderedSql renderedSql) : INonQuery
 {
     public RenderedSql RenderedSql => renderedSql;
 
@@ -16,7 +12,7 @@ public class NonQuery(
         return ExecuteAsync().GetAwaiter();
     }
 
-    public async ValueTask<int> ExecuteAsync()
+    public async ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         await using var cmd = dbConnector.CreateCommand();
         cmd.CommandText = renderedSql.CommandText;

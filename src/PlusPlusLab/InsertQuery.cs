@@ -23,12 +23,11 @@ public class InsertQuery<T>(
         return ExecuteAsync().GetAwaiter();
     }
 
-    public ValueTask<int> ExecuteAsync() =>
+    public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(
             options.DbConnector,
-            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this)),
-            CancellationToken.None
-        ).ExecuteAsync();
+            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this))
+        ).ExecuteAsync(cancellationToken);
 
     public RenderedSql RenderedSql =>
         options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this));

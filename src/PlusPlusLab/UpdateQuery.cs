@@ -23,13 +23,9 @@ public class UpdateQuery<T>(
         return ExecuteAsync().GetAwaiter();
     }
 
-    public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default)
-    {
-        var q = new NonQuery(
+    public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
+        new NonQuery(
             options.DbConnector,
-            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this)),
-            cancellationToken
-        );
-        return q.ExecuteAsync();
-    }
+            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this))
+        ).ExecuteAsync(cancellationToken);
 }
