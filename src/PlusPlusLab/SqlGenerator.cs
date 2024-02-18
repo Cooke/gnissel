@@ -156,12 +156,12 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
                 first = false;
             }
         }
-        //
-        // if (limit != null)
-        // {
-        //     sql.AppendLiteral(" LIMIT ");
-        //     sql.AppendLiteral(limit.Value.ToString());
-        // }
+
+        if (query.Limit != null)
+        {
+            sql.AppendLiteral(" LIMIT ");
+            sql.AppendLiteral(query.Limit.Value.ToString());
+        }
 
         return sql;
 
