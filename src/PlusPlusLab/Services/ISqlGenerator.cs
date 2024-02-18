@@ -1,6 +1,7 @@
 using Cooke.Gnissel;
+using PlusPlusLab.Querying;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Services;
 
 public interface ISqlGenerator
 {

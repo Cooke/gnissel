@@ -1,9 +1,8 @@
 ﻿using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel;
 using Cooke.Gnissel.Queries;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
 public class UpdateQuery<T>(
     Table<T> table,

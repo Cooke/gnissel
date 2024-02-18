@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
 public record TableSource(ITable Table, string? Alias = null)
 {

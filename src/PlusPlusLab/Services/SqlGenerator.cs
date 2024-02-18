@@ -2,8 +2,9 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel;
 using Cooke.Gnissel.Services;
+using PlusPlusLab.Querying;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Services;
 
 public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
 {

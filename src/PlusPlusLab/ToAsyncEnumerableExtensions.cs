@@ -1,11 +1,7 @@
-using Cooke.Gnissel.Utils;
+﻿using Cooke.Gnissel.Utils;
+using PlusPlusLab.Querying;
 
 namespace PlusPlusLab;
-
-public interface IToAsyncEnumerable<out T>
-{
-    public IAsyncEnumerable<T> ToAsyncEnumerable();
-}
 
 public static class ToAsyncEnumerableExtensions
 {

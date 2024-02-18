@@ -1,6 +1,6 @@
 using System.Data.Common;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
 public interface IInsertQuery
 {

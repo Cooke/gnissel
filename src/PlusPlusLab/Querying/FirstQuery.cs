@@ -1,18 +1,17 @@
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Utils;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
-public class FirstOrDefaultQuery<T>(DbOptionsPlus options, ExpressionQuery expressionQuery)
+public class FirstQuery<T>(DbOptionsPlus options, ExpressionQuery expressionQuery)
 {
-    public ValueTaskAwaiter<T?> GetAwaiter()
+    public ValueTaskAwaiter<T> GetAwaiter()
     {
         return ExecuteAsync().GetAwaiter();
     }
 
-    public async ValueTask<T?> ExecuteAsync(CancellationToken cancellationToken = default)
+    public async ValueTask<T> ExecuteAsync(CancellationToken cancellationToken = default)
     {
         var query = new Query<T>(
             options.DbAdapter.RenderSql(
@@ -27,6 +26,6 @@ public class FirstOrDefaultQuery<T>(DbOptionsPlus options, ExpressionQuery expre
             return value;
         }
 
-        return default;
+        throw new InvalidOperationException("Sequence contains no elements");
     }
 }

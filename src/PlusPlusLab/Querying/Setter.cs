@@ -1,5 +1,5 @@
 ﻿using System.Linq.Expressions;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
 public record Setter(IColumn Column, Expression Value);

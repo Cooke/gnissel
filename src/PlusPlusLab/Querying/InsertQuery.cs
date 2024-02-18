@@ -1,16 +1,21 @@
-using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel;
 using Cooke.Gnissel.Queries;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
-public class DeleteQuery<T>(Table<T> table, DbOptionsPlus options, Expression? condition)
-    : IDeleteQuery
+public class InsertQuery<T>(
+    Table<T> table,
+    IReadOnlyCollection<Column<T>> columns,
+    DbOptionsPlus options,
+    IReadOnlyCollection<RowParameters> rows
+) : IInsertQuery, INonQuery
 {
     public ITable Table { get; } = table;
 
-    public Expression? Condition { get; } = condition;
+    public IReadOnlyCollection<IColumn> Columns { get; } = columns;
+
+    public IReadOnlyCollection<RowParameters> Rows { get; } = rows;
 
     public ValueTaskAwaiter<int> GetAwaiter()
     {
@@ -22,4 +27,7 @@ public class DeleteQuery<T>(Table<T> table, DbOptionsPlus options, Expression? c
             options.DbConnector,
             options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this))
         ).ExecuteAsync(cancellationToken);
+
+    public RenderedSql RenderedSql =>
+        options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this));
 }

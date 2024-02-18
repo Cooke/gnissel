@@ -4,10 +4,11 @@ using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel;
-using Cooke.Gnissel.PlusPlus.Utils;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
+using PlusPlusLab.Querying;
+using PlusPlusLab.Utils;
 
 namespace PlusPlusLab;
 

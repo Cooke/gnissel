@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
 public class TableExpression(TableSource tableSource) : Expression
 {

@@ -1,9 +1,9 @@
 using System.Linq.Expressions;
-using Cooke.Gnissel.PlusPlus.Utils;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Utils;
+using PlusPlusLab.Utils;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Querying;
 
 public class TypedQuery<T1, T2, T3>(DbOptionsPlus options, ExpressionQuery expressionQuery) : IToAsyncEnumerable<(T1,T2,T3)>
 {
