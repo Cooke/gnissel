@@ -3,10 +3,11 @@ using System.Reflection;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Querying;
+using Cooke.Gnissel.Typed.Services;
 
-namespace Cooke.Gnissel.Typed.Services;
+namespace Cooke.Gnissel.Npgsql;
 
-public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
+public class NpgsqlSqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
 {
     public Sql Generate(IInsertQuery query)
     {

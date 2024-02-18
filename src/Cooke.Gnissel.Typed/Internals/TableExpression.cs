@@ -3,7 +3,7 @@ using Cooke.Gnissel.Typed.Querying;
 
 namespace Cooke.Gnissel.Typed.Internals;
 
-internal class TableExpression(TableSource tableSource) : Expression
+public class TableExpression(TableSource tableSource) : Expression
 {
     public TableSource TableSource { get; } = tableSource;
 

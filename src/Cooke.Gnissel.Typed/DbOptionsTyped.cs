@@ -4,6 +4,11 @@ using Cooke.Gnissel.Typed.Services;
 
 namespace Cooke.Gnissel.Typed;
 
+public interface ISqlGeneratorAdapter
+{
+    ISqlGenerator DefaultSqlGenerator { get; }
+}
+
 public record DbOptionsTyped(
     IDbAdapter DbAdapter,
     IObjectReaderProvider ObjectReaderProvider,
@@ -18,6 +23,8 @@ public record DbOptionsTyped(
             new DefaultObjectReaderProvider(DbAdapter.DefaultIdentifierMapper),
             DbAdapter.CreateConnector(),
             DbAdapter.DefaultIdentifierMapper,
-            new SqlGenerator(DbAdapter.DefaultIdentifierMapper)
+            DbAdapter is ISqlGeneratorAdapter generatorAdapter
+                ? generatorAdapter.DefaultSqlGenerator
+                : throw new NotSupportedException()
         ) { }
 }

@@ -19,6 +19,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\Cooke.Gnissel.Typed\Cooke.Gnissel.Typed.csproj" />
       <ProjectReference Include="..\Cooke.Gnissel\Cooke.Gnissel.csproj" />
     </ItemGroup>
 

@@ -1,19 +1,27 @@
 #region
 
 using System.Data.Common;
-using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Typed;
+using Cooke.Gnissel.Typed.Services;
 using Npgsql;
-using Npgsql.NameTranslation;
 
 #endregion
 
 namespace Cooke.Gnissel.Npgsql;
 
-public sealed class NpgsqlDbAdapter(NpgsqlDataSource dataSource) : IDbAdapter
+public sealed class NpgsqlDbAdapter : IDbAdapter, ISqlGeneratorAdapter
 {
+    private readonly NpgsqlDataSource dataSource;
+
+    public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
+    {
+        this.dataSource = dataSource;
+        DefaultSqlGenerator = new NpgsqlSqlGenerator(DefaultIdentifierMapper);
+    }
+
     public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
     public string EscapeIdentifierIfNeeded(string identifier) =>
@@ -73,4 +81,6 @@ public sealed class NpgsqlDbAdapter(NpgsqlDataSource dataSource) : IDbAdapter
 
     public IIdentifierMapper DefaultIdentifierMapper { get; } =
         new DefaultPostgresIdentifierMapper();
+
+    public ISqlGenerator DefaultSqlGenerator { get; }
 }
