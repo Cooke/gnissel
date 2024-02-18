@@ -20,7 +20,7 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
     public Table(DbOptionsPlus options)
     {
         this.options = options;
-        Columns = CreateColumns(options, this);
+        Columns = ColumnBuilder.CreateColumns(options, this);
         Name = options.IdentifierMapper.ToTableName(typeof(T));
         _expressionQuery = new ExpressionQuery(new TableSource(this), null, [],  []);
     }
@@ -113,93 +113,6 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
             ]))],
             []);
         return new(options, expressionQuery);
-    }
-
-    private static ImmutableArray<Column<T>> CreateColumns(DbOptions dbOptions, Table<T> table)
-    {
-        var objectParameter = Expression.Parameter(typeof(T));
-        return typeof(T)
-            .GetProperties()
-            .SelectMany(
-                p =>
-                    CreateColumns(
-                        dbOptions,
-                        p,
-                        objectParameter,
-                        Expression.Property(objectParameter, p),
-                        table
-                    )
-            )
-            .ToImmutableArray();
-    }
-
-    private static IEnumerable<Column<T>> CreateColumns(DbOptions dbOptions,
-        PropertyInfo p,
-        ParameterExpression rootExpression,
-        Expression memberExpression, Table<T> table)
-    {
-        if (p.GetDbType() != null)
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
-        else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
-        else if (p.PropertyType.IsClass)
-            foreach (
-                var column in p.PropertyType
-                    .GetProperties()
-                    .SelectMany<PropertyInfo, Column<T>>(
-                        innerProperty =>
-                            CreateColumns(
-                                dbOptions,
-                                innerProperty,
-                                rootExpression,
-                                Expression.Property(memberExpression, innerProperty), table
-                            )
-                    )
-            )
-                yield return column;
-        else
-            yield return CreateColumn(dbOptions, p, rootExpression, memberExpression, table);
-    }
-
-    private static Column<T> CreateColumn(DbOptions dbOptions,
-        PropertyInfo p,
-        ParameterExpression objectExpression,
-        Expression memberExpression, Table<T> table)
-    {
-        return new Column<T>(
-            table,
-            p.GetDbName() ?? dbOptions.DbAdapter.DefaultIdentifierMapper.ToColumnName(p),
-            p.GetCustomAttribute<DatabaseGeneratedAttribute>()
-                ?.Let(x => x.DatabaseGeneratedOption == DatabaseGeneratedOption.Identity) ?? false,
-            p,
-            CreateParameterFactory(
-                dbOptions.DbAdapter,
-                memberExpression,
-                p.GetDbType(),
-                objectExpression
-            )
-        );
-    }
-
-    private static Func<T, DbParameter> CreateParameterFactory(
-        IDbAdapter dbAdapter,
-        Expression valueExpression,
-        string? dbType,
-        ParameterExpression tableItemParameter
-    )
-    {
-        return Expression
-            .Lambda<Func<T, DbParameter>>(
-                Expression.Call(
-                    Expression.Constant(dbAdapter),
-                    nameof(dbAdapter.CreateParameter),
-                    [valueExpression.Type],
-                    valueExpression,
-                    Expression.Constant(dbType, typeof(string))
-                ),
-                tableItemParameter
-            )
-            .Compile();
     }
 
     public IAsyncEnumerable<T> ToAsyncEnumerable()
