@@ -230,20 +230,22 @@ public class TableTests
         Assert.That(user, Is.EqualTo(new User(1, "Bob", 25)));
         Assert.That(device, Is.EqualTo(new Device(1, "Bobs device")));
     }
-    
+
     [Test]
-        public async Task JoinJoin()
-        {
-            await _db.Users.Insert(new User(0, "Bob", 25));
-            await _db.Users.Insert(new User(0, "Alice", 25));
-            await _db.Devices.Insert(new Device(1, "Bobs device"));
-            var users = await _db.Users.Join(_db.Devices, (u, d) => u.Id == d.UserId)
-                .Join(_db.Users, (u1, _, u2) => u1.Age == u2.Age && u1.Name != u2.Name).ToArrayAsync();
-            var (user1, device, user2) = users.Single();
-            Assert.That(user1, Is.EqualTo(new User(1, "Bob", 25)));
-            Assert.That(user2, Is.EqualTo(new User(2, "Alice", 25)));
-            Assert.That(device, Is.EqualTo(new Device(1, "Bobs device")));
-        }
+    public async Task JoinJoin()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Alice", 25));
+        await _db.Devices.Insert(new Device(1, "Bobs device"));
+        var users = await _db.Users
+            .Join(_db.Devices, (u, d) => u.Id == d.UserId)
+            .Join(_db.Users, (u1, _, u2) => u1.Age == u2.Age && u1.Name != u2.Name)
+            .ToArrayAsync();
+        var (user1, device, user2) = users.Single();
+        Assert.That(user1, Is.EqualTo(new User(1, "Bob", 25)));
+        Assert.That(user2, Is.EqualTo(new User(2, "Alice", 25)));
+        Assert.That(device, Is.EqualTo(new Device(1, "Bobs device")));
+    }
 
     [Test]
     public async Task JoinFirst()

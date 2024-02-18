@@ -8,16 +8,17 @@ namespace Cooke.Gnissel.Npgsql;
 public class DefaultPostgresIdentifierMapper : IIdentifierMapper
 {
     public string ToColumnName(ParameterInfo parameterInfo) =>
-        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(
-            parameterInfo.Name ?? throw new InvalidOperationException(),
+        ConvertToSnakeCase(parameterInfo.Name);
+
+    public string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
+
+    public string ToTableName(Type type) => ConvertToSnakeCase(type.Name) + "s";
+
+    private static string ConvertToSnakeCase(string? name)
+    {
+        return NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(
+            name ?? throw new InvalidOperationException(),
             CultureInfo.CurrentCulture
         );
-
-    public string ToColumnName(PropertyInfo propertyInfo) =>
-        NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(
-            propertyInfo.Name ?? throw new InvalidOperationException(),
-            CultureInfo.CurrentCulture
-        );
-
-    public string ToTableName(Type type) => type.Name.ToLower() + "s";
+    }
 }

@@ -45,7 +45,7 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
 
         if (query.Condition != null)
         {
-            RenderExpression(query.Condition, sql);
+            RenderExpression(query.Condition, sql, new RenderOptions());
         }
 
         return sql;
@@ -70,7 +70,7 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
             sql.AppendIdentifier(setter.Column.Name);
             sql.AppendLiteral(" = ");
 
-            RenderExpression(setter.Value, sql, constantsAsParameters: true);
+            RenderExpression(setter.Value, sql, new RenderOptions { ConstantsAsParameters = true });
 
             first = false;
         }
@@ -78,17 +78,18 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql);
+            RenderExpression(query.Condition, sql, new RenderOptions());
         }
 
         return sql;
     }
 
-    public Sql Generate(ExpressionQuery expressionQuery)
+    public Sql Generate(ExpressionQuery query)
     {
-        var tableSource = expressionQuery.TableSource;
-        var joins = expressionQuery.Joins;
-        var selector = expressionQuery.Selector;
+        var tableSource = query.TableSource;
+        var joins = query.Joins;
+        var selector = query.Selector;
+        var options = new RenderOptions { QualifyColumns = query.Joins.Any() };
 
         var sql = new Sql(100, 2);
         // var tableIndices = CreateTableIndicesMap();
@@ -103,40 +104,39 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
         }
         else
         {
-            RenderExpression(selector, sql);
+            RenderExpression(selector, sql, options);
         }
 
         sql.AppendLiteral(" FROM ");
         AppendTableSource(tableSource);
 
-        // if (joins.Any())
-        // {
-        //     foreach (var (join, alias) in joins.Zip(joinAliases))
-        //     {
-        //         sql.AppendLiteral($" JOIN ");
-        //         AppendTableSource(join, alias);
-        //
-        //         sql.AppendLiteral($" ON ");
-        //         RenderExpression(join.Condition,
-        //             tableSourcesWithAliases,
-        //             sql
-        //         );
-        //     }
-        // }
-        //
+        if (joins.Any())
+        {
+            foreach (var join in joins)
+            {
+                sql.AppendLiteral($" JOIN ");
+                AppendTableSource(join.TableSource);
 
-        if (expressionQuery.Conditions.Any())
+                if (join.Condition != null)
+                {
+                    sql.AppendLiteral($" ON ");
+                    RenderExpression(join.Condition, sql, options);
+                }
+            }
+        }
+
+        if (query.Conditions.Any())
         {
             sql.AppendLiteral(" WHERE ");
             bool first = true;
-            foreach (var queryCondition in expressionQuery.Conditions)
+            foreach (var queryCondition in query.Conditions)
             {
                 if (!first)
                 {
                     sql.AppendLiteral(" AND ");
                 }
 
-                RenderExpression(queryCondition, sql);
+                RenderExpression(queryCondition, sql, options);
                 first = false;
             }
         }
@@ -151,42 +151,36 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
 
         void AppendTableSource(TableSource source)
         {
-            var table = source.Table.Name;
-            sql.AppendIdentifier(table);
-            if (tableSource.Alias != null)
+            sql.AppendIdentifier(source.Table.Name);
+            if (source.Alias != null)
             {
                 sql.AppendLiteral($" AS ");
-                sql.AppendIdentifier(tableSource.Alias);
+                sql.AppendIdentifier(source.Alias);
             }
-        }
-
-        Dictionary<string, int> CreateTableIndicesMap()
-        {
-            var tableCount = new Dictionary<string, int> { { tableSource.Table.Name, 1 } };
-            foreach (var join in joins)
-            {
-                tableCount.TryAdd(join.Table.Name, 0);
-                tableCount[join.Table.Name]++;
-            }
-
-            return tableCount.Where(x => x.Value > 1).ToDictionary(x => x.Key, _ => 0);
         }
     }
 
-    public void RenderExpression(Expression expression, Sql sql, bool constantsAsParameters = false)
+    private record RenderOptions
+    {
+        public bool ConstantsAsParameters { get; init; }
+
+        public bool QualifyColumns { get; init; }
+    }
+
+    private void RenderExpression(Expression expression, Sql sql, RenderOptions options)
     {
         switch (expression)
         {
             case BinaryExpression binaryExpression:
-                RenderExpression(binaryExpression.Left, sql);
+                RenderExpression(binaryExpression.Left, sql, options);
                 sql.AppendLiteral(" ");
                 sql.AppendLiteral(RenderBinaryOperator(binaryExpression.NodeType));
                 sql.AppendLiteral(" ");
-                RenderExpression(binaryExpression.Right, sql);
+                RenderExpression(binaryExpression.Right, sql, options);
                 return;
 
             case ConstantExpression constExp:
-                if (constantsAsParameters)
+                if (options.ConstantsAsParameters)
                 {
                     sql.AppendParameter(constExp.Value);
                 }
@@ -207,15 +201,11 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
             case MemberExpression { Expression: TableExpression tableExpression } memberExpression:
                 var source = tableExpression.TableSource;
                 var column = source.Table.Columns.First(x => x.Member == memberExpression.Member);
-                // if (
-                //     sources.Any(
-                //         x => x != source && x.Source.Table.Columns.Any(c => c.Name == column.Name)
-                //     )
-                // )
-                // {
-                //     sql.AppendIdentifier(source.Alias ?? source.Source.Table.Name);
-                //     sql.AppendLiteral(".");
-                // }
+                if (options.QualifyColumns)
+                {
+                    sql.AppendIdentifier(source.AliasOrName);
+                    sql.AppendLiteral(".");
+                }
 
                 sql.AppendIdentifier(column.Name);
                 return;
@@ -229,7 +219,7 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
                         sql.AppendLiteral(", ");
                     }
 
-                    RenderExpression(arg, sql);
+                    RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
                         identifierMapper.ToColumnName(

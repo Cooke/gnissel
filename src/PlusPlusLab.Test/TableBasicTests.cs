@@ -7,11 +7,11 @@ using Xunit.Abstractions;
 namespace PlusPlusLab.Fact;
 
 [Collection("Database collection")]
-public class TableTests : IDisposable
+public class TableBasicTests : IDisposable
 {
     private readonly TestDbContext db;
         
-    public TableTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
+    public TableBasicTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(new DbOptionsPlus(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));

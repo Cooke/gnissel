@@ -76,8 +76,7 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
             , [],
             [ParameterExpressionReplacer.Replace(predicate.Body, [
                 (predicate.Parameters.Single(), new TableExpression(tableSource))
-            ])],
-            Limit: 1);
+            ])]);
         return new(options, expressionQuery);
     }
 
@@ -91,6 +90,23 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
             [ParameterExpressionReplacer.Replace(predicate.Body, [
                 (predicate.Parameters.Single(), new TableExpression(tableSource))
             ])]);
+        return new(options, expressionQuery);
+    }
+    
+    public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate)
+    {
+        var (tableAlias, joinAlias) = joinTable.Equals(this) ? (Name + "1", Name + "2") : (null, null);
+        var tableSource = new TableSource(this, tableAlias);
+        var joinSource = new TableSource(joinTable, joinAlias);
+        
+        var expressionQuery = new ExpressionQuery(
+            tableSource, 
+            null
+            , [new (joinSource, ParameterExpressionReplacer.Replace(predicate.Body, [
+                (predicate.Parameters[0], new TableExpression(tableSource)),
+                (predicate.Parameters[1], new TableExpression(joinSource))
+            ]))],
+            []);
         return new(options, expressionQuery);
     }
 
@@ -189,7 +205,6 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
             options.DbConnector
         );
     }
-    
 }
 
 public interface ISetCollector<T>

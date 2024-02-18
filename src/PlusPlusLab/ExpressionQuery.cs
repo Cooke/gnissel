@@ -10,7 +10,13 @@ public record TableSource(ITable Table, string? Alias = null)
 public record ExpressionQuery(
     TableSource TableSource,
     Expression? Selector,
-    IReadOnlyCollection<TableSource> Joins,
-    IReadOnlyCollection<Expression> Conditions,
+    IReadOnlyList<Join> Joins,
+    IReadOnlyList<Expression> Conditions,
     int? Limit = null
-);
+)
+{
+    public IEnumerable<TableSource> Sources =>
+        new[] { TableSource }.Concat(Joins.Select(x => x.TableSource));
+}
+
+public record Join(TableSource TableSource, Expression? Condition);
