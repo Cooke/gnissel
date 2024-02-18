@@ -1,8 +1,7 @@
 using System.Linq.Expressions;
 using PlusPlusLab.Querying;
-using PlusPlusLab.Utils;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Internals;
 
 internal class SetCollector<T>(Table<T> table) : ISetCollector<T>
 {

@@ -1,6 +1,6 @@
 using System.Linq.Expressions;
 
-namespace PlusPlusLab.Utils;
+namespace PlusPlusLab.Internals;
 
 internal class ParameterExpressionReplacer(
     IReadOnlyCollection<(ParameterExpression, Expression)> transformations

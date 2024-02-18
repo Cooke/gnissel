@@ -6,7 +6,7 @@ using Cooke.Gnissel;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
 
-namespace PlusPlusLab;
+namespace PlusPlusLab.Internals;
 
 internal static class ColumnBuilder
 {

@@ -7,10 +7,20 @@ using Cooke.Gnissel;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Utils;
+using PlusPlusLab.Internals;
 using PlusPlusLab.Querying;
-using PlusPlusLab.Utils;
 
 namespace PlusPlusLab;
+
+public interface ITable
+{
+    string Name { get; }
+
+    IReadOnlyCollection<IColumn> Columns { get; }
+
+    Type Type { get; }
+}
+
 
 public class Table<T>(DbOptionsPlus options) : ITable, IToQuery<T>
 {

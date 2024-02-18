@@ -1,7 +1,6 @@
 using System.Linq.Expressions;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Utils;
-using PlusPlusLab.Utils;
 
 namespace PlusPlusLab.Querying;
 

@@ -1,8 +1,9 @@
 using System.Linq.Expressions;
+using PlusPlusLab.Querying;
 
-namespace PlusPlusLab.Querying;
+namespace PlusPlusLab.Internals;
 
-public class TableExpression(TableSource tableSource) : Expression
+internal class TableExpression(TableSource tableSource) : Expression
 {
     public TableSource TableSource { get; } = tableSource;
 

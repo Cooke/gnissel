@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using PlusPlusLab.Utils;
+using PlusPlusLab.Internals;
 
 namespace PlusPlusLab.Querying;
 

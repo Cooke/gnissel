@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel;
 using Cooke.Gnissel.Services;
+using PlusPlusLab.Internals;
 using PlusPlusLab.Querying;
 
 namespace PlusPlusLab.Services;
