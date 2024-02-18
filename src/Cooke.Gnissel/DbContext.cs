@@ -49,10 +49,10 @@ public class DbContext(DbOptions dbOptions)
         await batch.ExecuteNonQueryAsync();
     }
 
-    public Task Transaction(params NonQuery[] statements) =>
-        Transaction((IEnumerable<NonQuery>)statements);
+    public Task Transaction(params INonQuery[] statements) =>
+        Transaction((IEnumerable<INonQuery>)statements);
 
-    public async Task Transaction(IEnumerable<NonQuery> statements)
+    public async Task Transaction(IEnumerable<INonQuery> statements)
     {
         await using var connection = _dbConnector.CreateConnection();
         await using var batch = connection.CreateBatch();

@@ -3,8 +3,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.PlusPlus;
-using Cooke.Gnissel.Services.Implementations;
+using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
 using Dapper;
 using Npgsql;
@@ -24,7 +23,7 @@ public class PerformanceTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -117,7 +116,7 @@ public class PerformanceTests
         var array = result.ToArray();
     }
 
-    private class TestDbContext(DbOptions options) : DbContext(options)
+    private class TestDbContext(DbOptionsTyped options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
     }

@@ -6,11 +6,9 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.Test", "Cooke
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.Npgsql", "Cooke.Gnissel.Npgsql\Cooke.Gnissel.Npgsql.csproj", "{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.PlusPlus", "Cooke.Gnissel.PlusPlus\Cooke.Gnissel.PlusPlus.csproj", "{2C2AB8C7-F6A2-47E3-A14E-DC008E8AAE32}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.Typed", "Cooke.Gnissel.Typed\Cooke.Gnissel.Typed.csproj", "{D7F835A6-40A9-4423-837D-172EAE20F4C1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlusPlusLab", "PlusPlusLab\PlusPlusLab.csproj", "{D7F835A6-40A9-4423-837D-172EAE20F4C1}"
-EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PlusPlusLab.Test", "PlusPlusLab.Test\PlusPlusLab.Test.csproj", "{0BEA54ED-1F8A-46DF-839D-D22EC0FB6633}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.Typed.Test", "Cooke.Gnissel.Typed.Test\Cooke.Gnissel.Typed.Test.csproj", "{0BEA54ED-1F8A-46DF-839D-D22EC0FB6633}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -30,10 +28,6 @@ Global
 		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{4EFE5E6E-671F-4AD6-B8FE-9450D6B24905}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2C2AB8C7-F6A2-47E3-A14E-DC008E8AAE32}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2C2AB8C7-F6A2-47E3-A14E-DC008E8AAE32}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2C2AB8C7-F6A2-47E3-A14E-DC008E8AAE32}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2C2AB8C7-F6A2-47E3-A14E-DC008E8AAE32}.Release|Any CPU.Build.0 = Release|Any CPU
 		{D7F835A6-40A9-4423-837D-172EAE20F4C1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{D7F835A6-40A9-4423-837D-172EAE20F4C1}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{D7F835A6-40A9-4423-837D-172EAE20F4C1}.Release|Any CPU.ActiveCfg = Release|Any CPU

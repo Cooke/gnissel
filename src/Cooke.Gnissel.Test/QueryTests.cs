@@ -3,7 +3,7 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.PlusPlus;
+using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
 using Npgsql;
 
@@ -21,7 +21,7 @@ public class QueryTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -123,7 +123,7 @@ public class QueryTests
     }
     
 
-    private class TestDbContext(DbOptions options) : DbContext(options)
+    private class TestDbContext(DbOptionsTyped options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
 

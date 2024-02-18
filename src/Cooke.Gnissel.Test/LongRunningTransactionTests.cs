@@ -2,8 +2,8 @@
 
 using System.Data.Common;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.PlusPlus;
 using Cooke.Gnissel.Services.Implementations;
+using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
 using Npgsql;
 
@@ -19,7 +19,7 @@ public class LongRunningTransactionTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -118,16 +118,16 @@ public class LongRunningTransactionTests
 
     private class TestDbContext : DbContext
     {
-        private readonly DbOptions _options;
+        private readonly DbOptionsTyped _options;
 
-        public TestDbContext(DbOptions options)
+        public TestDbContext(DbOptionsTyped options)
             : base(options)
         {
             _options = options;
             Users = new Table<User>(options);
         }
 
-        private TestDbContext(TestDbContext context, DbOptions options)
+        private TestDbContext(TestDbContext context, DbOptionsTyped options)
             : base(options)
         {
             _options = options;

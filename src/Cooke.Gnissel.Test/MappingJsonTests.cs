@@ -3,7 +3,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.PlusPlus;
+using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
 using Npgsql;
 
@@ -25,7 +25,7 @@ public class MappingJsonTests
             )
             .EnableDynamicJson()
             .Build();
-        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -87,7 +87,7 @@ public class MappingJsonTests
         );
     }
 
-    private class TestDbContext(DbOptions options) : DbContext(options)
+    private class TestDbContext(DbOptionsTyped options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
 
