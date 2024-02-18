@@ -32,7 +32,11 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
     
     public Type Type => typeof(T);
     
-    public InsertQuery<T> Insert(T instance) => new InsertQuery<T>(this, Columns, options, Columns.Select(c => c.CreateParameter(instance)).ToArray());
+    public InsertQuery<T> Insert(T instance) => new(this, Columns, options, [new(Columns.Select(c => c.CreateParameter(instance)).ToArray())]);
+    
+    public InsertQuery<T> Insert(params T[] instances) => new(this, Columns, options, instances.Select(instance => new RowParameters(Columns.Select(c => c.CreateParameter(instance)).ToArray())).ToArray());
+    
+    public InsertQuery<T> Insert(IEnumerable<T> instances) => new(this, Columns, options, instances.Select(instance => new RowParameters(Columns.Select(c => c.CreateParameter(instance)).ToArray())).ToArray());
     
     public DeleteQuery<T> Delete(Expression<Func<T, bool>> predicate) => new DeleteQuery<T>(this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
         (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
@@ -205,6 +209,8 @@ public class Table<T> : ITable, IToAsyncEnumerable<T>
             options.DbConnector
         );
     }
+
+    public FirstQuery<T> First() => new(options, _expressionQuery);
 }
 
 public interface ISetCollector<T>

@@ -35,17 +35,36 @@ public class TableBasicTests : IDisposable
     [Fact]
     public async Task Insert()
     {
-        //// Ideas for partial insert
-        // await db.Users.Insert(x => x.Set(x.Name, "Box").Set(x.Age, 20));
-        // await db.Users.Insert(x => x.Name, "Box", x => x.Age, 20);
-        // await db.Users.Insert((x => x.Name, "Box"), (x => x.Age, 20));
-        // await db.Users.Insert(x => Db.Values(x.Name, x.Age), x => (x.Age, 20));
-        // await db.Users.Insert(x => x.Name, "Box");
-        // await db.Users.Update(x => x.Set(y => y.Name, "Bob"));
-        // await db.Users.Update(x => x.Name, "Box", x => x.Age, 20);
-        
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
+        
+        var users = await db.Query<User>($"SELECT * FROM users").ToArrayAsync();
+        
+        Assert.Equal(
+            new[] { (1, "Bob"), (2, "Sara") },
+            users.Select(x => (x.Id, x.Name))
+        );
+    }
+    
+    [Fact]
+    public async Task InsertMany()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25), new User(2, "Sara", 25));
+        
+        var users = await db.Query<User>($"SELECT * FROM users").ToArrayAsync();
+        
+        Assert.Equal(
+            new[] { (1, "Bob"), (2, "Sara") },
+            users.Select(x => (x.Id, x.Name))
+        );
+    }
+    
+    [Fact]
+    public async Task InsertBatch()
+    {
+        await db.Batch(
+            db.Users.Insert(new User(1, "Bob", 25)),
+            db.Users.Insert(new User(2, "Sara", 25)));
         
         var users = await db.Query<User>($"SELECT * FROM users").ToArrayAsync();
         
@@ -157,7 +176,7 @@ public class TableBasicTests : IDisposable
     }
     
     [Fact]
-    public async Task DoubleWhere()
+    public async Task WhereCombined()
     {
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
@@ -167,6 +186,17 @@ public class TableBasicTests : IDisposable
         
         var users2 = await db.Users.Where(x => x.Name == "Bob").Where(x => x.Age == 26).ToArrayAsync();
         Assert.Equal([], users2);
+    }
+    
+    [Fact]
+    public async Task SelectWhere()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+        
+        var users = await db.Users.Where(x => x.Name == "Bob").Select(x => x.Name).ToArrayAsync();
+        
+        Assert.Equal(["Bob"], users);
     }
     
     [Fact]

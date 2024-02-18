@@ -39,10 +39,9 @@ public class DbContext(DbOptions dbOptions)
     public NonQuery NonQuery(Sql sql, CancellationToken cancellationToken = default) =>
         new NonQuery(_dbConnector, _dbAdapter.RenderSql(sql), cancellationToken);
 
-    public Task Batch(params NonQuery[] statements) =>
-        Batch((IEnumerable<NonQuery>)statements);
+    public Task Batch(params INonQuery[] statements) => Batch((IEnumerable<INonQuery>)statements);
 
-    public async Task Batch(IEnumerable<NonQuery> statements)
+    public async Task Batch(IEnumerable<INonQuery> statements)
     {
         await using var batch = _dbConnector.CreateBatch();
         foreach (var statement in statements)

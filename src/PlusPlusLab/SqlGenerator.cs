@@ -22,17 +22,33 @@ public class SqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
             firstColumn = false;
         }
 
-        sql.AppendLiteral(") VALUES(");
-        var firstParam = true;
-        foreach (var par in query.Values)
+        sql.AppendLiteral(") VALUES ");
+        bool firstRow = true;
+        foreach (var row in query.Rows)
         {
-            if (!firstParam)
+            if (!firstRow)
+            {
                 sql.AppendLiteral(", ");
-            sql.AppendFormatted(par);
-            firstParam = false;
+            }
+
+            firstRow = false;
+
+            sql.AppendLiteral("(");
+            var firstParam = true;
+            foreach (var par in row.Parameters)
+            {
+                if (!firstParam)
+                {
+                    sql.AppendLiteral(", ");
+                }
+
+                sql.AppendFormatted(par);
+                firstParam = false;
+            }
+
+            sql.AppendLiteral(")");
         }
 
-        sql.AppendLiteral(")");
         return sql;
     }
 

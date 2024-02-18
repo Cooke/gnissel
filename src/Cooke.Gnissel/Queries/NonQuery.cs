@@ -7,7 +7,7 @@ public class NonQuery(
     IDbConnector dbConnector,
     RenderedSql renderedSql,
     CancellationToken cancellationToken
-) : IQuery
+) : INonQuery
 {
     public RenderedSql RenderedSql => renderedSql;
 

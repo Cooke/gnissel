@@ -27,4 +27,12 @@ public class TypedQuery<T>(DbOptionsPlus options, ExpressionQuery expressionQuer
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );
+
+    public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
+        new(options, expressionQuery with
+        {
+            Selector = ParameterExpressionReplacer.Replace(selector.Body, [
+                (selector.Parameters.Single(), new TableExpression(expressionQuery.TableSource))
+            ])
+        });
 }
