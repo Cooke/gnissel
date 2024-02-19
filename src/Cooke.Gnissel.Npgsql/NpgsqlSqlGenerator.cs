@@ -159,6 +159,27 @@ public class NpgsqlSqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenera
             }
         }
 
+        if (query.Order.Any())
+        {
+            sql.AppendLiteral(" ORDER BY ");
+            bool first = true;
+            foreach (var by in query.Order)
+            {
+                if (!first)
+                {
+                    sql.AppendLiteral(", ");
+                }
+                first = false;
+
+                RenderExpression(by.Expression, sql, options);
+
+                if (by.Descending)
+                {
+                    sql.AppendLiteral(" DESC");
+                }
+            }
+        }
+
         if (query.Limit != null)
         {
             sql.AppendLiteral(" LIMIT ");

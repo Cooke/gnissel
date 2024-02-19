@@ -120,7 +120,7 @@ public class TableJoinTests : IDisposable
         await db.DeviceKeys.Insert(sarasDeviceKey);
         
         var usersDevices = await db.Users.Join(db.Devices, (u, d) => u.Id == d.UserId)
-            .Join(db.DeviceKeys, (u, d, k) => d.Id == k.DeviceId).ToArrayAsync();
+            .Join(db.DeviceKeys, (_, d, k) => d.Id == k.DeviceId).ToArrayAsync();
         
         Assert.Equal(
             [(bob, bobsDevice, bobsDeviceKey), (sara, sarasDevice, sarasDeviceKey)],

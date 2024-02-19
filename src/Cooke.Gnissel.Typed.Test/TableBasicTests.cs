@@ -259,6 +259,71 @@ public class TableBasicTests : IDisposable
         );
     }
     
+    [Fact]
+    public async Task OrderBy()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 20);
+        await db.Users.Insert(bob, sara);
+        
+        var users = await db.Users.OrderBy(x => x.Age).ToArrayAsync();
+        
+        // db.Users.Set(x => x.Age, x => x.Age + 1).Set(x => x.Name, "Bubba");
+        // db.Users.GroupBy(x => x.Age).GroupBy(x => x.Name);
+        // db.Users.OrderByDesc(x => x.Age).OrderBy(x => x.Name);
+        // db.Users.GroupBy(x => x.Age).GroupBy(x => x.Name).Select(x => Db.Count(x.Id));
+            
+        Assert.Equal(
+            [sara, bob],
+            users
+        );
+    }
+    
+    [Fact]
+    public async Task OrderByThenBy()
+    {
+        var bob = new User(2, "Bob", 30);
+        var sara = new User(1, "Sara", 30);
+        await db.Users.Insert(bob, sara);
+        
+        var users = await db.Users.OrderBy(x => x.Age).ThenBy(x => x.Id).ToArrayAsync();
+            
+        Assert.Equal(
+            [sara, bob],
+            users
+        );
+    }
+    
+    [Fact]
+    public async Task OrderByDesc()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 30);
+        await db.Users.Insert(bob, sara);
+        
+        var users = await db.Users.OrderByDesc(x => x.Id).ToArrayAsync();
+            
+        Assert.Equal(
+            [sara, bob],
+            users
+        );
+    }
+    
+    [Fact]
+    public async Task OrderByThenByDesc()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 30);
+        await db.Users.Insert(bob, sara);
+        
+        var users = await db.Users.OrderBy(x => x.Age).ThenByDesc(x => x.Id).ToArrayAsync();
+            
+        Assert.Equal(
+            [sara, bob],
+            users
+        );
+    }
+    
     private class TestDbContext(DbOptionsTyped options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);

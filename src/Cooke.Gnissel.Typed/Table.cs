@@ -86,7 +86,7 @@ public class Table<T> : ITable, IToQuery<T>
 
     public FirstQuery<T> First() => new(options, CreateExpressionQuery());
     
-    private ExpressionQuery CreateExpressionQuery() => new ExpressionQuery(new TableSource(this), null, [],  []);
+    private ExpressionQuery CreateExpressionQuery() => new ExpressionQuery(new TableSource(this), null, [],  [], []);
     
     public Query<T> ToQuery() =>
         new Query<T>(
@@ -97,4 +97,10 @@ public class Table<T> : ITable, IToQuery<T>
     
     private RowParameters CreateRowParameters(T instance) 
         => new RowParameters(Columns.Where(x => !x.IsDatabaseGenerated).Select(c => c.CreateParameter(instance)).ToArray());
+
+    public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) 
+        => new(options, CreateExpressionQuery().WithOrderBy(propSelector));
+
+    public OrderByQuery<T> OrderByDesc<TProp>(Expression<Func<T, TProp>> propSelector) 
+        => new(options, CreateExpressionQuery().WithOrderByDesc(propSelector));
 }
