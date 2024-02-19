@@ -8,8 +8,8 @@ public class OrderByQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQ
     public Query<T> ToQuery() => expressionQuery.CreateQuery<T>(options);
 
     public OrderByQuery<T> ThenBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
-        new(options, expressionQuery.WithOrderBy(propSelector));
+        new(options, expressionQuery.OrderBy(propSelector));
 
     public OrderByQuery<T> ThenByDesc<TProp>(Expression<Func<T, TProp>> propSelector) =>
-        new(options, expressionQuery.WithOrderByDesc(propSelector));
+        new(options, expressionQuery.OrderByDesc(propSelector));
 }

@@ -7,7 +7,7 @@ namespace Cooke.Gnissel.Typed.Querying;
 public class TypedQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQuery) : IToQuery<T>
 {
     public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
-        => new TypedQuery<T>(options, expressionQuery.WithCondition(predicate));
+        => new TypedQuery<T>(options, expressionQuery.Where(predicate));
 
     public Query<T> ToQuery() =>
         new Query<T>(
@@ -17,5 +17,5 @@ public class TypedQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQue
         );
 
     public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
-        new(options, expressionQuery.WithSelect(selector));
+        new(options, expressionQuery.Select(selector));
 }

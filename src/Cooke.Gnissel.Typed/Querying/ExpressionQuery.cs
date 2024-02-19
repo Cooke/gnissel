@@ -26,7 +26,7 @@ public record ExpressionQuery(
     private IEnumerable<TableSource> Sources =>
         new[] { TableSource }.Concat(Joins.Select(x => x.TableSource));
 
-    public ExpressionQuery WithCondition(LambdaExpression predicate)
+    public ExpressionQuery Where(LambdaExpression predicate)
         => this with
         {
             Conditions =
@@ -35,13 +35,13 @@ public record ExpressionQuery(
                 ReplaceParametersWithSources(predicate)
             ]
         };
-    public ExpressionQuery WithSelect(LambdaExpression selector) =>
+    public ExpressionQuery Select(LambdaExpression selector) =>
         this with
         {
             Selector = ReplaceParametersWithSources(selector)
         };
     
-    public ExpressionQuery WithJoin(ITable joinTable, LambdaExpression predicate)
+    public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate)
     {
         var sameTableCount = Sources.Count(x => x.Table.Equals(joinTable));
         var joinAlias = sameTableCount > 0 ? joinTable.Name + "j" + sameTableCount : null;
@@ -61,13 +61,13 @@ public record ExpressionQuery(
         };
     }
 
-    public ExpressionQuery WithOrderBy(LambdaExpression propSelector) =>
+    public ExpressionQuery OrderBy(LambdaExpression propSelector) =>
         this with
         {
             Order = [..this.Order, new (ReplaceParametersWithSources(propSelector), false)]
         };
     
-    public ExpressionQuery WithOrderByDesc(LambdaExpression propSelector) =>
+    public ExpressionQuery OrderByDesc(LambdaExpression propSelector) =>
         this with
         {
             Order = [..this.Order, new (ReplaceParametersWithSources(propSelector), true)]
