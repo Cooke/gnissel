@@ -71,8 +71,8 @@ public class Table<T> : ITable, IToQuery<T>
             collector.Setters);
     }
 
-    public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
-        => new (options, CreateExpressionQuery().Select(selector));
+    public Query<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
+        => CreateExpressionQuery().Select(selector).ToQuery<TSelect>(options);
 
     public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
         => new (options, CreateExpressionQuery().Where(predicate));
@@ -86,7 +86,8 @@ public class Table<T> : ITable, IToQuery<T>
 
     public FirstQuery<T> First() => new(options, CreateExpressionQuery());
     
-    private ExpressionQuery CreateExpressionQuery() => new ExpressionQuery(new TableSource(this), null, [],  [], []);
+    private ExpressionQuery CreateExpressionQuery() 
+        => new ExpressionQuery(new TableSource(this), null, [],  [], [], []);
     
     public Query<T> ToQuery() =>
         new Query<T>(
@@ -103,4 +104,7 @@ public class Table<T> : ITable, IToQuery<T>
 
     public OrderByQuery<T> OrderByDesc<TProp>(Expression<Func<T, TProp>> propSelector) 
         => new(options, CreateExpressionQuery().OrderByDesc(propSelector));
+
+    public GroupByQuery<T> GroupBy<TProp>(Expression<Func<T, TProp>> propSelector) 
+        => new(options, CreateExpressionQuery().GroupBy(propSelector));
 }

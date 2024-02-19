@@ -159,11 +159,27 @@ public class NpgsqlSqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenera
             }
         }
 
-        if (query.Order.Any())
+        if (query.Groupings.Any())
+        {
+            sql.AppendLiteral(" GROUP BY ");
+            bool first = true;
+            foreach (var groupBy in query.Groupings)
+            {
+                if (!first)
+                {
+                    sql.AppendLiteral(", ");
+                }
+                first = false;
+
+                RenderExpression(groupBy, sql, options);
+            }
+        }
+
+        if (query.OrderBys.Any())
         {
             sql.AppendLiteral(" ORDER BY ");
             bool first = true;
-            foreach (var by in query.Order)
+            foreach (var by in query.OrderBys)
             {
                 if (!first)
                 {

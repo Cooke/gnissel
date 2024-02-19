@@ -12,14 +12,15 @@ public record TableSource(ITable Table, string? Alias = null)
 
 public record Join(TableSource TableSource, Expression? Condition);
 
-public record By(Expression Expression, bool Descending);
+public record OrderBy(Expression Expression, bool Descending);
 
 public record ExpressionQuery(
     TableSource TableSource,
     Expression? Selector,
     IReadOnlyList<Join> Joins,
     IReadOnlyList<Expression> Conditions,
-    IReadOnlyList<By> Order,
+    IReadOnlyList<Expression> Groupings,
+    IReadOnlyList<OrderBy> OrderBys,
     int? Limit = null
 )
 {
@@ -32,13 +33,13 @@ public record ExpressionQuery(
             Conditions =
             [
                 ..Conditions,
-                ReplaceParametersWithSources(predicate)
+                Transform(predicate)
             ]
         };
     public ExpressionQuery Select(LambdaExpression selector) =>
         this with
         {
-            Selector = ReplaceParametersWithSources(selector)
+            Selector = Transform(selector)
         };
     
     public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate)
@@ -64,26 +65,32 @@ public record ExpressionQuery(
     public ExpressionQuery OrderBy(LambdaExpression propSelector) =>
         this with
         {
-            Order = [..this.Order, new (ReplaceParametersWithSources(propSelector), false)]
+            OrderBys = [..this.OrderBys, new (Transform(propSelector), false)]
         };
     
     public ExpressionQuery OrderByDesc(LambdaExpression propSelector) =>
         this with
         {
-            Order = [..this.Order, new (ReplaceParametersWithSources(propSelector), true)]
+            OrderBys = [..this.OrderBys, new (Transform(propSelector), true)]
         };
 
-    private Expression ReplaceParametersWithSources(LambdaExpression predicate) 
-        => ParameterExpressionReplacer.Replace(
-            predicate.Body, 
-            Sources.Select((source, index) => (predicate.Parameters[index], (Expression)new TableExpression(source))).ToArray());
+    public ExpressionQuery GroupBy(LambdaExpression propSelector)
+        => this with
+        {
+            Groupings = [..this.Groupings, Transform(propSelector)]
+        };
 
-    public Query<T> CreateQuery<T>(DbOptionsTyped options) =>
+    public Query<T> ToQuery<T>(DbOptionsTyped options) =>
         new(
             options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this)),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );
+
+    private Expression Transform(LambdaExpression predicate) 
+        => ParameterExpressionReplacer.Replace(
+            predicate.Body, 
+            Sources.Select((source, index) => (predicate.Parameters[index], (Expression)new TableExpression(source))).ToArray());
 }
 
 

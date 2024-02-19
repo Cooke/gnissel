@@ -10,7 +10,7 @@ public class TypedQuery<T1, T2>(DbOptionsTyped options, ExpressionQuery expressi
     public TypedQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate) =>
         new(options, expressionQuery.Where(predicate));
 
-    public Query<(T1, T2)> ToQuery() => expressionQuery.CreateQuery<(T1, T2)>(options);
+    public Query<(T1, T2)> ToQuery() => expressionQuery.ToQuery<(T1, T2)>(options);
 
     public TypedQuery<T1, T2, T3> Join<T3>(
         Table<T3> joinTable,

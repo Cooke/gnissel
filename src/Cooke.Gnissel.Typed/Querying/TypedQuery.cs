@@ -6,16 +6,16 @@ namespace Cooke.Gnissel.Typed.Querying;
 
 public class TypedQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQuery) : IToQuery<T>
 {
-    public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
-        => new TypedQuery<T>(options, expressionQuery.Where(predicate));
+    public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) =>
+        new(options, expressionQuery.Where(predicate));
 
     public Query<T> ToQuery() =>
-        new Query<T>(
+        new(
             options.DbAdapter.RenderSql(options.SqlGenerator.Generate(expressionQuery)),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );
 
-    public TypedQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
-        new(options, expressionQuery.Select(selector));
+    public Query<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
+        expressionQuery.Select(selector).ToQuery<TSelect>(options);
 }

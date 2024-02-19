@@ -324,6 +324,22 @@ public class TableBasicTests : IDisposable
         );
     }
     
+    [Fact]
+    public async Task GroupBy()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 20);
+        var alice = new User(3, "Alice", 20);
+        await db.Users.Insert(bob, sara);
+        
+        var users = await db.Users.GroupBy(x => x.Age).Select(x => x.Age).ToArrayAsync();
+        
+        Assert.Equal(
+            [30, 20],
+            users
+        );
+    }
+    
     private class TestDbContext(DbOptionsTyped options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
