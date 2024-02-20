@@ -5,11 +5,11 @@ using Xunit.Abstractions;
 namespace Cooke.Gnissel.Typed.Test;
 
 [Collection("Database collection")]
-public class TableJoinTests : IDisposable
+public class JoinTests : IDisposable
 {
     private readonly TestDbContext db;
         
-    public TableJoinTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
+    public JoinTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));

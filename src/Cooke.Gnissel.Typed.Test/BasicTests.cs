@@ -6,11 +6,11 @@ using Xunit.Abstractions;
 namespace Cooke.Gnissel.Typed.Test;
 
 [Collection("Database collection")]
-public class TableBasicTests : IDisposable
+public class BasicTests : IDisposable
 {
     private readonly TestDbContext db;
         
-    public TableBasicTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
+    public BasicTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
@@ -337,6 +337,22 @@ public class TableBasicTests : IDisposable
         Assert.Equal(
             [30, 20],
             users
+        );
+    }
+    
+    [Fact]
+    public async Task GroupByAggregate()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 20);
+        var alice = new User(3, "Alice", 20);
+        await db.Users.Insert(bob, sara, alice);
+        
+        var numUsersByAge = await db.Users.GroupBy(x => x.Age).Select(x => new { x.Age, Count = Db.Count(x.Id) }).ToArrayAsync();
+        
+        Assert.Equal(
+            [new { Age = 30, Count = 1 }, new { Age = 20 , Count = 2}],
+            numUsersByAge
         );
     }
     

@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Services;
+using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Querying;
 using Cooke.Gnissel.Typed.Services;
@@ -242,6 +243,22 @@ public class NpgsqlSqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenera
                 else
                 {
                     sql.AppendLiteral(FormatValue(constExp.Value));
+                }
+                return;
+
+            case MethodCallExpression methodCallExpression:
+                if (methodCallExpression.Method.DeclaringType == typeof(Db))
+                {
+                    sql.AppendLiteral(methodCallExpression.Method.Name.ToUpperInvariant());
+                    sql.AppendLiteral("(");
+                    RenderExpression(methodCallExpression.Arguments.Single(), sql, options);
+                    sql.AppendLiteral(")");
+                }
+                else
+                {
+                    throw new NotSupportedException(
+                        $"Method {methodCallExpression.Method.Name} not supported"
+                    );
                 }
                 return;
 
