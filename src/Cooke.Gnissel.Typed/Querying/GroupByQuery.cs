@@ -10,6 +10,6 @@ public class GroupByQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQ
     public GroupByQuery<T> ThenBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
         new(options, expressionQuery.GroupBy(propSelector));
 
-    public Query<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
-        expressionQuery.Select(selector).ToQuery<TSelect>(options);
+    public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
+        new(options, expressionQuery.Select(selector));
 }

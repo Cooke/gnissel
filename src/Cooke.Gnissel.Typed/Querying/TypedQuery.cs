@@ -16,6 +16,6 @@ public class TypedQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQue
             options.DbConnector
         );
 
-    public Query<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
-        expressionQuery.Select(selector).ToQuery<TSelect>(options);
+    public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
+        new(options, expressionQuery.Select(selector));
 }

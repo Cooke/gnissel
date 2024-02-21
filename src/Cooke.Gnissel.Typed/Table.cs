@@ -46,7 +46,7 @@ public class Table<T> : ITable, IToQuery<T>
     public Type Type => typeof(T);
     
     public InsertQuery<T> Insert(T instance) 
-        => new InsertQuery<T>(this, insertColumns, options, [CreateRowParameters(instance)]);
+        => new (this, insertColumns, options, [CreateRowParameters(instance)]);
 
     public InsertQuery<T> Insert(params T[] instances) 
         => new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
@@ -55,7 +55,7 @@ public class Table<T> : ITable, IToQuery<T>
         => new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
     
     public DeleteQuery<T> Delete(Expression<Func<T, bool>> predicate) 
-        => new DeleteQuery<T>(this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
+        => new (this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
         (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
     ]));
     
@@ -71,8 +71,8 @@ public class Table<T> : ITable, IToQuery<T>
             collector.Setters);
     }
 
-    public Query<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
-        => CreateExpressionQuery().Select(selector).ToQuery<TSelect>(options);
+    public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
+        => new(options, CreateExpressionQuery().Select(selector));
 
     public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
         => new (options, CreateExpressionQuery().Where(predicate));
@@ -87,7 +87,7 @@ public class Table<T> : ITable, IToQuery<T>
     public FirstQuery<T> First() => new(options, CreateExpressionQuery());
     
     private ExpressionQuery CreateExpressionQuery() 
-        => new ExpressionQuery(new TableSource(this), null, [],  [], [], []);
+        => new (new TableSource(this), null, [],  [], [], []);
     
     public Query<T> ToQuery() =>
         new Query<T>(

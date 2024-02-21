@@ -56,11 +56,11 @@ public class AggregateTests : IDisposable
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
         
-        var numUsersByAge = await db.Users.Select(x => Db.Sum(x.Age) ).ToArrayAsync();
+        var numUsersByAge = await db.Users.Select(x => Db.Sum(x.Age) ).First();
         
         Assert.Equal(
             70,
-            numUsersByAge.Single()
+            numUsersByAge
         );
     }
     
@@ -72,11 +72,11 @@ public class AggregateTests : IDisposable
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
         
-        var numUsersByAge = await db.Users.Select(x => Db.Avg(x.Age) ).ToArrayAsync();
+        var numUsersByAge = await db.Users.Select(x => Db.Avg(x.Age) ).First();
         
         Assert.Equal(
             23,
-            numUsersByAge.Single()
+            numUsersByAge
         );
     }
     
@@ -88,11 +88,11 @@ public class AggregateTests : IDisposable
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
         
-        var numUsersByAge = await db.Users.Select(x => Db.Max(x.Age) ).ToArrayAsync();
+        var numUsersByAge = await db.Users.Select(x => Db.Max(x.Age) ).First();
         
         Assert.Equal(
             30,
-            numUsersByAge.Single()
+            numUsersByAge
         );
     }
     
@@ -104,11 +104,11 @@ public class AggregateTests : IDisposable
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
         
-        var numUsersByAge = await db.Users.Select(x => Db.Min(x.Age) ).ToArrayAsync();
+        var numUsersByAge = await db.Users.Select(x => Db.Min(x.Age)).First();
         
         Assert.Equal(
             20,
-            numUsersByAge.Single()
+            numUsersByAge
         );
     }
     
