@@ -59,7 +59,7 @@ internal static class ColumnBuilder
         PropertyInfo p,
         ParameterExpression objectExpression,
         Expression memberExpression) =>
-        new Column<T>(p.GetDbName() ?? dbOptions.DbAdapter.DefaultIdentifierMapper.ToColumnName(p),
+        new Column<T>(p.GetDbName() ?? dbOptions.DbAdapter.IdentifierMapper.ToColumnName(p),
             p,
             CreateParameterFactory<T>(
                 dbOptions.DbAdapter,

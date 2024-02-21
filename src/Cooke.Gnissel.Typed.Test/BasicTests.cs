@@ -1,6 +1,7 @@
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Cooke.Gnissel.Utils;
+using Npgsql;
 using Xunit.Abstractions;
 
 namespace Cooke.Gnissel.Typed.Test;
@@ -13,7 +14,9 @@ public class BasicTests : IDisposable
     public BasicTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-        db = new TestDbContext(NpgsqlDbOptionsFactory.Create(databaseFixture.DataSourceBuilder.Build()));
+        db = new TestDbContext(new(
+            new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())
+        ));
         db.NonQuery(
                 $"""
                     create table users

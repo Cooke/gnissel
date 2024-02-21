@@ -25,7 +25,9 @@ public class MappingJsonTests
             )
             .EnableDynamicJson()
             .Build();
-        _db = new TestDbContext(NpgsqlDbOptionsFactory.Create(_dataSource));
+        _db = new TestDbContext(new(
+            new NpgsqlDbAdapter(_dataSource)
+        ));
 
         await _dataSource
             .CreateCommand(

@@ -11,28 +11,14 @@ namespace Cooke.Gnissel;
 public record DbOptions(
     IDbAdapter DbAdapter,
     IObjectReaderProvider ObjectReaderProvider,
-    IDbConnector DbConnector,
-    IIdentifierMapper IdentifierMapper,
-    ISqlGenerator SqlGenerator
+    IDbConnector DbConnector
 )
 {
-    public DbOptions(IDbAdapter dbAdapter, ISqlGenerator sqlGenerator)
-        : this(
-            dbAdapter,
-            new DefaultObjectReaderProvider(dbAdapter.DefaultIdentifierMapper),
-            sqlGenerator
-        ) { }
+    public DbOptions(IDbAdapter dbAdapter)
+        : this(dbAdapter, new DefaultObjectReaderProvider(dbAdapter.IdentifierMapper)) { }
 
-    public DbOptions(
-        IDbAdapter dbAdapter,
-        IObjectReaderProvider objectReaderProvider,
-        ISqlGenerator sqlGenerator
-    )
-        : this(
-            dbAdapter,
-            objectReaderProvider,
-            dbAdapter.CreateConnector(),
-            dbAdapter.DefaultIdentifierMapper,
-            sqlGenerator
-        ) { }
+    public DbOptions(IDbAdapter dbAdapter, IObjectReaderProvider objectReaderProvider)
+        : this(dbAdapter, objectReaderProvider, dbAdapter.CreateConnector()) { }
+
+    public ITypedSqlGenerator TypedSqlGenerator => DbAdapter.TypedSqlGenerator;
 }

@@ -2,6 +2,7 @@
 
 using System.Data.Common;
 using System.Reflection;
+using Cooke.Gnissel.Typed.Services;
 
 #endregion
 
@@ -21,5 +22,7 @@ public interface IDbAdapter
 
     IDbConnector CreateConnector();
 
-    IIdentifierMapper DefaultIdentifierMapper { get; }
+    IIdentifierMapper IdentifierMapper { get; }
+    
+    ITypedSqlGenerator TypedSqlGenerator { get; }
 }

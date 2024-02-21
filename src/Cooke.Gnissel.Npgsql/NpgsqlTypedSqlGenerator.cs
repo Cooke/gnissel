@@ -8,7 +8,7 @@ using Cooke.Gnissel.Typed.Services;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public class NpgsqlSqlGenerator(IIdentifierMapper identifierMapper) : ISqlGenerator
+public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : ITypedSqlGenerator
 {
     public Sql Generate(IInsertQuery query)
     {

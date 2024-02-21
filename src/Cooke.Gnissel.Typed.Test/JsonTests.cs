@@ -1,5 +1,6 @@
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
+using Npgsql;
 using Xunit.Abstractions;
 
 namespace Cooke.Gnissel.Typed.Test;
@@ -13,8 +14,8 @@ public class JsonTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            NpgsqlDbOptionsFactory.Create(
-                databaseFixture.DataSourceBuilder.EnableDynamicJson().Build()
+            new(
+                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.EnableDynamicJson().Build())
             )
         );
         db.NonQuery(

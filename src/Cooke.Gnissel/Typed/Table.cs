@@ -32,7 +32,7 @@ public class Table<T> : ITable, IToQuery<T>
     public Table(DbOptions options)
     {
         Columns = ColumnBuilder.CreateColumns<T>(options);
-        Name = options.IdentifierMapper.ToTableName(typeof(T));
+        Name = options.DbAdapter.IdentifierMapper.ToTableName(typeof(T));
         this.options = options;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
     }
@@ -89,7 +89,7 @@ public class Table<T> : ITable, IToQuery<T>
     
     public Query<T> ToQuery() =>
         new Query<T>(
-            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(CreateExpressionQuery())),
+            options.DbAdapter.RenderSql(options.TypedSqlGenerator.Generate(CreateExpressionQuery())),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );

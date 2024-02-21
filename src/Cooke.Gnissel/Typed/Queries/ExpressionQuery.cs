@@ -83,7 +83,7 @@ public record ExpressionQuery(
 
     public Query<T> ToQuery<T>() =>
         new(
-            Options.DbAdapter.RenderSql(Options.SqlGenerator.Generate(this)),
+            Options.DbAdapter.RenderSql(Options.TypedSqlGenerator.Generate(this)),
             Options.ObjectReaderProvider.GetReaderFunc<T>(),
             Options.DbConnector
         );
