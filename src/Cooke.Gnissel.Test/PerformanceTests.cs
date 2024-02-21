@@ -23,7 +23,7 @@ public class PerformanceTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(NpgsqlDbOptionsFactory.Create(_dataSource));
 
         await _dataSource
             .CreateCommand(

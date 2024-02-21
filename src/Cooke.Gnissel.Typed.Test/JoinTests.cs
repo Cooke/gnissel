@@ -12,7 +12,7 @@ public class JoinTests : IDisposable
     public JoinTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-        db = new TestDbContext(new DbOptionsTyped(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
+        db = new TestDbContext(NpgsqlDbOptionsFactory.Create(databaseFixture.DataSourceBuilder.Build()));
         db.NonQuery(
                 $"""
                     create table users

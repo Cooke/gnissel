@@ -12,10 +12,9 @@ public class JsonTests : IDisposable
     public JsonTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-
         db = new TestDbContext(
-            new DbOptionsTyped(
-                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.EnableDynamicJson().Build())
+            NpgsqlDbOptionsFactory.Create(
+                databaseFixture.DataSourceBuilder.EnableDynamicJson().Build()
             )
         );
         db.NonQuery(

@@ -13,7 +13,7 @@ public class DateTimeTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new DbOptionsTyped(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()))
+            NpgsqlDbOptionsFactory.Create(databaseFixture.DataSourceBuilder.Build())
         );
         db.NonQuery(
                 $"""
