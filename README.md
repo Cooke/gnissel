@@ -29,13 +29,13 @@ Setup adapter (provider specific):
 
 ```csharp
 var connectionString = "...";
-var options = NpgsqlDbOptionsFactory.Create(NpgsqlDataSource.Create(connectionString));
+var adapter = new NpgsqlDbAdapter(NpgsqlDataSource.Create(connectionString));
 ```
 
 Setup DbContext (general)
 
 ```csharp
-var dbContext = new DbContext(options);
+var dbContext = new DbContext(new DbOptions(adapter));
 ```
 
 ## Usage examples
@@ -56,7 +56,7 @@ var allUsers = await dbContext.Query<User>($"SELECT * FROM users").ToArrayAsync(
 #### Non query
 
 ```csharp
-await dbContext.Execute($"INSERT INTO users(name) VALUES('Foo')");
+await dbContext.NonQuery($"INSERT INTO users(name) VALUES('Foo')");
 ```
 
 #### Parameters
@@ -108,8 +108,8 @@ var userIds = await dbContext.Query<int>(
 
 ```csharp
 await dbContext.Transaction(
-    dbContext.Execute($"INSERT INTO users(name) VALUES('foo')"),
-    dbContext.Execute($"INSERT INTO users(name) VALUES('bar')"));
+    dbContext.NonQuery($"INSERT INTO users(name) VALUES('foo')"),
+    dbContext.NonQuery($"INSERT INTO users(name) VALUES('bar')"));
 ```
 
 #### Batching
@@ -118,8 +118,8 @@ Currently only non queries are supported.
 
 ```csharp
 await dbContext.Batch(
-    dbContext.Execute($"INSERT INTO users(name) VALUES('foo')"),
-    dbContext.Execute($"INSERT INTO users(name) VALUES('bar')"));
+    dbContext.NonQuery($"INSERT INTO users(name) VALUES('foo')"),
+    dbContext.NonQuery($"INSERT INTO users(name) VALUES('bar')"));
 ```
 
 # Typed namespace
@@ -127,25 +127,17 @@ await dbContext.Batch(
 The Typed namespace includes support for typed quries.
 
 ## Setup
-Options setup is the same as in regular Gnissel.
-
-Create a custom DbContext
+Create a custom DbContext (which may inherit from DbContext but is not required to).
 
 ```csharp
 public record User(int Id, string Name);
 public record Device(int Id, string Name, int UserId);
 
-public class AppDbContext : DbContext
+public class AppDbContext(DbOptions options) : DbContext
 {
-    public AppDbContext(DbOptions options) : base(options)
-    {
-        Users = new Table<User>(options);
-        Devices = new Table<Device>(options);
-    }
+    public Table<User> Users { get; } = new Table<User>(options);
 
-    public Table<User> Users { get; }
-
-    public Table<Device> Devices { get; }
+    public Table<Device> Devices { get; } = new Table<Device>(options);
 }
 ```
 
@@ -155,17 +147,69 @@ var dbContext = new AppDbContext(new DbOptions(adapter));
 
 ## Usage examples
 
-#### Query
+#### Quering
 
 ```csharp
 var allUsers = await dbContext.Users.ToArrayAsync();
-var usersWithNameBob = await dbContext.Users.Where(x => x.Name == "Bob").ToArrayAsync();
-var allUserNames = await dbContext.Users.Select(x => x.Name).ToArrayAsync();
+var allBobs = await dbContext.Users.Where(x => x.Name == "Bob").ToArrayAsync();
+var allNames = await dbContext.Users.Select(x => x.Name).ToArrayAsync();
 var partialDevcies = await dbContext.Devices.Select(x => new { x.Id, DeviceName = x.Name }).ToArrayAsync();
+var firstUser = await dbContext.Users.First();
+var firstOrNoUser = await dbContext.Users.FirstOrDefault();
+var firstBob = await dbContext.Users.First(x => x.Name == "Bob");
+var firstOrNoBob = await dbContext.Users.FirstOrDefault(x => x.Name == "Bob");
+```
+
+#### Joining
+
+```csharp
+(User, Device)[] bobWithDevices = await dbContext.Users
+    .Join(dbContext.Devices, (u, d) => u.Id == d.UserId)
+    .Where((u, d) => u.Name == "Bob")
+    .ToArrayAsync();
 ```
 
 #### Insert
 
 ```csharp
 await dbContext.Users.Insert(new User(0, "Bob"));
+await dbContext.Users.Insert(new User(1, "Alice"), new User(2, "Greta"));
+```
+
+#### Update
+
+```csharp
+await dbContext.Users.Set(x => x.Name, "Robert").Where(x => x.Name == "Bob");
+await dbContext.Users.Set(x => x.LastLogin, null).WithoutWhere();
+```
+
+#### Delete
+
+```csharp
+await dbContext.Users.Delete().Where(x => x.Name == "Bob");
+await dbContext.Users.Delete().WithoutWhere();
+```
+
+#### Grouping and aggregation
+    
+```csharp
+var userSummaryByName = await dbContext.Users
+    .GroupBy(x => x.Name)
+    .Select(x => new { 
+        x.Name, 
+        Count = Db.Count(),
+        MaxAge = Db.Max(x.Age),
+        MinAge = Db.Min(x.Age),
+        MaxAge = Db.Sum(x.Age),
+        AvgAge = Db.Avg(x.Age)
+    }).ToArrayAsync();
+```
+
+#### Ordering
+
+```csharp
+var userSummaryByName = await dbContext.Users
+    .OrderBy(x => x.Name)
+    .ThenByDesc(x => x.Age)
+    .ToArrayAsync();
 ```

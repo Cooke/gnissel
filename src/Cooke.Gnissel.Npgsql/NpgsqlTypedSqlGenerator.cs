@@ -60,10 +60,10 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         var sql = new Sql(100, 2);
         sql.AppendLiteral($"DELETE FROM ");
         sql.AppendIdentifier(query.Table.Name);
-        sql.AppendLiteral(" WHERE ");
 
         if (query.Condition != null)
         {
+            sql.AppendLiteral(" WHERE ");
             RenderExpression(query.Condition, sql, new RenderOptions());
         }
 
@@ -251,7 +251,13 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                 {
                     sql.AppendLiteral(methodCallExpression.Method.Name.ToUpperInvariant());
                     sql.AppendLiteral("(");
-                    RenderExpression(methodCallExpression.Arguments.Single(), sql, options);
+                    if (methodCallExpression.Arguments.Count > 0)
+                    {
+                        RenderExpression(methodCallExpression.Arguments.Single(), sql, options);
+                    }
+                    else {
+                        sql.AppendLiteral("*");
+                    }
                     sql.AppendLiteral(")");
                 }
                 else

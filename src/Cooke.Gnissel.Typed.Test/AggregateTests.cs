@@ -52,6 +52,22 @@ public class AggregateTests : IDisposable
     }
     
     [Fact]
+    public async Task CountStar()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 20);
+        var alice = new User(3, "Alice", 20);
+        await db.Users.Insert(bob, sara, alice);
+        
+        var numUsersByAge = await db.Users.GroupBy(x => x.Age).Select(x => new { x.Age, Count = Db.Count() }).ToArrayAsync();
+        
+        Assert.Equal(
+            [new { Age = 30, Count = 1 }, new { Age = 20 , Count = 2}],
+            numUsersByAge
+        );
+    }
+    
+    [Fact]
     public async Task Sum()
     {
         var bob = new User(1, "Bob", 30);

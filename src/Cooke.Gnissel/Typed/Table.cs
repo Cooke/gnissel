@@ -54,10 +54,8 @@ public class Table<T> : ITable, IToQuery<T>
     public InsertQuery<T> Insert(IEnumerable<T> instances) 
         => new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
     
-    public DeleteQuery<T> Delete(Expression<Func<T, bool>> predicate) 
-        => new (this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
-        (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
-    ]));
+    public DeleteQueryWithoutWhere<T> Delete() 
+        => new (this, options);
     
     public UpdateQueryWithoutWhere<T> Set<TProperty>(
         Expression<Func<T, TProperty>> propertySelector,

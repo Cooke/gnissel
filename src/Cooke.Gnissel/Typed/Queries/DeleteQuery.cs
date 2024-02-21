@@ -1,6 +1,7 @@
 using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Queries;
+using Cooke.Gnissel.Typed.Internals;
 
 namespace Cooke.Gnissel.Typed.Queries;
 
@@ -9,6 +10,18 @@ public interface IDeleteQuery
     ITable Table { get; }
 
     Expression? Condition { get; }
+}
+
+public class DeleteQueryWithoutWhere<T>(Table<T> table, DbOptions options)
+    
+{
+    public ITable Table { get; } = table;
+
+    public DeleteQuery<T> Where(Expression<Func<T, bool>> predicate) =>
+        new(table, options, ParameterExpressionReplacer.Replace(predicate.Body, [(predicate.Parameters.Single(), new TableExpression(new TableSource(table)))]));
+    
+    public DeleteQuery<T> WithoutWhere() =>
+        new(table, options, null);
 }
 
 public class DeleteQuery<T>(Table<T> table, DbOptions options, Expression? condition)

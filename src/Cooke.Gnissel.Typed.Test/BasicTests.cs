@@ -237,13 +237,30 @@ public class BasicTests : IDisposable
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
         
-        var result = await db.Users.Delete(x => x.Id == 1);
+        var result = await db.Users.Delete().Where(x => x.Id == 1);
         Assert.Equal(1, result);
         
         var users = await db.Users.ToArrayAsync();
         
         Assert.Equal(
             [new User(2, "Sara", 25)],
+            users
+        );
+    }
+    
+    [Fact]
+    public async Task DeleteAll()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+        
+        var result = await db.Users.Delete().WithoutWhere();
+        Assert.Equal(2, result);
+        
+        var users = await db.Users.ToArrayAsync();
+        
+        Assert.Equal(
+            [],
             users
         );
     }
