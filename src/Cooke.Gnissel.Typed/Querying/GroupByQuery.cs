@@ -3,13 +3,13 @@ using Cooke.Gnissel.Queries;
 
 namespace Cooke.Gnissel.Typed.Querying;
 
-public class GroupByQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQuery) : IToQuery<T>
+public class GroupByQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
 {
-    public Query<T> ToQuery() => expressionQuery.ToQuery<T>(options);
+    public Query<T> ToQuery() => expressionQuery.ToQuery<T>();
 
     public GroupByQuery<T> ThenBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
-        new(options, expressionQuery.GroupBy(propSelector));
+        new(expressionQuery.GroupBy(propSelector));
 
     public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
-        new(options, expressionQuery.Select(selector));
+        new(expressionQuery.Select(selector));
 }

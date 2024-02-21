@@ -2,11 +2,11 @@ using Cooke.Gnissel.Queries;
 
 namespace Cooke.Gnissel.Typed.Querying;
 
-public class SelectQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQuery) : IToQuery<T>
+public class SelectQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
 {
-    public FirstQuery<T> First() => new(options, expressionQuery);
+    public FirstQuery<T> First() => new(expressionQuery);
 
-    public FirstOrDefaultQuery<T> FirstOrDefault() => new(options, expressionQuery);
+    public FirstOrDefaultQuery<T> FirstOrDefault() => new(expressionQuery);
 
-    public Query<T> ToQuery() => expressionQuery.ToQuery<T>(options);
+    public Query<T> ToQuery() => expressionQuery.ToQuery<T>();
 }

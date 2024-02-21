@@ -15,6 +15,7 @@ public record Join(TableSource TableSource, Expression? Condition);
 public record OrderBy(Expression Expression, bool Descending);
 
 public record ExpressionQuery(
+    DbOptionsTyped Options,
     TableSource TableSource,
     Expression? Selector,
     IReadOnlyList<Join> Joins,
@@ -80,11 +81,11 @@ public record ExpressionQuery(
             Groupings = [..this.Groupings, Transform(propSelector)]
         };
 
-    public Query<T> ToQuery<T>(DbOptionsTyped options) =>
+    public Query<T> ToQuery<T>() =>
         new(
-            options.DbAdapter.RenderSql(options.SqlGenerator.Generate(this)),
-            options.ObjectReaderProvider.GetReaderFunc<T>(),
-            options.DbConnector
+            Options.DbAdapter.RenderSql(Options.SqlGenerator.Generate(this)),
+            Options.ObjectReaderProvider.GetReaderFunc<T>(),
+            Options.DbConnector
         );
 
     private Expression Transform(LambdaExpression predicate) 

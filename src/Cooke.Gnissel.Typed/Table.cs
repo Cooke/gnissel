@@ -72,22 +72,22 @@ public class Table<T> : ITable, IToQuery<T>
     }
 
     public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
-        => new(options, CreateExpressionQuery().Select(selector));
+        => new(CreateExpressionQuery().Select(selector));
 
     public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
-        => new (options, CreateExpressionQuery().Where(predicate));
+        => new (CreateExpressionQuery().Where(predicate));
 
     public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
-        => new (options, CreateExpressionQuery().Where(predicate));
+        => new (CreateExpressionQuery().Where(predicate));
 
     public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate) 
-        => new (options, CreateExpressionQuery().Join(joinTable, predicate));
+        => new (CreateExpressionQuery().Join(joinTable, predicate));
 
 
-    public FirstQuery<T> First() => new(options, CreateExpressionQuery());
+    public FirstQuery<T> First() => new(CreateExpressionQuery());
     
     private ExpressionQuery CreateExpressionQuery() 
-        => new (new TableSource(this), null, [],  [], [], []);
+        => new (options, new TableSource(this), null, [],  [], [], []);
     
     public Query<T> ToQuery() =>
         new Query<T>(
@@ -100,11 +100,11 @@ public class Table<T> : ITable, IToQuery<T>
         => new RowParameters(Columns.Where(x => !x.IsDatabaseGenerated).Select(c => c.CreateParameter(instance)).ToArray());
 
     public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) 
-        => new(options, CreateExpressionQuery().OrderBy(propSelector));
+        => new(CreateExpressionQuery().OrderBy(propSelector));
 
     public OrderByQuery<T> OrderByDesc<TProp>(Expression<Func<T, TProp>> propSelector) 
-        => new(options, CreateExpressionQuery().OrderByDesc(propSelector));
+        => new(CreateExpressionQuery().OrderByDesc(propSelector));
 
     public GroupByQuery<T> GroupBy<TProp>(Expression<Func<T, TProp>> propSelector) 
-        => new(options, CreateExpressionQuery().GroupBy(propSelector));
+        => new(CreateExpressionQuery().GroupBy(propSelector));
 }

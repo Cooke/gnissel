@@ -4,7 +4,7 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Typed.Querying;
 
-public class FirstQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQuery)
+public class FirstQuery<T>(ExpressionQuery expressionQuery)
 {
     public ValueTaskAwaiter<T> GetAwaiter()
     {
@@ -13,13 +13,7 @@ public class FirstQuery<T>(DbOptionsTyped options, ExpressionQuery expressionQue
 
     public async ValueTask<T> ExecuteAsync(CancellationToken cancellationToken = default)
     {
-        var query = new Query<T>(
-            options.DbAdapter.RenderSql(
-                options.SqlGenerator.Generate(expressionQuery with { Limit = 1 })
-            ),
-            options.ObjectReaderProvider.GetReaderFunc<T>(),
-            options.DbConnector
-        );
+        var query = (expressionQuery with { Limit = 1 }).ToQuery<T>();
 
         await foreach (var value in query.WithCancellation(cancellationToken))
         {
