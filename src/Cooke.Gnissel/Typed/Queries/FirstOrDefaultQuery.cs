@@ -1,8 +1,6 @@
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel.Queries;
-using Cooke.Gnissel.Utils;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public class FirstOrDefaultQuery<T>(ExpressionQuery expressionQuery)
 {

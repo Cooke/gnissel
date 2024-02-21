@@ -118,16 +118,16 @@ public class LongRunningTransactionTests
 
     private class TestDbContext : DbContext
     {
-        private readonly DbOptionsTyped _options;
+        private readonly DbOptions _options;
 
-        public TestDbContext(DbOptionsTyped options)
+        public TestDbContext(DbOptions options)
             : base(options)
         {
             _options = options;
             Users = new Table<User>(options);
         }
 
-        private TestDbContext(TestDbContext context, DbOptionsTyped options)
+        private TestDbContext(TestDbContext context, DbOptions options)
             : base(options)
         {
             _options = options;

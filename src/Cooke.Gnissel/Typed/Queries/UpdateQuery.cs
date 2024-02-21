@@ -3,7 +3,7 @@ using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Internals;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public interface IUpdateQuery
 {
@@ -19,7 +19,7 @@ public record Setter(IColumn Column, Expression Value);
 
 public class UpdateQueryWithoutWhere<T>(
     Table<T> table,
-    DbOptionsTyped options,
+    DbOptions options,
     IReadOnlyCollection<Setter> setters
 )
 {
@@ -44,7 +44,7 @@ public class UpdateQueryWithoutWhere<T>(
 
 public class UpdateQuery<T>(
     Table<T> table,
-    DbOptionsTyped options,
+    DbOptions options,
     Expression? predicate,
     IReadOnlyCollection<Setter> setters
 ) : IUpdateQuery

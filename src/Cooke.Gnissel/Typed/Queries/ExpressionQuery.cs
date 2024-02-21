@@ -3,7 +3,7 @@ using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Utils;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public record TableSource(ITable Table, string? Alias = null)
 {
@@ -15,7 +15,7 @@ public record Join(TableSource TableSource, Expression? Condition);
 public record OrderBy(Expression Expression, bool Descending);
 
 public record ExpressionQuery(
-    DbOptionsTyped Options,
+    DbOptions Options,
     TableSource TableSource,
     Expression? Selector,
     IReadOnlyList<Join> Joins,

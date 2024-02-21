@@ -1,8 +1,7 @@
 using System.Linq.Expressions;
 using Cooke.Gnissel.Queries;
-using Cooke.Gnissel.Utils;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public class TypedQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IToQuery<(T1, T2, T3)>
 {

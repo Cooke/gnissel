@@ -61,7 +61,7 @@ public class DateTimeTests : IDisposable
         Assert.Equal(user with { timestamp = timestampTz }, userFromDb);
     }
 
-    private class TestDbContext(DbOptionsTyped options) : DbContext(options)
+    private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
     }

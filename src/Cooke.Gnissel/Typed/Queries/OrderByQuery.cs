@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Cooke.Gnissel.Queries;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public class OrderByQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
 {

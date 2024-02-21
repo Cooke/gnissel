@@ -17,7 +17,7 @@ public class NonQueryTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new DbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
+        _db = new DbContext(NpgsqlDbOptionsFactory.Create(_dataSource));
 
         await _dataSource
             .CreateCommand(

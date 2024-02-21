@@ -2,7 +2,7 @@ using System.Linq.Expressions;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Queries;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public interface IDeleteQuery
 {
@@ -11,7 +11,7 @@ public interface IDeleteQuery
     Expression? Condition { get; }
 }
 
-public class DeleteQuery<T>(Table<T> table, DbOptionsTyped options, Expression? condition)
+public class DeleteQuery<T>(Table<T> table, DbOptions options, Expression? condition)
     : IDeleteQuery
 {
     public ITable Table { get; } = table;

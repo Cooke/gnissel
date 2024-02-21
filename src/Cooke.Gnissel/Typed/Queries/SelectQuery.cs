@@ -1,6 +1,6 @@
 using Cooke.Gnissel.Queries;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public class SelectQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
 {

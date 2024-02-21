@@ -2,7 +2,7 @@ using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Queries;
 
-namespace Cooke.Gnissel.Typed.Querying;
+namespace Cooke.Gnissel.Typed.Queries;
 
 public interface IInsertQuery
 {
@@ -19,7 +19,7 @@ public record RowParameters(IReadOnlyCollection<DbParameter> Parameters);
 public class InsertQuery<T>(
     Table<T> table,
     IReadOnlyCollection<Column<T>> columns,
-    DbOptionsTyped options,
+    DbOptions options,
     IReadOnlyCollection<RowParameters> rows
 ) : IInsertQuery, INonQuery
 {

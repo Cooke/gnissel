@@ -1,5 +1,5 @@
 using System.Linq.Expressions;
-using Cooke.Gnissel.Typed.Querying;
+using Cooke.Gnissel.Typed.Queries;
 
 namespace Cooke.Gnissel.Typed.Internals;
 

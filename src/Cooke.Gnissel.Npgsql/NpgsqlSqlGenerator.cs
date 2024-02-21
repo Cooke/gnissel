@@ -3,7 +3,7 @@ using System.Reflection;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
-using Cooke.Gnissel.Typed.Querying;
+using Cooke.Gnissel.Typed.Queries;
 using Cooke.Gnissel.Typed.Services;
 
 namespace Cooke.Gnissel.Npgsql;

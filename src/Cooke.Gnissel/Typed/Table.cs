@@ -1,7 +1,7 @@
 ﻿using System.Linq.Expressions;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Internals;
-using Cooke.Gnissel.Typed.Querying;
+using Cooke.Gnissel.Typed.Queries;
 using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Typed;
@@ -18,10 +18,10 @@ public interface ITable
 
 public class Table<T> : ITable, IToQuery<T>
 {
-    private readonly DbOptionsTyped options;
+    private readonly DbOptions options;
     private readonly Column<T>[] insertColumns;
 
-    public Table(Table<T> copy, DbOptionsTyped options) : this(options)
+    public Table(Table<T> copy, DbOptions options) : this(options)
     {
         Columns = copy.Columns;
         Name = copy.Name;
@@ -29,7 +29,7 @@ public class Table<T> : ITable, IToQuery<T>
         insertColumns = copy.insertColumns;
     }
 
-    public Table(DbOptionsTyped options)
+    public Table(DbOptions options)
     {
         Columns = ColumnBuilder.CreateColumns<T>(options);
         Name = options.IdentifierMapper.ToTableName(typeof(T));

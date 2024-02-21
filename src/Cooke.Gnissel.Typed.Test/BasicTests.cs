@@ -354,7 +354,7 @@ public class BasicTests : IDisposable
         );
     }
     
-    private class TestDbContext(DbOptionsTyped options) : DbContext(options)
+    private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
     }
