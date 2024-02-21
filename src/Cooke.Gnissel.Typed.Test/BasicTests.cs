@@ -32,8 +32,11 @@ public class BasicTests : IDisposable
     }
     
     [Fact]
-    public async Task Insert()
+    public async Task Insert( )
+    
     {
+        
+        
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
         
@@ -267,11 +270,6 @@ public class BasicTests : IDisposable
         await db.Users.Insert(bob, sara);
         
         var users = await db.Users.OrderBy(x => x.Age).ToArrayAsync();
-        
-        // db.Users.Set(x => x.Age, x => x.Age + 1).Set(x => x.Name, "Bubba");
-        // db.Users.GroupBy(x => x.Age).GroupBy(x => x.Name);
-        // db.Users.OrderByDesc(x => x.Age).OrderBy(x => x.Name);
-        // db.Users.GroupBy(x => x.Age).GroupBy(x => x.Name).Select(x => Db.Count(x.Id));
             
         Assert.Equal(
             [sara, bob],
