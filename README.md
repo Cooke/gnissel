@@ -9,7 +9,7 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 - Utilizes the DataSource API introduced in .NET 7
 - No change tracking
 - No navigation properties
-- Typed query support avaiable in [PlusPlus package](#plusplus-package)
+- Typed query support avaiable in [Typed namespace](#typed-namespace)
 
 ## Limitations
 
@@ -23,22 +23,19 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 Postgres adapter:
 `dotnet add Cooke.Gnissel.Npgsql`
 
-Recommended addition:
-`dotnet add System.Async.Linq`
-
 ## Setup
 
 Setup adapter (provider specific):
 
 ```csharp
 var connectionString = "...";
-var adapter = new NpgsqlDbAdapter(NpgsqlDataSource.Create(connectionString));
+var options = NpgsqlDbOptionsFactory.Create(NpgsqlDataSource.Create(connectionString));
 ```
 
 Setup DbContext (general)
 
 ```csharp
-var dbContext = new DbContext(new DbOptions(adapter));
+var dbContext = new DbContext(options);
 ```
 
 ## Usage examples
@@ -125,18 +122,12 @@ await dbContext.Batch(
     dbContext.Execute($"INSERT INTO users(name) VALUES('bar')"));
 ```
 
-# PlusPlus package
+# Typed namespace
 
-The PlusPlus package includes addtional features like typed quries.
-
-> [!NOTE]
-> The PlusPlus package is in "alpha state" and may be changed significantly. Depending on the outcome it may be merged into the main package, dropped or left as is.
-
-## Installation
-`dotnet add Cooke.Gnissel.PlusPlus`
+The Typed namespace includes support for typed quries.
 
 ## Setup
-Adapter setup is the same as in regular Gnissel.
+Options setup is the same as in regular Gnissel.
 
 Create a custom DbContext
 
