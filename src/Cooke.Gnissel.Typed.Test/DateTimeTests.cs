@@ -55,7 +55,7 @@ public class DateTimeTests : IDisposable
         var user = new User(1, timestampTz, timestamp);
         await db.Users.Insert(user);
 
-        await db.Users.Update(x => true, s => s.Set(x => x.timestamp, x => x.timestampTz));
+        await db.Users.Set(x => x.timestamp, x => x.timestampTz).WithoutWhere();
         var userFromDb = await db.Users.First();
 
         Assert.Equal(user with { timestamp = timestampTz }, userFromDb);

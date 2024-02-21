@@ -59,17 +59,15 @@ public class Table<T> : ITable, IToQuery<T>
         (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
     ]));
     
-    public UpdateQuery<T> Update(Expression<Func<T, bool>> predicate, Func<ISetCollector<T>, ISetCollector<T>> collectSetters)
-    {
-        var collector = new SetCollector<T>(this);
-        collectSetters(collector);
-        
-        return new UpdateQuery<T>(
-            this, options, ParameterExpressionReplacer.Replace(predicate.Body, [
-                (predicate.Parameters.Single(), new TableExpression(new TableSource(this)))
-            ]),
-            collector.Setters);
-    }
+    public UpdateQueryWithoutWhere<T> Set<TProperty>(
+        Expression<Func<T, TProperty>> propertySelector,
+        TProperty value
+    ) => new(this, options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
+
+    public UpdateQueryWithoutWhere<T> Set<TProperty>(
+        Expression<Func<T, TProperty>> propertySelector,
+        Expression<Func<T, TProperty>> value
+    ) => new(this, options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
 
     public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
         => new(CreateExpressionQuery().Select(selector));

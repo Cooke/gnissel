@@ -248,7 +248,7 @@ public class BasicTests : IDisposable
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
         
-        var result = await db.Users.Update(x => x.Id == 1, s => s.Set(x => x.Name, "Bubba").Set(x => x.Age, x => x.Age + 1));
+        var result = await db.Users.Set(x => x.Name, "Bubba").Set(x => x.Age, x => x.Age + 1).Where(x => x.Id == 1);
         Assert.Equal(1, result);
         
         var user = await db.Users.FirstOrDefault(x => x.Id == 1);
