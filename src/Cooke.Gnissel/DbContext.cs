@@ -2,6 +2,7 @@
 
 using System.Data.Common;
 using System.Runtime.CompilerServices;
+using Cooke.Gnissel.History;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
@@ -69,4 +70,7 @@ public class DbContext(DbOptions dbOptions)
         await batch.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
     }
+    
+    public ValueTask Migrate(IReadOnlyList<Migration> migrations, CancellationToken cancellationToken = default) 
+        => _dbAdapter.Migrator.MigrateAsync(migrations, cancellationToken);
 }

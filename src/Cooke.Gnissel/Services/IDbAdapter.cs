@@ -23,6 +23,8 @@ public interface IDbAdapter
     IDbConnector CreateConnector();
 
     IIdentifierMapper IdentifierMapper { get; }
-    
+
     ITypedSqlGenerator TypedSqlGenerator { get; }
+
+    IMigrator Migrator { get; }
 }

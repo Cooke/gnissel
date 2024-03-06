@@ -4,18 +4,34 @@ using System.Data.Common;
 using System.Text;
 using System.Text.RegularExpressions;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Services;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
 
 #endregion
 
 namespace Cooke.Gnissel.Npgsql;
 
-public sealed class NpgsqlDbAdapter(NpgsqlDataSource dataSource, IIdentifierMapper identifierMapper) : IDbAdapter
+public sealed class NpgsqlDbAdapter : IDbAdapter
 {
-    public NpgsqlDbAdapter(NpgsqlDataSource dataSource) : this(dataSource, new DefaultPostgresIdentifierMapper()) { }
-    
+    private readonly NpgsqlDataSource _dataSource;
+
+    public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
+        : this(dataSource, new DefaultPostgresIdentifierMapper(), NullLogger.Instance) { }
+
+    public NpgsqlDbAdapter(
+        NpgsqlDataSource dataSource,
+        IIdentifierMapper identifierMapper,
+        ILogger logger
+    )
+    {
+        _dataSource = dataSource;
+        IdentifierMapper = identifierMapper;
+        TypedSqlGenerator = new NpgsqlTypedSqlGenerator(identifierMapper);
+        Migrator = new NpgsqlMigrator(logger, this);
+    }
+
     public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
     public string EscapeIdentifierIfNeeded(string identifier) =>
@@ -71,9 +87,11 @@ public sealed class NpgsqlDbAdapter(NpgsqlDataSource dataSource, IIdentifierMapp
 
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
-    public IDbConnector CreateConnector() => new NpgsqlDbConnector(dataSource);
+    public IDbConnector CreateConnector() => new NpgsqlDbConnector(_dataSource);
 
-    public IIdentifierMapper IdentifierMapper { get; } = identifierMapper;
+    public IIdentifierMapper IdentifierMapper { get; }
 
-    public ITypedSqlGenerator TypedSqlGenerator { get; } = new NpgsqlTypedSqlGenerator(identifierMapper);
+    public ITypedSqlGenerator TypedSqlGenerator { get; }
+
+    public IMigrator Migrator { get; }
 }

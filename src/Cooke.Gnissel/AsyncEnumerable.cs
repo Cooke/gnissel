@@ -7,11 +7,8 @@ public static class AsyncEnumerable
     public static async ValueTask<T[]> ToArrayAsync<T>(
         this IAsyncEnumerable<T> source,
         CancellationToken cancellationToken = default
-    )
-    {
-        var listAsync = await source.ToListAsync(cancellationToken);
-        return listAsync.ToArray();
-    }
+    ) =>
+        (await source.ToListAsync(cancellationToken)).ToArray();
 
     public static async Task<List<T>> ToListAsync<T>(
         this IAsyncEnumerable<T> source,
@@ -60,6 +57,12 @@ public static class AsyncEnumerable
         return result;
     }
     
+    public static async Task<HashSet<T>> ToHashSetAsync<T>(
+        this IAsyncEnumerable<T> source,
+        CancellationToken cancellationToken = default
+    ) =>
+        (await source.ToListAsync(cancellationToken)).ToHashSet();
+
     public static async IAsyncEnumerable<TResult> GroupBy<T1, T2, TKey, TElement, TResult>(
         this IAsyncEnumerable<(T1, T2)> source,
         Func<T1, T2, TKey> keySelector,
