@@ -71,6 +71,6 @@ public class DbContext(DbOptions dbOptions)
         await transaction.CommitAsync();
     }
     
-    public ValueTask Migrate(IReadOnlyList<Migration> migrations, CancellationToken cancellationToken = default) 
-        => _dbAdapter.Migrator.MigrateAsync(migrations, cancellationToken);
+    public ValueTask Migrate(IReadOnlyList<IMigration> migrations, CancellationToken cancellationToken = default) 
+        => _dbAdapter.Migrator.Migrate(migrations, cancellationToken);
 }

@@ -9,8 +9,8 @@ namespace Cooke.Gnissel.Npgsql;
 
 public class NpgsqlMigrator(ILogger logger, IDbAdapter dbAdapter) : IMigrator
 {
-    public async ValueTask MigrateAsync(
-        IReadOnlyCollection<Migration> migrations,
+    public async ValueTask Migrate(
+        IReadOnlyCollection<IMigration> migrations,
         CancellationToken cancellationToken
     )
     {
