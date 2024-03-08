@@ -117,6 +117,13 @@ public class PerformanceTests
         var result = await connection.QueryAsync<User>($"SELECT * FROM users");
         var array = result.ToArray();
     }
+    
+    [Test]
+    public async Task QueryGnisselTyped()
+    {
+        var table = new Table<User>(new(new NpgsqlDbAdapter(_dataSource)));
+        await table.ToArrayAsync();
+    }
 
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
