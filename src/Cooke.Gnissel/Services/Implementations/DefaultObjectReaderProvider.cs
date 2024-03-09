@@ -17,7 +17,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
 {
     private readonly ConcurrentDictionary<Type, object> _readers =
         new ConcurrentDictionary<Type, object>();
-    
+
     private static Type[] BuiltInComplexTypes = new[]
     {
         typeof(string),
@@ -61,12 +61,11 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        string? dbName = null,
         string? dbType = null
     )
     {
         if (type.IsClass) {
-            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, type, dbName ?? type.GetDbName(), dbType ?? type.GetDbType());
+            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, type, dbType ?? type.GetDbType());
             var (actualReader, width) = CreateActualReader();
             return (Expression.Condition(
                 isNullReader,
@@ -77,8 +76,8 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
 
         if (IsNullableValueType(type)) {
             var underlyingType = Nullable.GetUnderlyingType(type)!;
-            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, underlyingType, dbName ?? type.GetDbName(), dbType ?? underlyingType.GetDbType());
-            var (actualReader, width) = CreateReader(dataReader, ordinalOffset, underlyingType, dbName, dbType);
+            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, underlyingType, dbType ?? underlyingType.GetDbType());
+            var (actualReader, width) = CreateReader(dataReader, ordinalOffset, underlyingType, dbType);
             return (Expression.Condition(
                 isNullReader,
                 Expression.Constant(null, type),
@@ -89,30 +88,26 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         return CreateActualReader();
         (Expression Body, int Width) CreateActualReader()
         {
-            var primitiveOrdinal =
-                dbName != null
-                    ? GetOrdinalAfterExpression(dataReader, ordinalOffset, dbName)
-                    : ordinalOffset;
             if (type.GetDbType() != null || dbType != null) {
-                return (CreateValueReader(dataReader, primitiveOrdinal, type), 1);
+                return (CreateValueReader(dataReader, ordinalOffset, type), 1);
             }
 
             if (type.IsPrimitive) {
-                return (CreateValueReader(dataReader, primitiveOrdinal, type), 1);
+                return (CreateValueReader(dataReader, ordinalOffset, type), 1);
             }
-    
+
             if (type.IsAssignableTo(typeof(ITuple))) {
                 return CreatePositionalReader(dataReader, ordinalOffset, type);
             }
 
             if (BuiltInComplexTypes.Contains(type)) {
-                return (CreateValueReader(dataReader, primitiveOrdinal, type), 1);
+                return (CreateValueReader(dataReader, ordinalOffset, type), 1);
             }
-           
+
             if (type.IsClass || type.IsValueType) {
                 return CreateNamedReader(dataReader, ordinalOffset, type);
             }
-            
+
             throw new NotSupportedException($"Cannot map type {type}");
         }
     }
@@ -121,29 +116,24 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        string? dbName = null,
         string? dbType = null
     )
     {
-        var primitiveOrdinal =
-            dbName != null
-                ? GetOrdinalAfterExpression(dataReader, ordinalOffset, dbName)
-                : ordinalOffset;
         if (type.GetDbType() != null || dbType != null) {
-            return (CreateIsNullValueReader(dataReader, primitiveOrdinal), 1);
+            return (CreateIsNullValueReader(dataReader, ordinalOffset), 1);
         }
 
         return type switch
         {
             not null when type == typeof(TimeSpan)
-                => (CreateIsNullValueReader(dataReader, primitiveOrdinal), 1),
+                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
             not null when type == typeof(DateTimeOffset)
-                => (CreateIsNullValueReader(dataReader, primitiveOrdinal), 1),
+                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
             not null when type == typeof(DateTime)
-                => (CreateIsNullValueReader(dataReader, primitiveOrdinal), 1),
-            { IsPrimitive: true } => (CreateIsNullValueReader(dataReader, primitiveOrdinal), 1),
+                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
+            { IsPrimitive: true } => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
             not null when type == typeof(string)
-                => (CreateIsNullValueReader(dataReader, primitiveOrdinal), 1),
+                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
             { IsClass: true } => CreateIsNullComplexReader(dataReader, ordinalOffset, type),
             _ => throw new NotSupportedException($"Cannot map type {type}")
         };
@@ -180,9 +170,8 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
                 {
                     var (body, innerWidth) = CreateReader(
                         dataReader,
-                        ordinalOffset,
+                        GetOrdinalAfterExpression(dataReader, ordinalOffset, p.GetDbName() ?? identifierMapper.ToColumnName(p)),
                         p.ParameterType,
-                        p.GetDbName() ?? identifierMapper.ToColumnName(p),
                         p.GetDbType()
                     );
                     width += innerWidth;
