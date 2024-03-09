@@ -60,12 +60,11 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
     private (Expression Body, int Width) CreateReader(
         Expression dataReader,
         Expression ordinalOffset,
-        Type type,
-        string? dbType = null
+        Type type
     )
     {
         if (type.IsClass) {
-            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, type, dbType ?? type.GetDbType());
+            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, type);
             var (actualReader, width) = CreateActualReader();
             return (Expression.Condition(
                 isNullReader,
@@ -76,8 +75,8 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
 
         if (IsNullableValueType(type)) {
             var underlyingType = Nullable.GetUnderlyingType(type)!;
-            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, underlyingType, dbType ?? underlyingType.GetDbType());
-            var (actualReader, width) = CreateReader(dataReader, ordinalOffset, underlyingType, dbType);
+            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, underlyingType);
+            var (actualReader, width) = CreateReader(dataReader, ordinalOffset, underlyingType);
             return (Expression.Condition(
                 isNullReader,
                 Expression.Constant(null, type),
@@ -88,7 +87,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         return CreateActualReader();
         (Expression Body, int Width) CreateActualReader()
         {
-            if (type.GetDbType() != null || dbType != null) {
+            if (type.GetDbType() != null) {
                 return (CreateValueReader(dataReader, ordinalOffset, type), 1);
             }
 
@@ -147,7 +146,6 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
     {
         var ctor = type.GetConstructors().First();
         var (test, width) = ctor.GetParameters().Select(p =>
-                // TODO fix offset
                 CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, p.GetDbName() ?? identifierMapper.ToColumnName(p)))
             .Aggregate((Body: (Expression)Expression.Constant(true), Width: 0), (x, agg) => (Expression.And(x.Body, agg.Body), x.Width + agg.Width));
 
@@ -168,12 +166,14 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
             ctor.GetParameters()
                 .Select(p =>
                 {
-                    var (body, innerWidth) = CreateReader(
-                        dataReader,
-                        GetOrdinalAfterExpression(dataReader, ordinalOffset, p.GetDbName() ?? identifierMapper.ToColumnName(p)),
-                        p.ParameterType,
-                        p.GetDbType()
-                    );
+                    var ordinalAfterExpression = GetOrdinalAfterExpression(dataReader, ordinalOffset, p.GetDbName() ?? identifierMapper.ToColumnName(p));
+                    var (body, innerWidth) = p.GetDbType() != null
+                        ? (CreateValueReader(dataReader, ordinalAfterExpression, p.ParameterType), 1)
+                        : CreateReader(
+                            dataReader,
+                            ordinalAfterExpression,
+                            p.ParameterType
+                        );
                     width += innerWidth;
                     return body;
                 })
