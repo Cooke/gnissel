@@ -12,4 +12,7 @@ public class OrderByQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
 
     public OrderByQuery<T> ThenByDesc<TProp>(Expression<Func<T, TProp>> propSelector) =>
         new(expressionQuery.OrderByDesc(propSelector));
+    
+    public TypedQuery<T> Limit(int limit) 
+        => new(expressionQuery with { Limit = limit });
 }

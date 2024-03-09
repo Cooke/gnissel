@@ -70,20 +70,13 @@ public class Table<T> : ITable, IToQuery<T>
     public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
         => new(CreateExpressionQuery().Select(selector));
 
-    public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
-        => new (CreateExpressionQuery().Where(predicate));
-
     public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
         => new (CreateExpressionQuery().Where(predicate));
 
-    public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate) 
-        => new (CreateExpressionQuery().Join(joinTable, predicate));
-
-
     public FirstQuery<T> First() => new(CreateExpressionQuery());
     
-    private ExpressionQuery CreateExpressionQuery() 
-        => new (options, new TableSource(this), null, [],  [], [], []);
+    public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
+        => new (CreateExpressionQuery().Where(predicate));
     
     public Query<T> ToQuery() =>
         new Query<T>(
@@ -92,9 +85,6 @@ public class Table<T> : ITable, IToQuery<T>
             options.DbConnector
         );
     
-    private RowParameters CreateRowParameters(T instance) 
-        => new RowParameters(Columns.Where(x => !x.IsDatabaseGenerated).Select(c => c.CreateParameter(instance)).ToArray());
-
     public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) 
         => new(CreateExpressionQuery().OrderBy(propSelector));
 
@@ -103,6 +93,28 @@ public class Table<T> : ITable, IToQuery<T>
 
     public GroupByQuery<T> GroupBy<TProp>(Expression<Func<T, TProp>> propSelector) 
         => new(CreateExpressionQuery().GroupBy(propSelector));
-    public TypedQuery<T, T2?> LeftJoin<T2>(Table<T2> dbDevices, Expression<Func<T, T2, bool>> predicate)
-     => new(CreateExpressionQuery().LeftJoin(dbDevices, predicate));
+    
+    public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate) 
+        => new (CreateExpressionQuery().Join(joinTable, predicate));
+    
+    public TypedQuery<T, T2?> LeftJoin<T2>(Table<T2> joinTable, Expression<Func<T, T2, bool>> predicate)
+     => new(CreateExpressionQuery().LeftJoin(joinTable, predicate));
+    
+    public TypedQuery<T?, T2> RightJoin<T2>(Table<T2> joinTable, Expression<Func<T, T2, bool>> predicate)
+        => new(CreateExpressionQuery().RightJoin(joinTable, predicate));
+    
+    public TypedQuery<T?, T2?> FullJoin<T2>(Table<T2> joinTable, Expression<Func<T, T2, bool>> predicate)
+        => new(CreateExpressionQuery().FullJoin(joinTable, predicate));
+    
+    public TypedQuery<T, T2> CrossJoin<T2>(Table<T2> joinTable)
+        => new(CreateExpressionQuery().CrossJoin(joinTable));
+    
+    public TypedQuery<T> Limit(int limit) 
+        => new(CreateExpressionQuery() with { Limit = limit });
+    
+    private ExpressionQuery CreateExpressionQuery() 
+        => new (options, new TableSource(this), null, [],  [], [], []);
+    
+    private RowParameters CreateRowParameters(T instance) 
+        => new RowParameters(Columns.Where(x => !x.IsDatabaseGenerated).Select(c => c.CreateParameter(instance)).ToArray());
 }

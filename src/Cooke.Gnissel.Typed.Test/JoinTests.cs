@@ -29,12 +29,12 @@ public class JoinTests : IDisposable
                     (
                         id   text primary key,
                         name text,
-                        user_id  integer references users(id)
+                        user_id integer
                     );
 
                     create table device_keys
                        (
-                           device_id   text references devices(id),
+                           device_id text,
                            key text
                        );
                 """
@@ -74,14 +74,89 @@ public class JoinTests : IDisposable
         var sara = new User(2, "Sara", 25);
         var bobsDevice = new Device("a", "Bob's device", 1);
         
-        await db.Users.Insert(bob);
-        await db.Users.Insert(sara);
+        await db.Users.Insert(bob, sara);
         await db.Devices.Insert(bobsDevice);
         
         var usersDevices = await db.Users.LeftJoin(db.Devices, (u, d) => u.Id == d.UserId).ToArrayAsync();
         
         Assert.Equal(
             [(bob, bobsDevice), (sara, null)],
+            usersDevices
+        );
+    }
+    
+    [Fact]
+    public async Task RightJoin()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        
+        await db.Users.Insert(bob, sara);
+        await db.Devices.Insert(bobsDevice);
+        
+        var usersDevices = await db.Devices.RightJoin(db.Users, (d, u) => u.Id == d.UserId).ToArrayAsync();
+        
+        Assert.Equal(
+            [(bobsDevice, bob), (null, sara)],
+            usersDevices
+        );
+    }
+    
+    [Fact]
+    public async Task FullJoin()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        var aliceDevice = new Device("c", "Alice's device", 3);
+        
+        await db.Users.Insert(bob, sara);
+        await db.Devices.Insert(bobsDevice, aliceDevice);
+        
+        var usersDevices = await db.Users.FullJoin(db.Devices, (u, d) => u.Id == d.UserId).ToArrayAsync();
+        
+        Assert.Equal(
+            [(bob, bobsDevice), (null, aliceDevice), (sara, null), ],
+            usersDevices
+        );
+    }
+    
+    [Fact]
+    public async Task CrossJoin()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        var aliceDevice = new Device("c", "Alice's device", 3);
+        
+        await db.Users.Insert(bob, sara);
+        await db.Devices.Insert(bobsDevice, aliceDevice);
+        
+        var usersDevices = await db.Users.CrossJoin(db.Devices).ToArrayAsync();
+        
+        Assert.Equal(
+            [(bob, bobsDevice), (bob, aliceDevice), (sara, bobsDevice), (sara, aliceDevice) ],
+            usersDevices
+        );
+    }
+    
+    [Fact]
+    public async Task LeftJoinLeftJoin()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        
+        await db.Users.Insert(bob);
+        await db.Users.Insert(sara);
+        await db.Devices.Insert(bobsDevice);
+        
+        var usersDevices = await db.Users.LeftJoin(db.Devices, (u, d) => u.Id == d.UserId)
+            .LeftJoin(db.Devices, (u, d1, d2) => d1!.Id == d2.Id).ToArrayAsync();
+        
+        Assert.Equal(
+            [(bob, bobsDevice, bobsDevice), (sara, null, null)],
             usersDevices
         );
     }
