@@ -18,15 +18,15 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
     private readonly ConcurrentDictionary<Type, object> _readers =
         new ConcurrentDictionary<Type, object>();
 
-    private static Type[] BuiltInComplexTypes = new[]
-    {
+    private static readonly Type[] BuiltInTypes =
+    [
         typeof(string),
         typeof(DateTime),
         typeof(DateTimeOffset),
         typeof(TimeSpan),
         typeof(Guid),
-        typeof(byte[]),
-    };
+        typeof(byte[])
+    ];
 
     public ObjectReader<TOut> Get<TOut>()
     {
@@ -55,7 +55,6 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         )!;
     }
 
-    private static bool IsNullableValueType(Type type) => type.IsValueType && Nullable.GetUnderlyingType(type) != null;
 
     private (Expression Body, int Width) CreateReader(
         Expression dataReader,
@@ -63,93 +62,67 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Type type
     )
     {
-        if (type.IsClass) {
-            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, type);
-            var (actualReader, width) = CreateActualReader();
-            return (Expression.Condition(
-                isNullReader,
-                Expression.Constant(null, type),
-                actualReader
-            ), width);
-        }
-
         if (IsNullableValueType(type)) {
             var underlyingType = Nullable.GetUnderlyingType(type)!;
-            var (isNullReader, _) = CreateIsNullReader(dataReader, ordinalOffset, underlyingType);
             var (actualReader, width) = CreateReader(dataReader, ordinalOffset, underlyingType);
             return (Expression.Condition(
-                isNullReader,
+                CreateIsNullReader(dataReader, ordinalOffset, underlyingType),
                 Expression.Constant(null, type),
                 Expression.New(type.GetConstructor([underlyingType])!, [actualReader])
             ), width);
         }
 
-        return CreateActualReader();
-        (Expression Body, int Width) CreateActualReader()
-        {
-            if (type.GetDbType() != null) {
-                return (CreateValueReader(dataReader, ordinalOffset, type), 1);
-            }
-
-            if (type.IsPrimitive) {
-                return (CreateValueReader(dataReader, ordinalOffset, type), 1);
-            }
-
-            if (type.IsAssignableTo(typeof(ITuple))) {
-                return CreatePositionalReader(dataReader, ordinalOffset, type);
-            }
-
-            if (BuiltInComplexTypes.Contains(type)) {
-                return (CreateValueReader(dataReader, ordinalOffset, type), 1);
-            }
-
-            if (type.IsClass || type.IsValueType) {
-                return CreateNamedReader(dataReader, ordinalOffset, type);
-            }
-
-            throw new NotSupportedException($"Cannot map type {type}");
+        if (type.GetDbType() != null || type.IsPrimitive || BuiltInTypes.Contains(type)) {
+            return (CreateValueReader(dataReader, ordinalOffset, type), 1);
         }
+
+        if (type.IsAssignableTo(typeof(ITuple))) {
+            return CreatePositionalReader(dataReader, ordinalOffset, type);
+        }
+
+        if (type.IsClass) {
+            var (actualReader, width) = CreateNamedReader(dataReader, ordinalOffset, type);
+            return (Expression.Condition(
+                CreateIsNullReader(dataReader, ordinalOffset, type),
+                Expression.Constant(null, type),
+                actualReader
+            ), width);
+        }
+
+        if (type.IsValueType) {
+            return CreateNamedReader(dataReader, ordinalOffset, type);
+        }
+
+        throw new NotSupportedException($"Cannot map type {type}");
     }
 
-    private (Expression Body, int Width) CreateIsNullReader(
+    private Expression CreateIsNullReader(
         Expression dataReader,
         Expression ordinalOffset,
-        Type type,
-        string? dbType = null
+        Type type
     )
     {
-        if (type.GetDbType() != null || dbType != null) {
-            return (CreateIsNullValueReader(dataReader, ordinalOffset), 1);
+        if (type.GetDbType() != null || type.IsPrimitive || BuiltInTypes.Contains(type)) {
+            return CreateIsNullValueReader(dataReader, ordinalOffset);
         }
 
-        return type switch
-        {
-            not null when type == typeof(TimeSpan)
-                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
-            not null when type == typeof(DateTimeOffset)
-                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
-            not null when type == typeof(DateTime)
-                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
-            { IsPrimitive: true } => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
-            not null when type == typeof(string)
-                => (CreateIsNullValueReader(dataReader, ordinalOffset), 1),
-            { IsClass: true } => CreateIsNullComplexReader(dataReader, ordinalOffset, type),
-            _ => throw new NotSupportedException($"Cannot map type {type}")
-        };
+        if (type.IsAssignableTo(typeof(ITuple)) || type.IsClass) {
+            return CreateIsNullComplexReader(dataReader, ordinalOffset, type);
+        }
+
+        throw new NotSupportedException($"Cannot create is null reader for type {type}");
     }
 
-    private (Expression Body, int Width) CreateIsNullComplexReader(
+    private Expression CreateIsNullComplexReader(
         Expression dataReader,
         Expression ordinalOffset,
         Type type
     )
     {
         var ctor = type.GetConstructors().First();
-        var (test, width) = ctor.GetParameters().Select(p =>
-                CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, p.GetDbName() ?? identifierMapper.ToColumnName(p)))
-            .Aggregate((Body: (Expression)Expression.Constant(true), Width: 0), (x, agg) => (Expression.And(x.Body, agg.Body), x.Width + agg.Width));
-
-        return (test, width);
+        return ctor.GetParameters().Select(p =>
+                CreateIsNullReader(dataReader, GetOrdinalAfterExpression(dataReader, ordinalOffset, p.GetDbName() ?? identifierMapper.ToColumnName(p)), p.ParameterType))
+            .Aggregate((Expression)Expression.Constant(true), Expression.And);
     }
 
     private (Expression Body, int Width) CreateNamedReader(
@@ -251,4 +224,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
             $"No column with name '{name}' in data reader after offset {offset}"
         );
     }
+
+    private static bool IsNullableValueType(Type type) => type.IsValueType && Nullable.GetUnderlyingType(type) != null;
+
 }
