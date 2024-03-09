@@ -74,6 +74,16 @@ var devicesWithUserName = await dbContext.Query<(string userName, Device device)
     .ToArrayAsync();
 ```
 
+#### Null support
+
+If all columns are null in a complex type, the result will be null for that complex type.
+
+```csharp
+var usersWithDevices = await dbContext.Query<(User user, Device? device)>(
+    $"SELECT u.*, ud.* FROM users AS u LEFT JOIN user_devices AS ud ON u.id=ud.user_id")
+    .ToArrayAsync();
+```
+
 #### Dynamic SQL (injection)
 
 ```csharp
@@ -122,11 +132,29 @@ await dbContext.Batch(
     dbContext.NonQuery($"INSERT INTO users(name) VALUES('bar')"));
 ```
 
+#### Utils
+
+Some utils are provided for easier consumption of the async enumerable result.
+
+##### Group by
+
+```csharp
+usersWithDevices // Type: IAsyncEnumerable<(User user, Device device)>
+    .GroupBy(
+        (u, d) => u, // Group by selector
+        (u, device) => device, // Element selector
+        (u, devices) => (u, devices.ToArray()), // Result selector
+        u => u.id // Group by key selector
+    ); 
+
+```
+
 # Typed namespace
 
 The Typed namespace includes support for typed quries.
 
 ## Setup
+
 Create a custom DbContext (which may inherit from DbContext but is not required to).
 
 ```csharp
@@ -154,6 +182,11 @@ var allUsers = await dbContext.Users.ToArrayAsync();
 var allBobs = await dbContext.Users.Where(x => x.Name == "Bob").ToArrayAsync();
 var allNames = await dbContext.Users.Select(x => x.Name).ToArrayAsync();
 var partialDevcies = await dbContext.Devices.Select(x => new { x.Id, DeviceName = x.Name }).ToArrayAsync();
+```
+
+#### First or default utils
+
+```csharp
 var firstUser = await dbContext.Users.First();
 var firstOrNoUser = await dbContext.Users.FirstOrDefault();
 var firstBob = await dbContext.Users.First(x => x.Name == "Bob");
@@ -161,6 +194,8 @@ var firstOrNoBob = await dbContext.Users.FirstOrDefault(x => x.Name == "Bob");
 ```
 
 #### Joining
+
+Supported join types are: (inner) join, left join, right join, full (outer) join and cross join.
 
 ```csharp
 (User, Device)[] bobWithDevices = await dbContext.Users
@@ -191,7 +226,7 @@ await dbContext.Users.Delete().WithoutWhere();
 ```
 
 #### Grouping and aggregation
-    
+
 ```csharp
 var userSummaryByName = await dbContext.Users
     .GroupBy(x => x.Name)
