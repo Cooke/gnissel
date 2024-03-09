@@ -68,6 +68,25 @@ public class JoinTests : IDisposable
     }
     
     [Fact]
+    public async Task LeftJoin()
+    {
+        var bob = new User(1, "Bob", 25);
+        var sara = new User(2, "Sara", 25);
+        var bobsDevice = new Device("a", "Bob's device", 1);
+        
+        await db.Users.Insert(bob);
+        await db.Users.Insert(sara);
+        await db.Devices.Insert(bobsDevice);
+        
+        var usersDevices = await db.Users.LeftJoin(db.Devices, (u, d) => u.Id == d.UserId).ToArrayAsync();
+        
+        Assert.Equal(
+            [(bob, bobsDevice), (sara, null)],
+            usersDevices
+        );
+    }
+    
+    [Fact]
     public async Task JoinWhere()
     {
         var bob = new User(1, "Bob", 25);

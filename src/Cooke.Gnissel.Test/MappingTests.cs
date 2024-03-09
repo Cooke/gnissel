@@ -136,6 +136,20 @@ public class MappingTests
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { (withTimeZone, withoutTimeZone) }, results);
     }
+    
+    [Test]
+    public async Task NullComplexType()
+    {
+        var results = await _db.Query<User>($"SELECT null as id, null as name, null as age").ToArrayAsync();
+        CollectionAssert.AreEqual(new User?[] { null }, results);
+    }
+    
+    [Test]
+    public async Task NullNullableStruct()
+    {
+        var results = await _db.Query<TimeSpan?>($"SELECT null::int").ToArrayAsync();
+        CollectionAssert.AreEqual(new TimeSpan?[] { null }, results);
+    }
 
     [Test]
     [Ignore("Should warn when over fetching")]

@@ -17,8 +17,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendIdentifier(query.Table.Name);
         sql.AppendLiteral(" (");
         var firstColumn = true;
-        foreach (var column in query.Columns)
-        {
+        foreach (var column in query.Columns) {
             if (!firstColumn)
                 sql.AppendLiteral(", ");
             sql.AppendIdentifier(column.Name);
@@ -27,10 +26,8 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
 
         sql.AppendLiteral(") VALUES ");
         bool firstRow = true;
-        foreach (var row in query.Rows)
-        {
-            if (!firstRow)
-            {
+        foreach (var row in query.Rows) {
+            if (!firstRow) {
                 sql.AppendLiteral(", ");
             }
 
@@ -38,10 +35,8 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
 
             sql.AppendLiteral("(");
             var firstParam = true;
-            foreach (var par in row.Parameters)
-            {
-                if (!firstParam)
-                {
+            foreach (var par in row.Parameters) {
+                if (!firstParam) {
                     sql.AppendLiteral(", ");
                 }
 
@@ -61,8 +56,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendLiteral($"DELETE FROM ");
         sql.AppendIdentifier(query.Table.Name);
 
-        if (query.Condition != null)
-        {
+        if (query.Condition != null) {
             sql.AppendLiteral(" WHERE ");
             RenderExpression(query.Condition, sql, new RenderOptions());
         }
@@ -79,10 +73,8 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendLiteral(" SET ");
 
         var first = true;
-        foreach (var setter in query.Setters)
-        {
-            if (!first)
-            {
+        foreach (var setter in query.Setters) {
+            if (!first) {
                 sql.AppendLiteral(", ");
             }
 
@@ -94,8 +86,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
             first = false;
         }
 
-        if (query.Condition != null)
-        {
+        if (query.Condition != null) {
             sql.AppendLiteral(" WHERE ");
             RenderExpression(query.Condition, sql, new RenderOptions());
         }
@@ -117,41 +108,42 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         // var tableSourcesWithAliases = ((IReadOnlyCollection<TableSource>)[tableSource, ..joins]).Zip([tableAlias, ..joinAliases]).ToArray();
 
         sql.AppendLiteral("SELECT ");
-        if (selector == null)
-        {
+        if (selector == null) {
             sql.AppendLiteral("*");
         }
-        else
-        {
+        else {
             RenderExpression(selector, sql, options);
         }
 
         sql.AppendLiteral(" FROM ");
         AppendTableSource(tableSource);
 
-        if (joins.Any())
-        {
-            foreach (var join in joins)
-            {
-                sql.AppendLiteral($" JOIN ");
+        if (joins.Any()) {
+            foreach (var join in joins) {
+                sql.AppendLiteral(
+                    join.Type switch
+                    {
+                        JoinType.Default => " JOIN ",
+                        JoinType.Left => " LEFT JOIN ",
+                        JoinType.Right => " RIGHT JOIN ",
+                        JoinType.Full => " FULL JOIN ",
+                        JoinType.Cross => " CROSS JOIN ",
+                        _ => throw new NotSupportedException("Join type not supported")
+                    });
                 AppendTableSource(join.TableSource);
 
-                if (join.Condition != null)
-                {
+                if (join.Condition != null) {
                     sql.AppendLiteral($" ON ");
                     RenderExpression(join.Condition, sql, options);
                 }
             }
         }
 
-        if (query.Conditions.Any())
-        {
+        if (query.Conditions.Any()) {
             sql.AppendLiteral(" WHERE ");
             bool first = true;
-            foreach (var queryCondition in query.Conditions)
-            {
-                if (!first)
-                {
+            foreach (var queryCondition in query.Conditions) {
+                if (!first) {
                     sql.AppendLiteral(" AND ");
                 }
 
@@ -160,14 +152,11 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
             }
         }
 
-        if (query.Groupings.Any())
-        {
+        if (query.Groupings.Any()) {
             sql.AppendLiteral(" GROUP BY ");
             bool first = true;
-            foreach (var groupBy in query.Groupings)
-            {
-                if (!first)
-                {
+            foreach (var groupBy in query.Groupings) {
+                if (!first) {
                     sql.AppendLiteral(", ");
                 }
                 first = false;
@@ -176,29 +165,24 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
             }
         }
 
-        if (query.OrderBys.Any())
-        {
+        if (query.OrderBys.Any()) {
             sql.AppendLiteral(" ORDER BY ");
             bool first = true;
-            foreach (var by in query.OrderBys)
-            {
-                if (!first)
-                {
+            foreach (var by in query.OrderBys) {
+                if (!first) {
                     sql.AppendLiteral(", ");
                 }
                 first = false;
 
                 RenderExpression(by.Expression, sql, options);
 
-                if (by.Descending)
-                {
+                if (by.Descending) {
                     sql.AppendLiteral(" DESC");
                 }
             }
         }
 
-        if (query.Limit != null)
-        {
+        if (query.Limit != null) {
             sql.AppendLiteral(" LIMIT ");
             sql.AppendLiteral(query.Limit.Value.ToString());
         }
@@ -208,8 +192,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         void AppendTableSource(TableSource source)
         {
             sql.AppendIdentifier(source.Table.Name);
-            if (source.Alias != null)
-            {
+            if (source.Alias != null) {
                 sql.AppendLiteral($" AS ");
                 sql.AppendIdentifier(source.Alias);
             }
@@ -225,8 +208,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
 
     private void RenderExpression(Expression expression, Sql sql, RenderOptions options)
     {
-        switch (expression)
-        {
+        switch (expression) {
             case BinaryExpression binaryExpression:
                 RenderExpression(binaryExpression.Left, sql, options);
                 sql.AppendLiteral(" ");
@@ -236,23 +218,19 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                 return;
 
             case ConstantExpression constExp:
-                if (options.ConstantsAsParameters)
-                {
+                if (options.ConstantsAsParameters) {
                     sql.AppendParameter(constExp.Value);
                 }
-                else
-                {
+                else {
                     sql.AppendLiteral(FormatValue(constExp.Value));
                 }
                 return;
 
             case MethodCallExpression methodCallExpression:
-                if (methodCallExpression.Method.DeclaringType == typeof(Db))
-                {
+                if (methodCallExpression.Method.DeclaringType == typeof(Db)) {
                     sql.AppendLiteral(methodCallExpression.Method.Name.ToUpperInvariant());
                     sql.AppendLiteral("(");
-                    if (methodCallExpression.Arguments.Count > 0)
-                    {
+                    if (methodCallExpression.Arguments.Count > 0) {
                         RenderExpression(methodCallExpression.Arguments.Single(), sql, options);
                     }
                     else {
@@ -260,8 +238,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                     }
                     sql.AppendLiteral(")");
                 }
-                else
-                {
+                else {
                     throw new NotSupportedException(
                         $"Method {methodCallExpression.Method.Name} not supported"
                     );
@@ -279,8 +256,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
             case MemberExpression { Expression: TableExpression tableExpression } memberExpression:
                 var source = tableExpression.TableSource;
                 var column = source.Table.Columns.First(x => x.Member == memberExpression.Member);
-                if (options.QualifyColumns)
-                {
+                if (options.QualifyColumns) {
                     sql.AppendIdentifier(source.AliasOrName);
                     sql.AppendLiteral(".");
                 }
@@ -289,11 +265,9 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                 return;
 
             case NewExpression newExpression:
-                for (var index = 0; index < newExpression.Arguments.Count; index++)
-                {
+                for (var index = 0; index < newExpression.Arguments.Count; index++) {
                     var arg = newExpression.Arguments[index];
-                    if (index > 0)
-                    {
+                    if (index > 0) {
                         sql.AppendLiteral(", ");
                     }
 
@@ -317,11 +291,8 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
 
     private static object? GetValue(MemberInfo memberInfo, object? instance)
     {
-        return memberInfo is PropertyInfo p
-            ? p.GetValue(instance)
-            : memberInfo is FieldInfo f
-                ? f.GetValue(instance)
-                : throw new InvalidOperationException();
+        return memberInfo is PropertyInfo p ? p.GetValue(instance) :
+            memberInfo is FieldInfo f ? f.GetValue(instance) : throw new InvalidOperationException();
     }
 
     private static string RenderBinaryOperator(ExpressionType expressionType) =>

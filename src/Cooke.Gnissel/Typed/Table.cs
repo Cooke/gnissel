@@ -103,4 +103,6 @@ public class Table<T> : ITable, IToQuery<T>
 
     public GroupByQuery<T> GroupBy<TProp>(Expression<Func<T, TProp>> propSelector) 
         => new(CreateExpressionQuery().GroupBy(propSelector));
+    public TypedQuery<T, T2?> LeftJoin<T2>(Table<T2> dbDevices, Expression<Func<T, T2, bool>> predicate)
+     => new(CreateExpressionQuery().LeftJoin(dbDevices, predicate));
 }

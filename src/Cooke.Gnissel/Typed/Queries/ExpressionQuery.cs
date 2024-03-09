@@ -10,7 +10,16 @@ public record TableSource(ITable Table, string? Alias = null)
     public string AliasOrName => Alias ?? Table.Name;
 }
 
-public record Join(TableSource TableSource, Expression? Condition);
+public record Join(JoinType Type, TableSource TableSource, Expression? Condition);
+
+public enum JoinType
+{
+    Default,
+    Left,
+    Right,
+    Full,
+    Cross
+}
 
 public record OrderBy(Expression Expression, bool Descending);
 
@@ -43,7 +52,12 @@ public record ExpressionQuery(
             Selector = Transform(selector)
         };
     
-    public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate)
+    public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate) => Join(JoinType.Default, joinTable, predicate);
+    
+    public ExpressionQuery LeftJoin(ITable joinTable, LambdaExpression predicate)
+        => Join(JoinType.Left, joinTable, predicate);
+    
+    private ExpressionQuery Join(JoinType type, ITable joinTable, LambdaExpression predicate)
     {
         var sameTableCount = Sources.Count(x => x.Table.Equals(joinTable));
         var joinAlias = sameTableCount > 0 ? joinTable.Name + "j" + sameTableCount : null;
@@ -54,6 +68,7 @@ public record ExpressionQuery(
             [
                 ..Joins,
                 new Join(
+                    type,
                     joinSource,
                     ParameterExpressionReplacer.Replace(
                         predicate.Body,
@@ -62,6 +77,8 @@ public record ExpressionQuery(
             ]
         };
     }
+
+    
 
     public ExpressionQuery OrderBy(LambdaExpression propSelector) =>
         this with
@@ -92,6 +109,7 @@ public record ExpressionQuery(
         => ParameterExpressionReplacer.Replace(
             predicate.Body, 
             Sources.Select((source, index) => (predicate.Parameters[index], (Expression)new TableExpression(source))).ToArray());
+    
 }
 
 
