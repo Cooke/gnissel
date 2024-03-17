@@ -1,4 +1,5 @@
 ﻿using System.Linq.Expressions;
+using System.Reflection;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Queries;
@@ -15,6 +16,74 @@ public interface ITable
     Type Type { get; }
 }
 
+public record TableOptions(DbOptions DbOptions)
+{
+    public string? Name { get; init; }
+
+    public IReadOnlyCollection<ColumnOptions> Columns { get; init; } = [];
+
+    public IReadOnlyCollection<IReadOnlyCollection<MemberInfo>> Ignores { get; init; } = [];
+};
+
+public record ColumnOptions(IReadOnlyCollection<MemberInfo> MemberChain)
+{
+    public string? Name { get; init; }
+    
+    public bool IsDatabaseGenerated { get; init; }
+}
+
+public class TableOptionsBuilder<T>(DbOptions dbOptions)
+{
+    private string? name;
+    private readonly List<ColumnOptions> _columns = new();
+    private readonly List<IReadOnlyCollection<MemberInfo>> _ignores = new();
+
+    public TableOptionsBuilder<T> Name(string name)
+    {
+        this.name = name;
+        return this;
+    }
+    
+    public TableOptions Build() => new(dbOptions)
+    {
+        Name = name,
+        Columns = _columns.ToArray(),
+        Ignores = _ignores,
+    };
+
+    public TableOptionsBuilder<T> Column<TProp>(Expression<Func<T, TProp>> selector, Action<ColumnOptionsBuilder> configure)
+    {
+        var memberChain = ExpressionUtils.GetMemberChain(selector.Body);
+        var columnOptionsBuilder = new ColumnOptionsBuilder(memberChain);
+        configure(columnOptionsBuilder);
+        _columns.Add(columnOptionsBuilder.Build());
+        return this;
+    }
+    
+    public TableOptionsBuilder<T> Column<TProp>(Expression<Func<T, TProp>> selector, string columnName)
+    {
+        return Column(selector, x => x.Name(columnName));
+    }
+    public TableOptionsBuilder<T> Ignore<TProp>(Expression<Func<T, TProp>> selector)
+    {
+        _ignores.Add(ExpressionUtils.GetMemberChain(selector.Body));
+        return this;
+    }
+}
+
+public class ColumnOptionsBuilder(IReadOnlyCollection<MemberInfo> memberChain)
+{
+    private string? _name;
+    
+    public ColumnOptionsBuilder Name(string name)
+    {
+        this._name = name;
+        return this;
+    }
+
+    public ColumnOptions Build() => new ColumnOptions(memberChain) { Name = _name };
+}
+
 
 public class Table<T> : ITable, IToQuery<T>
 {
@@ -29,11 +98,16 @@ public class Table<T> : ITable, IToQuery<T>
         insertColumns = copy.insertColumns;
     }
 
-    public Table(DbOptions options)
+    public Table(DbOptions options) : this(new TableOptions(options))
     {
+    }
+
+    public Table(TableOptions options)
+    {
+        var dbOptions = options.DbOptions;
         Columns = ColumnBuilder.CreateColumns<T>(options);
-        Name = options.DbAdapter.IdentifierMapper.ToTableName(typeof(T));
-        this.options = options;
+        Name = options.Name ?? dbOptions.DbAdapter.IdentifierMapper.ToTableName(typeof(T));
+        this.options = dbOptions;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
     }
     

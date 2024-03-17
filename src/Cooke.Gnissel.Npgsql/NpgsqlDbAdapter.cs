@@ -35,7 +35,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
     public string EscapeIdentifierIfNeeded(string identifier) =>
-        Regex.IsMatch(identifier, @"[^a-zA-Z0-9_]")
+        Regex.IsMatch(identifier, @"[^a-z0-9_]")
             ? $"\"{identifier.Replace("\"", "\"\"")}\""
             : identifier;
 

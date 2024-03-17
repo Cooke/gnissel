@@ -7,7 +7,7 @@ public interface IColumn
 {
     string Name { get; }
 
-    MemberInfo Member { get; }
+    IReadOnlyCollection<MemberInfo> MemberChain { get; }
     
     bool IsDatabaseGenerated { get; }
 }
@@ -15,14 +15,14 @@ public interface IColumn
 
 public class Column<TTable>(
     string name,
-    MemberInfo member,
+    IReadOnlyCollection<MemberInfo> memberChain,
     Func<TTable, DbParameter> parameterFactory,
     bool isDatabaseGenerated)
     : IColumn
 {
     public string Name { get; } = name;
 
-    public MemberInfo Member { get; } = member;
+    public IReadOnlyCollection<MemberInfo> MemberChain { get; } = memberChain;
 
     public bool IsDatabaseGenerated { get; } = isDatabaseGenerated;
 

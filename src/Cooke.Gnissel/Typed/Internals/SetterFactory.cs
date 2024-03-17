@@ -16,14 +16,7 @@ internal static class SetterFactory
     private static Column<TTable> FindColumn<TTable, TProperty>(
         Table<TTable> table,
         Expression<Func<TTable, TProperty>> columnSelector
-    )
-    {
-        if (!(columnSelector.Body is MemberExpression { Member: { } memberInfo }))
-        {
-            throw new ArgumentException("Expected a member expression", nameof(columnSelector));
-        }
-
-        return table.Columns.FirstOrDefault(x => x.Member == memberInfo)
-            ?? throw new ArgumentException("Column not found", nameof(columnSelector));
-    }
+    ) =>
+        table.Columns.FirstOrDefault(x => x.MemberChain.SequenceEqual(ExpressionUtils.GetMemberChain(columnSelector.Body)))
+        ?? throw new ArgumentException("Column not found", nameof(columnSelector));
 }

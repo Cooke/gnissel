@@ -10,7 +10,7 @@ namespace Cooke.Gnissel.Typed.Internals;
 
 internal static class ColumnBuilder
 {
-    public static ImmutableArray<Column<T>> CreateColumns<T>(DbOptions dbOptions)
+    public static ImmutableArray<Column<T>> CreateColumns<T>(TableOptions options)
     {
         var objectParameter = Expression.Parameter(typeof(T));
         return typeof(T)
@@ -18,7 +18,7 @@ internal static class ColumnBuilder
             .SelectMany(
                 p =>
                     CreateColumns<T>(
-                        dbOptions,
+                        options,
                         p,
                         objectParameter,
                         Expression.Property(objectParameter, p)
@@ -27,15 +27,19 @@ internal static class ColumnBuilder
             .ToImmutableArray();
     }
 
-    private static IEnumerable<Column<T>> CreateColumns<T>(DbOptions dbOptions,
+    private static IEnumerable<Column<T>> CreateColumns<T>(TableOptions options,
         PropertyInfo p,
         ParameterExpression rootExpression,
         Expression memberExpression)
     {
+        var methodChain = ExpressionUtils.GetMemberChain(memberExpression);
+        if (options.Ignores.Any(x => x.SequenceEqual(methodChain)))
+            yield break;
+
         if (p.GetDbType() != null)
-            yield return CreateColumn<T>(dbOptions, p, rootExpression, memberExpression);
+            yield return CreateColumn<T>(options, p, rootExpression, memberExpression);
         else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-            yield return CreateColumn<T>(dbOptions, p, rootExpression, memberExpression);
+            yield return CreateColumn<T>(options, p, rootExpression, memberExpression);
         else if (p.PropertyType.IsClass)
             foreach (
                 var column in p.PropertyType
@@ -43,7 +47,7 @@ internal static class ColumnBuilder
                     .SelectMany<PropertyInfo, Column<T>>(
                         innerProperty =>
                             CreateColumns<T>(
-                                dbOptions,
+                                options,
                                 innerProperty,
                                 rootExpression,
                                 Expression.Property(memberExpression, innerProperty)
@@ -52,23 +56,27 @@ internal static class ColumnBuilder
             )
                 yield return column;
         else
-            yield return CreateColumn<T>(dbOptions, p, rootExpression, memberExpression);
+            yield return CreateColumn<T>(options, p, rootExpression, memberExpression);
     }
 
-    private static Column<T> CreateColumn<T>(DbOptions dbOptions,
+    private static Column<T> CreateColumn<T>(TableOptions options,
         PropertyInfo p,
         ParameterExpression objectExpression,
-        Expression memberExpression) =>
-        new Column<T>(p.GetDbName() ?? dbOptions.DbAdapter.IdentifierMapper.ToColumnName(p),
-            p,
+        Expression memberExpression)
+    {
+        var memberChain = ExpressionUtils.GetMemberChain(memberExpression);
+        var columnOptions = options.Columns.FirstOrDefault(x => x.MemberChain.SequenceEqual(memberChain));
+        return new Column<T>(columnOptions?.Name ?? p.GetDbName() ?? options.DbOptions.DbAdapter.IdentifierMapper.ToColumnName(p),
+            memberChain,
             CreateParameterFactory<T>(
-                dbOptions.DbAdapter,
+                options.DbOptions.DbAdapter,
                 memberExpression,
                 p.GetDbType(),
                 objectExpression
             ),
             p.GetCustomAttribute<DatabaseGeneratedAttribute>() != null
         );
+    }
 
     private static Func<T, DbParameter> CreateParameterFactory<T>(
         IDbAdapter dbAdapter,

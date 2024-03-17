@@ -121,7 +121,7 @@ public class PerformanceTests
     [Test]
     public async Task QueryGnisselTyped()
     {
-        var table = new Table<User>(new(new NpgsqlDbAdapter(_dataSource)));
+        var table = new Table<User>(new DbOptions(new NpgsqlDbAdapter(_dataSource)));
         await table.ToArrayAsync();
     }
 

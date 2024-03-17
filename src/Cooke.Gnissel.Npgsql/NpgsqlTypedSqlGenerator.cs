@@ -255,7 +255,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
 
             case MemberExpression { Expression: TableExpression tableExpression } memberExpression:
                 var source = tableExpression.TableSource;
-                var column = source.Table.Columns.First(x => x.Member == memberExpression.Member);
+                var column = source.Table.Columns.First(x => x.MemberChain.SequenceEqual([memberExpression.Member]));
                 if (options.QualifyColumns) {
                     sql.AppendIdentifier(source.AliasOrName);
                     sql.AppendLiteral(".");
