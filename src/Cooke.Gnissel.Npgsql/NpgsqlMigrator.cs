@@ -15,20 +15,27 @@ public class NpgsqlMigrator(ILogger logger, IDbAdapter dbAdapter) : IMigrator
     )
     {
         await CreateMigrationHistoryTableIfNotExist(dbAdapter, cancellationToken);
+
         await using var connection = dbAdapter.CreateConnector().CreateConnection();
         await connection.OpenAsync(cancellationToken);
-        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-        var dbContext = new DbContext(new DbOptions(dbAdapter)
-            {
-                DbConnector = new FixedConnectionDbConnector(connection, dbAdapter)
-            }
-        );
-        await dbContext.NonQuery($"LOCK TABLE __migration_history").ExecuteAsync(cancellationToken);
-        var appliedMigrationNames = await dbContext
-            .Query<string>($"SELECT id FROM __migration_history")
-            .ToHashSetAsync(cancellationToken);
 
-        foreach (var migration in migrations.Where(x => !appliedMigrationNames.Contains(x.Id))) {
+        while (true) {
+            await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+            var dbContext = new DbContext(new DbOptions(dbAdapter)
+                {
+                    DbConnector = new FixedConnectionDbConnector(connection, dbAdapter)
+                }
+            );
+            await dbContext.NonQuery($"LOCK TABLE __migration_history").ExecuteAsync(cancellationToken);
+            var appliedMigrationNames = await dbContext
+                .Query<string>($"SELECT id FROM __migration_history")
+                .ToHashSetAsync(cancellationToken);
+
+            var migration = migrations.FirstOrDefault(x => !appliedMigrationNames.Contains(x.Id));
+            if (migration == null) {
+                break;
+            }
+            
             var sw = Stopwatch.StartNew();
             logger.LogInformation("Applying migration: {Id}", migration.Id);
             await migration.Migrate(dbContext, cancellationToken);
@@ -36,9 +43,10 @@ public class NpgsqlMigrator(ILogger logger, IDbAdapter dbAdapter) : IMigrator
                 $"INSERT INTO __migration_history (id, applied_at) VALUES ({migration.Id}, now())"
             ).ExecuteAsync(cancellationToken);
             logger.LogInformation("Applied migration: {Id} in {Elapsed}", migration.Id, sw.Elapsed);
-        }
 
-        await transaction.CommitAsync(cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+        }
     }
     private static async Task CreateMigrationHistoryTableIfNotExist(IDbAdapter dbAdapter, CancellationToken cancellationToken)
     {
