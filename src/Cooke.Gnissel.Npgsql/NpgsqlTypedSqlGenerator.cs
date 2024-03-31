@@ -222,7 +222,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendLiteral(".");
         sql.AppendIdentifier(column.Name);
 
-        var parameterColumnName = identifierMapper.ToColumnName(column.MemberChain.Select(x => new IIdentifierMapper.PropertyPart((PropertyInfo)x)));
+        var parameterColumnName = identifierMapper.ToColumnName(column.MemberChain.Select(x => new PropertyPathPart((PropertyInfo)x)));
 
         if (column.Name != parameterColumnName) {
             sql.AppendLiteral($" AS ");
@@ -306,7 +306,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
                         identifierMapper.ToColumnName(
-                            [new IIdentifierMapper.ParameterPart(newExpression.Constructor!.GetParameters()[index])]
+                            [new ParameterPathPart(newExpression.Constructor!.GetParameters()[index])]
                         )
                     );
                 }

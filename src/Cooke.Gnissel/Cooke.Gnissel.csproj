@@ -20,4 +20,8 @@
             <_Parameter1>Cooke.Gnissel.Typed</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
+
+    <ItemGroup>
+      <Folder Include="Models\" />
+    </ItemGroup>
 </Project>

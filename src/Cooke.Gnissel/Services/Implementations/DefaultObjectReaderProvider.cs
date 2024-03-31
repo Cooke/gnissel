@@ -14,8 +14,7 @@ namespace Cooke.Gnissel.Services.Implementations;
 
 public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : IObjectReaderProvider
 {
-    private readonly ConcurrentDictionary<Type, object> _readers =
-        new ConcurrentDictionary<Type, object>();
+    private readonly ConcurrentDictionary<Type, object> _readers = new();
 
     private static readonly Type[] BuiltInTypes =
     [
@@ -38,7 +37,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
-        var (body, width) = CreateReader(dataReader, ordinalOffset, type, ImmutableList<IIdentifierMapper.IdentifierPart>.Empty);
+        var (body, width) = CreateReader(dataReader, ordinalOffset, type, ImmutableList<ObjectPathPart>.Empty);
         var objectReader = Expression
             .Lambda(
                 typeof(ObjectReaderFunc<>).MakeGenericType(type),
@@ -59,7 +58,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain
     )
     {
         if (IsNullableValueType(type)) {
@@ -91,7 +90,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         }
 
         if (type.IsValueType) {
-            return CreateNamedReader(dataReader, ordinalOffset, type, ImmutableList<IIdentifierMapper.IdentifierPart>.Empty);
+            return CreateNamedReader(dataReader, ordinalOffset, type, ImmutableList<ObjectPathPart>.Empty);
         }
 
         throw new NotSupportedException($"Cannot map type {type}");
@@ -103,7 +102,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
 
     private Expression CreateIsNullReader(Expression dataReader,
         Expression ordinalOffset,
-        Type type, IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain)
+        Type type, IImmutableList<ObjectPathPart> parameterChain)
     {
         if (type.GetDbType() != null || type.IsPrimitive || BuiltInTypes.Contains(type)) {
             return CreateIsNullValueReader(dataReader, ordinalOffset);
@@ -120,11 +119,11 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain
     )
     {
         var ctor = type.GetConstructors().First();
-        return ctor.GetParameters().Select(p => CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, parameterChain.Add(new IIdentifierMapper.ParameterPart(p))))
+        return ctor.GetParameters().Select(p => CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, parameterChain.Add(new ParameterPathPart(p))))
             .Aggregate((Expression)Expression.Constant(true), Expression.And);
     }
 
@@ -132,7 +131,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain)
+        IImmutableList<ObjectPathPart> parameterChain)
     {
         var ctor = type.GetConstructors().First();
         var width = 0;
@@ -146,7 +145,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
                         dataReader,
                         ordinalOffset,
                         p.ParameterType,
-                        parameterChain.Add(new IIdentifierMapper.ParameterPart(p))
+                        parameterChain.Add(new ParameterPathPart(p))
                     );
                     width += innerWidth;
                     return body;
@@ -159,7 +158,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain
     )
     {
         var ctor = type.GetConstructors().First();

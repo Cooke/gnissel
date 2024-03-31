@@ -27,19 +27,19 @@ public class DefaultPostgresIdentifierMapper : IIdentifierMapper
 
     public string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
 
-    public string ToColumnName(IEnumerable<IIdentifierMapper.IdentifierPart> path) =>
+    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
         string.Join(
             ".",
-            path.Where(x => !(x is IIdentifierMapper.ParameterPart
+            path.Where(x => !(x is ParameterPathPart
             {
                 ParameterInfo.Member: ConstructorInfo ctor
             } param && ctor.GetParameters().Length == 1 && IsValueType(param.ParameterInfo.ParameterType))).Select(
                 part =>
                     part switch
                     {
-                        IIdentifierMapper.ParameterPart parameterPart
+                        ParameterPathPart parameterPart
                             => ToColumnName(parameterPart.ParameterInfo),
-                        IIdentifierMapper.PropertyPart propertyPart
+                        PropertyPathPart propertyPart
                             => ToColumnName(propertyPart.PropertyInfo),
                         _ => throw new InvalidOperationException()
                     }
