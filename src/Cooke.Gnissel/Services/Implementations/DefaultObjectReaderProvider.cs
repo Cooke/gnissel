@@ -6,25 +6,14 @@ using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel.Utils;
 
 #endregion
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : IObjectReaderProvider
+public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
-
-    private static readonly Type[] BuiltInTypes =
-    [
-        typeof(string),
-        typeof(DateTime),
-        typeof(DateTimeOffset),
-        typeof(TimeSpan),
-        typeof(Guid),
-        typeof(byte[])
-    ];
 
     public ObjectReader<TOut> Get<TOut>()
     {
@@ -71,8 +60,8 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
             ), width);
         }
 
-        if (IsValueType(type)) {
-            var ordinal = parameterChain.Count == 0 ? ordinalOffset : GetOrdinalAfterExpression(dataReader, ordinalOffset, identifierMapper.ToColumnName(parameterChain));
+        if (dbAdapter.IsDbMapped(type)) {
+            var ordinal = parameterChain.Count == 0 ? ordinalOffset : GetOrdinalAfterExpression(dataReader, ordinalOffset, dbAdapter.ToColumnName(parameterChain));
             return (CreateValueReader(dataReader, ordinal, type), 1);
         }
 
@@ -95,16 +84,12 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
 
         throw new NotSupportedException($"Cannot map type {type}");
     }
-    private static bool IsValueType(Type type)
-    {
-        return type.GetDbType() != null || type.IsPrimitive || BuiltInTypes.Contains(type);
-    }
 
     private Expression CreateIsNullReader(Expression dataReader,
         Expression ordinalOffset,
         Type type, IImmutableList<ObjectPathPart> parameterChain)
     {
-        if (type.GetDbType() != null || type.IsPrimitive || BuiltInTypes.Contains(type)) {
+        if (dbAdapter.IsDbMapped(type)) {
             return CreateIsNullValueReader(dataReader, ordinalOffset);
         }
 

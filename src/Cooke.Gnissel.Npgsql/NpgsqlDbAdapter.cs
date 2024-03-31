@@ -1,6 +1,8 @@
 #region
 
 using System.Data.Common;
+using System.Globalization;
+using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
 using Cooke.Gnissel.Services;
@@ -8,6 +10,7 @@ using Cooke.Gnissel.Typed.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
+using Npgsql.NameTranslation;
 
 #endregion
 
@@ -15,20 +18,28 @@ namespace Cooke.Gnissel.Npgsql;
 
 public sealed class NpgsqlDbAdapter : IDbAdapter
 {
+    private static readonly Type[] BuiltInTypes =
+    [
+        typeof(string),
+        typeof(DateTime),
+        typeof(DateTimeOffset),
+        typeof(TimeSpan),
+        typeof(Guid),
+        typeof(byte[])
+    ];
+    
     private readonly NpgsqlDataSource _dataSource;
 
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
-        : this(dataSource, new DefaultPostgresIdentifierMapper(), NullLogger.Instance) { }
+        : this(dataSource, NullLogger.Instance) { }
 
     public NpgsqlDbAdapter(
         NpgsqlDataSource dataSource,
-        IIdentifierMapper identifierMapper,
         ILogger logger
     )
     {
         _dataSource = dataSource;
-        IdentifierMapper = identifierMapper;
-        TypedSqlGenerator = new NpgsqlTypedSqlGenerator(identifierMapper);
+        TypedSqlGenerator = new NpgsqlTypedSqlGenerator(this);
         Migrator = new NpgsqlMigrator(logger, this);
     }
 
@@ -89,9 +100,44 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public IDbConnector CreateConnector() => new NpgsqlDbConnector(_dataSource);
 
-    public IIdentifierMapper IdentifierMapper { get; }
-
     public ITypedSqlGenerator TypedSqlGenerator { get; }
 
     public IMigrator Migrator { get; }
+    
+    public bool IsDbMapped(Type type) => type.GetCustomAttribute<DbTypeAttribute>() != null || type.IsPrimitive || BuiltInTypes.Contains(type);
+
+    public string ToColumnName(ParameterInfo parameterInfo) =>
+        ConvertToSnakeCase(parameterInfo.Name);
+
+    public string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
+
+    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
+        string.Join(
+            ".",
+            path.Where(x => !(x is ParameterPathPart
+            {
+                ParameterInfo.Member: ConstructorInfo ctor
+            } param && ctor.GetParameters().Length == 1 && IsDbMapped(param.ParameterInfo.ParameterType)))
+                .Select(
+                part =>
+                    part switch
+                    {
+                        ParameterPathPart parameterPart
+                            => ToColumnName(parameterPart.ParameterInfo),
+                        PropertyPathPart propertyPart
+                            => ToColumnName(propertyPart.PropertyInfo),
+                        _ => throw new InvalidOperationException()
+                    }
+            )
+        );
+
+    public string ToTableName(Type type) => ConvertToSnakeCase(type.Name) + "s";
+
+    private static string ConvertToSnakeCase(string? name)
+    {
+        return NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(
+            name ?? throw new InvalidOperationException(),
+            CultureInfo.CurrentCulture
+        );
+    }
 }

@@ -15,7 +15,7 @@ public record DbOptions(
 )
 {
     public DbOptions(IDbAdapter dbAdapter)
-        : this(dbAdapter, new DefaultObjectReaderProvider(dbAdapter.IdentifierMapper)) { }
+        : this(dbAdapter, new DefaultObjectReaderProvider(dbAdapter)) { }
 
     public DbOptions(IDbAdapter dbAdapter, IObjectReaderProvider objectReaderProvider)
         : this(dbAdapter, objectReaderProvider, dbAdapter.CreateConnector()) { }

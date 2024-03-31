@@ -66,7 +66,7 @@ internal static class ColumnBuilder
     {
         var memberChain = ExpressionUtils.GetMemberChain(memberExpression);
         var columnOptions = options.Columns.FirstOrDefault(x => x.MemberChain.SequenceEqual(memberChain));
-        return new Column<T>(columnOptions?.Name ?? p.GetDbName() ?? options.DbOptions.DbAdapter.IdentifierMapper.ToColumnName(memberChain.Select(x => new PropertyPathPart((PropertyInfo)x))),
+        return new Column<T>(columnOptions?.Name ?? p.GetDbName() ?? options.DbOptions.DbAdapter.ToColumnName(memberChain.Select(x => new PropertyPathPart((PropertyInfo)x))),
             memberChain,
             CreateParameterFactory<T>(
                 options.DbOptions.DbAdapter,

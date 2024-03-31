@@ -5,54 +5,7 @@ using Npgsql.NameTranslation;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public class DefaultPostgresIdentifierMapper : IIdentifierMapper
+public class DefaultPostgresIdentifierMapper 
 {
-    private static readonly Type[] BuiltInTypes =
-    [
-        typeof(string),
-        typeof(DateTime),
-        typeof(DateTimeOffset),
-        typeof(TimeSpan),
-        typeof(Guid),
-        typeof(byte[])
-    ];
-
-    private static bool IsValueType(Type type)
-    {
-        return type.IsPrimitive || BuiltInTypes.Contains(type);
-    }
-
-    public string ToColumnName(ParameterInfo parameterInfo) =>
-        ConvertToSnakeCase(parameterInfo.Name);
-
-    public string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
-
-    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
-        string.Join(
-            ".",
-            path.Where(x => !(x is ParameterPathPart
-            {
-                ParameterInfo.Member: ConstructorInfo ctor
-            } param && ctor.GetParameters().Length == 1 && IsValueType(param.ParameterInfo.ParameterType))).Select(
-                part =>
-                    part switch
-                    {
-                        ParameterPathPart parameterPart
-                            => ToColumnName(parameterPart.ParameterInfo),
-                        PropertyPathPart propertyPart
-                            => ToColumnName(propertyPart.PropertyInfo),
-                        _ => throw new InvalidOperationException()
-                    }
-            )
-        );
-
-    public string ToTableName(Type type) => ConvertToSnakeCase(type.Name) + "s";
-
-    private static string ConvertToSnakeCase(string? name)
-    {
-        return NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(
-            name ?? throw new InvalidOperationException(),
-            CultureInfo.CurrentCulture
-        );
-    }
+    
 }

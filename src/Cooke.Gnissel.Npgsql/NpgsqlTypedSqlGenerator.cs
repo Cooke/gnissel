@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
@@ -9,7 +8,7 @@ using Cooke.Gnissel.Typed.Services;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : ITypedSqlGenerator
+public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
 {
     public Sql Generate(IInsertQuery query)
     {
@@ -222,7 +221,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendLiteral(".");
         sql.AppendIdentifier(column.Name);
 
-        var parameterColumnName = identifierMapper.ToColumnName(column.MemberChain.Select(x => new PropertyPathPart((PropertyInfo)x)));
+        var parameterColumnName = dbAdapter.ToColumnName(column.MemberChain.Select(x => new PropertyPathPart((PropertyInfo)x)));
 
         if (column.Name != parameterColumnName) {
             sql.AppendLiteral($" AS ");
@@ -305,7 +304,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                     RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
-                        identifierMapper.ToColumnName(
+                        dbAdapter.ToColumnName(
                             [new ParameterPathPart(newExpression.Constructor!.GetParameters()[index])]
                         )
                     );

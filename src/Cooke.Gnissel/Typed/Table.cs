@@ -106,7 +106,7 @@ public class Table<T> : ITable, IToQuery<T>
     {
         var dbOptions = options.DbOptions;
         Columns = ColumnBuilder.CreateColumns<T>(options);
-        Name = options.Name ?? dbOptions.DbAdapter.IdentifierMapper.ToTableName(typeof(T));
+        Name = options.Name ?? dbOptions.DbAdapter.ToTableName(typeof(T));
         this.options = dbOptions;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
     }
