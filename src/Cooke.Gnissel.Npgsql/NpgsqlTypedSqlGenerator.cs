@@ -113,9 +113,9 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
             var index = 0;
             foreach (var column in query.TableSource.Table.Columns) {
                 if (index > 0) {
-                    sql.AppendLiteral(", ");    
+                    sql.AppendLiteral(", ");
                 }
-                
+
                 RenderSelectColumn(sql, column, query.TableSource);
 
                 index++;
@@ -222,10 +222,8 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendLiteral(".");
         sql.AppendIdentifier(column.Name);
 
-        var parameterColumnName = string.Join(".", column.MemberChain.Select(member => identifierMapper.ToColumnName(
-            member as PropertyInfo ?? throw new InvalidOperationException()
-        )));
-                
+        var parameterColumnName = identifierMapper.ToColumnName(column.MemberChain.Select(x => new IIdentifierMapper.PropertyPart((PropertyInfo)x)));
+
         if (column.Name != parameterColumnName) {
             sql.AppendLiteral($" AS ");
             sql.AppendIdentifier(parameterColumnName);
@@ -303,12 +301,12 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                     if (index > 0) {
                         sql.AppendLiteral(", ");
                     }
-                    
+
                     RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
                         identifierMapper.ToColumnName(
-                            newExpression.Constructor!.GetParameters()[index]
+                            [new IIdentifierMapper.ParameterPart(newExpression.Constructor!.GetParameters()[index])]
                         )
                     );
                 }

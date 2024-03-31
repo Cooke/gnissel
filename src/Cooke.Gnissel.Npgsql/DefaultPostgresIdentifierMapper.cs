@@ -12,6 +12,22 @@ public class DefaultPostgresIdentifierMapper : IIdentifierMapper
 
     public string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
 
+    public string ToColumnName(IEnumerable<IIdentifierMapper.IdentifierPart> path) =>
+        string.Join(
+            ".",
+            path.Select(
+                part =>
+                    part switch
+                    {
+                        IIdentifierMapper.ParameterPart parameterPart
+                            => ToColumnName(parameterPart.ParameterInfo),
+                        IIdentifierMapper.PropertyPart propertyPart
+                            => ToColumnName(propertyPart.PropertyInfo),
+                        _ => throw new InvalidOperationException()
+                    }
+            )
+        );
+
     public string ToTableName(Type type) => ConvertToSnakeCase(type.Name) + "s";
 
     private static string ConvertToSnakeCase(string? name)

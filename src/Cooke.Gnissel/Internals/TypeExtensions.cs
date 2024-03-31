@@ -30,9 +30,4 @@ internal static class TypeExtensions
     public static string? GetDbName(this ParameterInfo paramInfo) =>
         paramInfo.GetCustomAttribute<DbNameAttribute>()?.DbName
         ?? paramInfo.ParameterType.GetDbName();
-
-    public static string ToColumnName(
-        this IIdentifierMapper identifierMapper,
-        IImmutableStack<ParameterInfo> parmsChain
-    ) => string.Join(".", parmsChain.Reverse().Select(identifierMapper.ToColumnName));
 }
