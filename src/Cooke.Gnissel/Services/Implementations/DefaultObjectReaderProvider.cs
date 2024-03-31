@@ -74,7 +74,8 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         }
 
         if (IsValueType(type)) {
-            return (CreateValueReader(dataReader, ordinalOffset, type), 1);
+            var ordinal = parameterChain.IsEmpty ? ordinalOffset : GetOrdinalAfterExpression(dataReader, ordinalOffset, identifierMapper.ToColumnName(parameterChain));
+            return (CreateValueReader(dataReader, ordinal, type), 1);
         }
 
         if (type.IsAssignableTo(typeof(ITuple))) {
@@ -128,7 +129,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
             {
                 var newParameterChain = PushParameter(parameterChain, ctor, p);
                 var columnName = p.GetDbName() ?? identifierMapper.ToColumnName(newParameterChain);
-                return CreateIsNullReader(dataReader, GetOrdinalAfterExpression(dataReader, ordinalOffset, columnName), p.ParameterType, newParameterChain);
+                return CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, newParameterChain);
             })
             .Aggregate((Expression)Expression.Constant(true), Expression.And);
     }
@@ -147,13 +148,10 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
             ctor.GetParameters()
                 .Select(p =>
                 {
-                    // Special handling of typed primitive values
                     var newParameterChain = PushParameter(parameterChain, ctor, p);
-                    var columnName = p.GetDbName() ?? identifierMapper.ToColumnName(newParameterChain);
-                    var ordinalAfterExpression = GetOrdinalAfterExpression(dataReader, ordinalOffset, columnName);
                     var (body, innerWidth) = CreateReader(
                         dataReader,
-                        ordinalAfterExpression,
+                        ordinalOffset,
                         p.ParameterType,
                         newParameterChain
                     );
@@ -233,7 +231,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
     private static int GetOrdinalAfter(DbDataReader dataReader, int offset, string name)
     {
         for (int ordinal = offset; ordinal < dataReader.FieldCount; ordinal++) {
-            if (dataReader.GetName(ordinal).StartsWith(name, StringComparison.OrdinalIgnoreCase)) {
+            if (dataReader.GetName(ordinal).Equals(name, StringComparison.OrdinalIgnoreCase)) {
                 return ordinal;
             }
         }
