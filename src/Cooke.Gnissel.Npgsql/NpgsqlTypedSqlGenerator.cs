@@ -1,5 +1,6 @@
 using System.Linq.Expressions;
 using System.Reflection;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
@@ -109,10 +110,27 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
 
         sql.AppendLiteral("SELECT ");
         if (selector == null) {
-            sql.AppendLiteral("*");
+            var index = 0;
+            foreach (var column in query.TableSource.Table.Columns) {
+                if (index > 0) {
+                    sql.AppendLiteral(", ");    
+                }
+                
+                RenderSelectColumn(sql, column, query.TableSource);
+
+                index++;
+            }
+
+            // Select joins tables
+            foreach (var join in joins) {
+                foreach (var column in join.TableSource.Table.Columns) {
+                    sql.AppendLiteral(", ");
+                    RenderSelectColumn(sql, column, join.TableSource);
+                }
+            }
         }
         else {
-            RenderExpression(selector, sql, options);
+            RenderExpression(selector, sql, options with { });
         }
 
         sql.AppendLiteral(" FROM ");
@@ -198,6 +216,21 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
             }
         }
     }
+    private void RenderSelectColumn(Sql sql, IColumn column, TableSource tableSource)
+    {
+        sql.AppendIdentifier(tableSource.AliasOrName);
+        sql.AppendLiteral(".");
+        sql.AppendIdentifier(column.Name);
+
+        var parameterColumnName = identifierMapper.ToColumnName(
+            (PropertyInfo)column.MemberChain.First()
+        );
+                
+        if (column.Name != parameterColumnName) {
+            sql.AppendLiteral($" AS ");
+            sql.AppendIdentifier(parameterColumnName);
+        }
+    }
 
     private record RenderOptions
     {
@@ -270,7 +303,7 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
                     if (index > 0) {
                         sql.AppendLiteral(", ");
                     }
-
+                    
                     RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
