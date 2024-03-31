@@ -7,6 +7,21 @@ namespace Cooke.Gnissel.Npgsql;
 
 public class DefaultPostgresIdentifierMapper : IIdentifierMapper
 {
+    private static readonly Type[] BuiltInTypes =
+    [
+        typeof(string),
+        typeof(DateTime),
+        typeof(DateTimeOffset),
+        typeof(TimeSpan),
+        typeof(Guid),
+        typeof(byte[])
+    ];
+
+    private static bool IsValueType(Type type)
+    {
+        return type.IsPrimitive || BuiltInTypes.Contains(type);
+    }
+
     public string ToColumnName(ParameterInfo parameterInfo) =>
         ConvertToSnakeCase(parameterInfo.Name);
 
@@ -15,7 +30,10 @@ public class DefaultPostgresIdentifierMapper : IIdentifierMapper
     public string ToColumnName(IEnumerable<IIdentifierMapper.IdentifierPart> path) =>
         string.Join(
             ".",
-            path.Select(
+            path.Where(x => !(x is IIdentifierMapper.ParameterPart
+            {
+                ParameterInfo.Member: ConstructorInfo ctor
+            } param && ctor.GetParameters().Length == 1 && IsValueType(param.ParameterInfo.ParameterType))).Select(
                 part =>
                     part switch
                     {

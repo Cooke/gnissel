@@ -2,9 +2,7 @@
 
 using System.Collections.Concurrent;
 using System.Collections.Immutable;
-using System.Collections.ObjectModel;
 using System.Data.Common;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -62,7 +60,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
         Expression ordinalOffset,
         Type type,
         IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain
-        )
+    )
     {
         if (IsNullableValueType(type)) {
             var underlyingType = Nullable.GetUnderlyingType(type)!;
@@ -126,12 +124,7 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
     )
     {
         var ctor = type.GetConstructors().First();
-        return ctor.GetParameters().Select(p =>
-            {
-                var newParameterChain = PushParameter(parameterChain, ctor, p);
-                var columnName = p.GetDbName() ?? identifierMapper.ToColumnName(newParameterChain);
-                return CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, newParameterChain);
-            })
+        return ctor.GetParameters().Select(p => CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, parameterChain.Add(new IIdentifierMapper.ParameterPart(p))))
             .Aggregate((Expression)Expression.Constant(true), Expression.And);
     }
 
@@ -149,24 +142,17 @@ public class DefaultObjectReaderProvider(IIdentifierMapper identifierMapper) : I
             ctor.GetParameters()
                 .Select(p =>
                 {
-                    var newParameterChain = PushParameter(parameterChain, ctor, p);
                     var (body, innerWidth) = CreateReader(
                         dataReader,
                         ordinalOffset,
                         p.ParameterType,
-                        newParameterChain
+                        parameterChain.Add(new IIdentifierMapper.ParameterPart(p))
                     );
                     width += innerWidth;
                     return body;
                 })
         );
         return (body, width);
-    }
-    private static IImmutableList<IIdentifierMapper.IdentifierPart> PushParameter(IImmutableList<IIdentifierMapper.IdentifierPart> parameterChain, ConstructorInfo ctor, ParameterInfo p)
-    {
-        // Special handling of typed primitive values
-        return ctor.GetParameters().Length == 1 && IsValueType(ctor.GetParameters()[0].ParameterType) 
-            ? parameterChain : parameterChain.Add(new IIdentifierMapper.ParameterPart(p));
     }
 
     private (Expression Body, int Width) CreatePositionalReader(
