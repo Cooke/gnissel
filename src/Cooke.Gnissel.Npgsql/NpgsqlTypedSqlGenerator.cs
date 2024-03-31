@@ -222,9 +222,9 @@ public class NpgsqlTypedSqlGenerator(IIdentifierMapper identifierMapper) : IType
         sql.AppendLiteral(".");
         sql.AppendIdentifier(column.Name);
 
-        var parameterColumnName = identifierMapper.ToColumnName(
-            (PropertyInfo)column.MemberChain.First()
-        );
+        var parameterColumnName = string.Join(".", column.MemberChain.Select(member => identifierMapper.ToColumnName(
+            member as PropertyInfo ?? throw new InvalidOperationException()
+        )));
                 
         if (column.Name != parameterColumnName) {
             sql.AppendLiteral($" AS ");

@@ -6,6 +6,7 @@ using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
 using Npgsql;
+using Org.BouncyCastle.Asn1.X509;
 
 #endregion
 
@@ -160,11 +161,18 @@ public class MappingTests
         CollectionAssert.AreEqual(new[] { "Bob" }, results);
     }
 
+    [Test]
+    public async Task TypedPrimitiveMapping()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        var results = await _db.Query<UserWithTypedName>($"SELECT name, age FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new UserWithTypedName(new("Bob"), 25) }, results);
+    }
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
 
-        public Table<Device> Devices { get; } = new(options);
     }
 
     private record User(
@@ -178,6 +186,10 @@ public class MappingTests
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name
     );
+    
+    private record UserWithTypedName(Name Name, int Age);
+
+    private record Name(string Value);
 
     public record Device(string Id, string Name, int UserId);
 }
