@@ -4,6 +4,32 @@ namespace Cooke.Gnissel.Utils;
 
 public static class AsyncEnumerable
 {
+    public static async ValueTask<T?> FirstOrDefaultAsync<T>(
+        this IAsyncEnumerable<T> source,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            return item;
+        }
+
+        return default;
+    }
+    
+    public static async ValueTask<T> FirstAsync<T>(
+        this IAsyncEnumerable<T> source,
+        CancellationToken cancellationToken = default
+    )
+    {
+        await foreach (var item in source.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            return item;
+        }
+
+        throw new InvalidOperationException("Sequence contains no elements");
+    }
+    
     public static async ValueTask<T[]> ToArrayAsync<T>(
         this IAsyncEnumerable<T> source,
         CancellationToken cancellationToken = default
