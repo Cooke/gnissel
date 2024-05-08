@@ -24,7 +24,7 @@ public class BasicTests : IDisposable
                         id   integer primary key,
                         name text,
                         age  integer
-                    );
+                    )
                 """
             ).GetAwaiter().GetResult();
     }
@@ -35,11 +35,8 @@ public class BasicTests : IDisposable
     }
     
     [Fact]
-    public async Task Insert( )
-    
+    public async Task Insert()
     {
-        
-        
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
         
@@ -91,6 +88,95 @@ public class BasicTests : IDisposable
             [new User(1, "Bob", 25), new User(2, "Sara", 25)],
             users
         );
+    }
+    
+    [Fact]
+    public async Task First()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var user = await db.Users.First();
+        
+        Assert.Equal(
+            new User(1, "Bob", 25),
+            user
+        );
+    }
+    
+    [Fact]
+    public async Task FirstButNotMatches()
+    {
+        await Assert.ThrowsAsync<InvalidOperationException>(async () =>await db.Users.First());
+    }
+    
+    [Fact]
+    public async Task FirstWithPredicate()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var user = await db.Users.First(x => x.Id == 2);
+        
+        Assert.Equal(
+            new User(2, "Sara", 25),
+            user
+        );
+    }
+    
+    [Fact]
+    public async Task FirstWithPredicateAndNoMatches()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        await Assert.ThrowsAsync<InvalidOperationException>(async () => await db.Users.First(x => x.Id == 3));
+    }
+    
+    
+    [Fact]
+    public async Task FirstOrDefault()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var user = await db.Users.FirstOrDefault();
+        
+        Assert.Equal(
+            new User(1, "Bob", 25),
+            user
+        );
+    }
+    
+    [Fact]
+    public async Task FirstOrDefaultWithMatches()
+    {
+        var user = await db.Users.FirstOrDefault();
+        Assert.Null(user);
+    }
+    
+    [Fact]
+    public async Task FirstOrDefaultWithPredicate()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var user = await db.Users.FirstOrDefault(x => x.Id == 2);
+        
+        Assert.Equal(
+            new User(2, "Sara", 25),
+            user
+        );
+    }
+    
+    [Fact]
+    public async Task FirstOrDefaultWithPredicateAndNoMatches()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var user = await db.Users.FirstOrDefault(x => x.Id == 3);
+        Assert.Null(user);
     }
     
     [Fact]
@@ -347,7 +433,6 @@ public class BasicTests : IDisposable
     {
         var bob = new User(1, "Bob", 30);
         var sara = new User(2, "Sara", 20);
-        var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara);
         
         var users = await db.Users.GroupBy(x => x.Age).Select(x => x.Age).ToArrayAsync();
