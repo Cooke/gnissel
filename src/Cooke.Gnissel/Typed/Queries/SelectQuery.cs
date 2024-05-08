@@ -4,9 +4,9 @@ namespace Cooke.Gnissel.Typed.Queries;
 
 public class SelectQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
 {
-    public FirstQuery<T> First() => new(expressionQuery);
+    public SingleQuery<T> First() => expressionQuery.First<T>();
 
-    public FirstOrDefaultQuery<T> FirstOrDefault() => new(expressionQuery);
+    public SingleOrDefaultQuery<T> FirstOrDefault() => expressionQuery.FirstOrDefault<T>();
 
     public Query<T> ToQuery() => expressionQuery.ToQuery<T>();
 }

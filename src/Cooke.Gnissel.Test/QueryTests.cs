@@ -122,6 +122,59 @@ public class QueryTests
         }
     }
 
+    [Test]
+    public async Task QuerySingle()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        
+        var user = await _db.QuerySingle<User>($"SELECT * FROM users WHERE name='Sara'");
+        
+        Assert.That(user, Is.EqualTo(new User(2, "Sara", 25)));
+    }
+    
+    [Test]
+    public void QuerySingleButMatchZero()
+    {
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await _db.QuerySingle<User>($"SELECT * FROM users WHERE name='Sara'"));
+    }
+    
+    [Test]
+    public async Task QuerySingleButMatchSeveral()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await _db.QuerySingle<User>($"SELECT * FROM users"));
+    }
+    
+    [Test]
+    public async Task QuerySingleOrDefault()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        
+        var user = await _db.QuerySingleOrDefault<User>($"SELECT * FROM users WHERE name='Sara'");
+        
+        Assert.That(user, Is.EqualTo(new User(2, "Sara", 25)));
+    }
+    
+    [Test]
+    public async Task QuerySingleOrDefaultAndMatchZero()
+    {
+        var result = await _db.QuerySingleOrDefault<User>($"SELECT * FROM users WHERE name='Sara'");
+        Assert.That(result, Is.Null);
+    }
+    
+    [Test]
+    public async Task QuerySingleOrDefaultButMatchSeveral()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(0, "Sara", 25));
+        
+        Assert.ThrowsAsync<InvalidOperationException>(async () => await _db.QuerySingleOrDefault<User>($"SELECT * FROM users"));
+    }
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);

@@ -18,7 +18,7 @@ public class MigrationTests
     private DbContext _db;
 
     [OneTimeSetUp]
-    public async Task Setup()
+    public void Setup()
     {
         _db = new DbContext(new(new NpgsqlDbAdapter(_dataSource)));
     }

@@ -9,35 +9,42 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Queries;
 
-public class SingleOrDefaultQuery<TOut>(
-    RenderedSql renderedSql,
-    Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
-    IDbConnector dbConnector
-) : IQuery
+public class SingleOrDefaultQuery<TOut> : IQuery
 {
-    public RenderedSql RenderedSql => renderedSql;
+    private readonly Query<TOut> _innerQuery;
 
-    public async ValueTask<TOut?> ExecuteAsync(CancellationToken cancellationToken)
+    public SingleOrDefaultQuery(
+        RenderedSql renderedSql,
+        Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
+        IDbConnector dbConnector
+    )
     {
-        await using var cmd = dbConnector.CreateCommand();
-        cmd.CommandText = renderedSql.CommandText;
-        cmd.Parameters.AddRange(renderedSql.Parameters);
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        cancellationToken.Register(reader.Close);
+        _innerQuery = new(renderedSql, rowReader, dbConnector);
+    }
 
-        TOut? result = default;
-        bool hasResult = false;
-        await foreach (var item in rowReader(reader, cancellationToken))
+    public SingleOrDefaultQuery(Query<TOut> innerQuery)
+    {
+        _innerQuery = innerQuery;
+    }
+
+    public RenderedSql RenderedSql => _innerQuery.RenderedSql;
+
+    public async ValueTask<TOut?> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        await using var enumerator = _innerQuery.GetAsyncEnumerator(cancellationToken);
+        if (!await enumerator.MoveNextAsync())
         {
-            if (hasResult)
-            {
-                throw new InvalidOperationException("Sequence contains more than one element");
-            }
+            return default;
+        }
 
-            result = item;
-            hasResult = true;
+        var result = enumerator.Current;
+        if (await enumerator.MoveNextAsync())
+        {
+            throw new InvalidOperationException("Sequence contains more than one element");
         }
 
         return result;
     }
+
+    public ValueTaskAwaiter<TOut?> GetAwaiter() => ExecuteAsync().GetAwaiter();
 }

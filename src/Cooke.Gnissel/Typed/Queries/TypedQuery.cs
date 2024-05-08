@@ -13,10 +13,15 @@ public class TypedQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
     public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
         new(expressionQuery.Select(selector));
     
-    public FirstQuery<T> First() => new(expressionQuery);
+    public SingleQuery<T> First() => expressionQuery.First<T>();
+
+    public SingleQuery<T> First(Expression<Func<T, bool>> predicate) =>
+        expressionQuery.First<T>(predicate);
     
-    public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
-        => new (expressionQuery.Where(predicate));
+    public SingleOrDefaultQuery<T> FirstOrDefault() => expressionQuery.FirstOrDefault<T>();
+
+    public SingleOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) =>
+        expressionQuery.FirstOrDefault<T>(predicate);
     
     public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) 
         => new(expressionQuery.OrderBy(propSelector));

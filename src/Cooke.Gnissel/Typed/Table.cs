@@ -147,13 +147,18 @@ public class Table<T> : ITable, IToQuery<T>
     public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
         => new (CreateExpressionQuery().Where(predicate));
 
-    public FirstQuery<T> First() => new(CreateExpressionQuery());
+    public SingleQuery<T> First() => CreateExpressionQuery().First<T>();
     
-    public FirstOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) 
-        => new (CreateExpressionQuery().Where(predicate));
+    public SingleQuery<T> First(Expression<Func<T, bool>> predicate) => CreateExpressionQuery().First<T>(predicate);
     
-    public Query<T> ToQuery() =>
-        new Query<T>(
+    public SingleOrDefaultQuery<T> FirstOrDefault()
+        => CreateExpressionQuery().FirstOrDefault<T>();
+
+    public SingleOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
+        => CreateExpressionQuery().FirstOrDefault<T>(predicate);
+    
+    public Query<T> ToQuery() => 
+        new(
             options.DbAdapter.RenderSql(options.TypedSqlGenerator.Generate(CreateExpressionQuery())),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector

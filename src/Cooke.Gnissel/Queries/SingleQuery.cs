@@ -9,40 +9,42 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Queries;
 
-public class SingleQuery<TOut>(
-    RenderedSql renderedSql,
-    Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
-    IDbConnector dbConnector
-) : IQuery
+public class SingleQuery<TOut> : IQuery
 {
-    public RenderedSql RenderedSql => renderedSql;
+    private readonly Query<TOut> _innerQuery;
 
-    public async ValueTask<TOut> ExecuteAsync(CancellationToken cancellationToken)
+    public SingleQuery(
+        RenderedSql renderedSql,
+        Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
+        IDbConnector dbConnector
+    )
     {
-        await using var cmd = dbConnector.CreateCommand();
-        cmd.CommandText = renderedSql.CommandText;
-        cmd.Parameters.AddRange(renderedSql.Parameters);
-        await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        cancellationToken.Register(reader.Close);
+        _innerQuery = new(renderedSql, rowReader, dbConnector);
+    }
 
-        TOut result = default!;
-        bool hasResult = false;
-        await foreach (var item in rowReader(reader, cancellationToken))
-        {
-            if (hasResult)
-            {
-                throw new InvalidOperationException("Sequence contains more than one element");
-            }
+    public SingleQuery(Query<TOut> innerQuery)
+    {
+        _innerQuery = innerQuery;
+    }
 
-            result = item;
-            hasResult = true;
-        }
+    public RenderedSql RenderedSql => _innerQuery.RenderedSql;
 
-        if (!hasResult)
+    public async ValueTask<TOut> ExecuteAsync(CancellationToken cancellationToken = default)
+    {
+        await using var enumerator = _innerQuery.GetAsyncEnumerator(cancellationToken);
+        if (!await enumerator.MoveNextAsync())
         {
             throw new InvalidOperationException("Sequence contains no elements");
         }
 
+        var result = enumerator.Current;
+        if (await enumerator.MoveNextAsync())
+        {
+            throw new InvalidOperationException("Sequence contains more than one element");
+        }
+
         return result;
     }
+
+    public ValueTaskAwaiter<TOut> GetAwaiter() => ExecuteAsync().GetAwaiter();
 }

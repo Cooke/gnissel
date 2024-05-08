@@ -27,10 +27,15 @@ public class TypedQuery<T1, T2>(ExpressionQuery expressionQuery) : IToQuery<(T1,
     public TypedQuery<T1, T2, T3> CrossJoin<T3>(Table<T3> joinTable)
         => new(expressionQuery.CrossJoin(joinTable));
 
-    public FirstQuery<(T1, T2)> First() => new(expressionQuery);
+    public SingleQuery<(T1, T2)> First() => expressionQuery.First<(T1, T2)>();
 
-    public FirstQuery<(T1, T2)> First(Expression<Func<T1, T2, bool>> predicate) =>
-        new(expressionQuery.Where(predicate));
+    public SingleQuery<(T1, T2)> First(Expression<Func<T1, T2, bool>> predicate) =>
+        expressionQuery.First<(T1, T2)>(predicate);
+    
+    public SingleOrDefaultQuery<(T1, T2)> FirstOrDefault() => expressionQuery.FirstOrDefault<(T1, T2)>();
+
+    public SingleOrDefaultQuery<(T1, T2)> FirstOrDefault(Expression<Func<T1, T2, bool>> predicate) =>
+        expressionQuery.FirstOrDefault<(T1, T2)>(predicate);
     
     public TypedQuery<T1, T2> Limit(int limit) 
         => new(expressionQuery with { Limit = limit });

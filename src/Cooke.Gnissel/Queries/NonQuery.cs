@@ -7,10 +7,7 @@ public class NonQuery(IDbConnector dbConnector, RenderedSql renderedSql) : INonQ
 {
     public RenderedSql RenderedSql => renderedSql;
 
-    public ValueTaskAwaiter<int> GetAwaiter()
-    {
-        return ExecuteAsync().GetAwaiter();
-    }
+    public ValueTaskAwaiter<int> GetAwaiter() => ExecuteAsync().GetAwaiter();
 
     public async ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default)
     {

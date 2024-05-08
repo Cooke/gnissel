@@ -114,8 +114,19 @@ public record ExpressionQuery(
             Options.DbConnector
         );
 
+    public SingleQuery<T> First<T>() => new((this with {Limit = 1}).ToQuery<T>());
+    
+    public SingleOrDefaultQuery<T> FirstOrDefault<T>() => new((this with { Limit = 1}).ToQuery<T>());
+
+    public SingleQuery<T> First<T>(LambdaExpression predicate) =>
+        new((this with { Limit = 1, Conditions = [..this.Conditions, Transform(predicate)] }).ToQuery<T>());
+    
+    public SingleOrDefaultQuery<T> FirstOrDefault<T>(LambdaExpression predicate) =>
+        new((this with { Limit = 1, Conditions = [..this.Conditions, Transform(predicate)] }).ToQuery<T>());
+
     private Expression Transform(LambdaExpression predicate)
         => ParameterExpressionReplacer.Replace(
             predicate.Body,
             Sources.Select((source, index) => (predicate.Parameters[index], (Expression)new TableExpression(source))).ToArray());
+
 }
