@@ -14,7 +14,6 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 ## Limitations
 
 - Currently only a Postgres adapter exists
-- Not battle tested
 
 ## Installation
 
@@ -51,6 +50,8 @@ public record Device(int Id, string Name, int UserId);
 
 ```csharp
 var allUsers = await dbContext.Query<User>($"SELECT * FROM users").ToArrayAsync();
+var user = await dbContext.QuerySingle<User>($"SELECT * FROM users WHERE id=1");
+var maybeUser = await dbContext.QuerySingleOrDefault<User>($"SELECT * FROM users WHERE name=chad LIMIT 1");
 ```
 
 #### Non query
