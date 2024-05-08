@@ -33,6 +33,23 @@ public class DbContext(DbOptions dbOptions)
     public Query<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
         new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
+    public SingleQuery<TOut> QuerySingle<TOut>(Sql sql) =>
+        _objectReaderProvider
+            .Get<TOut?>()
+            .Let(
+                objectReader =>
+                    new SingleQuery<TOut>(
+                        _dbAdapter.RenderSql(sql),
+                        (reader, ct) => reader.ReadRows(objectReader, ct),
+                        _dbConnector
+                    )
+            );
+
+    public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(
+        Sql sql,
+        Func<DbDataReader, TOut> mapper
+    ) => new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
+
     public NonQuery NonQuery(Sql sql) => new(_dbConnector, _dbAdapter.RenderSql(sql));
 
     public Task Batch(params INonQuery[] statements) => Batch((IEnumerable<INonQuery>)statements);
@@ -70,7 +87,9 @@ public class DbContext(DbOptions dbOptions)
         await batch.ExecuteNonQueryAsync();
         await transaction.CommitAsync();
     }
-    
-    public ValueTask Migrate(IReadOnlyList<IMigration> migrations, CancellationToken cancellationToken = default) 
-        => _dbAdapter.Migrator.Migrate(migrations, cancellationToken);
+
+    public ValueTask Migrate(
+        IReadOnlyList<IMigration> migrations,
+        CancellationToken cancellationToken = default
+    ) => _dbAdapter.Migrator.Migrate(migrations, cancellationToken);
 }

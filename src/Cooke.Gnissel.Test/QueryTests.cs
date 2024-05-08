@@ -21,9 +21,7 @@ public class QueryTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(
-            new NpgsqlDbAdapter(_dataSource)
-        ));
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
