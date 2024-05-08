@@ -24,7 +24,6 @@ public class Query<TOut>(
         cmd.CommandText = renderedSql.CommandText;
         cmd.Parameters.AddRange(renderedSql.Parameters);
         await using var reader = await cmd.ExecuteReaderAsync(cancellationToken);
-        cancellationToken.Register(reader.Close);
         await foreach (var value in rowReader(reader, cancellationToken))
         {
             yield return value;
