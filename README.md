@@ -176,7 +176,7 @@ var dbContext = new AppDbContext(new DbOptions(adapter));
 
 ## Usage examples
 
-#### Quering
+#### Querying
 
 ```csharp
 var allUsers = await dbContext.Users.ToArrayAsync();
@@ -185,7 +185,9 @@ var allNames = await dbContext.Users.Select(x => x.Name).ToArrayAsync();
 var partialDevcies = await dbContext.Devices.Select(x => new { x.Id, DeviceName = x.Name }).ToArrayAsync();
 ```
 
-#### First or default utils
+#### First or default 
+
+First queries are implemented by using LIMIT 1 in the SQL query.
 
 ```csharp
 var firstUser = await dbContext.Users.First();
