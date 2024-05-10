@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using System.Diagnostics.Contracts;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.History;
 using Cooke.Gnissel.Queries;
@@ -18,6 +19,7 @@ public class DbContext(DbOptions dbOptions)
     private readonly IDbConnector _dbConnector = dbOptions.DbConnector;
     private readonly IObjectReaderProvider _objectReaderProvider = dbOptions.ObjectReaderProvider;
 
+    [Pure]
     public Query<TOut> Query<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
@@ -30,9 +32,11 @@ public class DbContext(DbOptions dbOptions)
                     )
             );
 
+    [Pure]
     public Query<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
         new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
+    [Pure]
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
@@ -45,9 +49,11 @@ public class DbContext(DbOptions dbOptions)
                     )
             );
 
+    [Pure]
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
         new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
+    [Pure]
     public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
@@ -60,16 +66,19 @@ public class DbContext(DbOptions dbOptions)
                     )
             );
 
+    [Pure]
     public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(
         Sql sql,
         Func<DbDataReader, TOut> mapper
     ) => new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
+    [Pure]
     public NonQuery NonQuery(Sql sql) => new(_dbConnector, _dbAdapter.RenderSql(sql));
 
-    public Task Batch(params INonQuery[] statements) => Batch((IEnumerable<INonQuery>)statements);
+    public ValueTask Batch(params INonQuery[] statements) =>
+        Batch((IEnumerable<INonQuery>)statements);
 
-    public async Task Batch(IEnumerable<INonQuery> statements)
+    public async ValueTask Batch(IEnumerable<INonQuery> statements)
     {
         await using var batch = _dbConnector.CreateBatch();
         foreach (var statement in statements)
@@ -82,10 +91,10 @@ public class DbContext(DbOptions dbOptions)
         await batch.ExecuteNonQueryAsync();
     }
 
-    public Task Transaction(params INonQuery[] statements) =>
+    public ValueTask Transaction(params INonQuery[] statements) =>
         Transaction((IEnumerable<INonQuery>)statements);
 
-    public async Task Transaction(IEnumerable<INonQuery> statements)
+    public async ValueTask Transaction(IEnumerable<INonQuery> statements)
     {
         await using var connection = _dbConnector.CreateConnection();
         await using var batch = connection.CreateBatch();
