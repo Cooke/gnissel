@@ -180,5 +180,6 @@ public class QueryTests
 
     public record Device(DeviceId Id, string Name, int UserId);
 
-    public record DeviceId([property: DbName("id")] [DbName("id")] string Value);
+    [DbMapping(DbMappingType.WrappedPrimitive)]
+    public record DeviceId(string Value);
 }

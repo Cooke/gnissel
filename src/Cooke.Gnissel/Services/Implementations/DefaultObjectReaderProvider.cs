@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using Cooke.Gnissel.Utils;
 
 #endregion
 
@@ -26,7 +27,12 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
-        var (body, width) = CreateReader(dataReader, ordinalOffset, type, ImmutableList<ObjectPathPart>.Empty);
+        var (body, width) = CreateReader(
+            dataReader,
+            ordinalOffset,
+            type,
+            ImmutableList<ObjectPathPart>.Empty
+        );
         var objectReader = Expression
             .Lambda(
                 typeof(ObjectReaderFunc<>).MakeGenericType(type),
@@ -42,7 +48,6 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         )!;
     }
 
-
     private (Expression Body, int Width) CreateReader(
         Expression dataReader,
         Expression ordinalOffset,
@@ -50,50 +55,104 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         IImmutableList<ObjectPathPart> parameterChain
     )
     {
-        if (IsNullableValueType(type)) {
+        if (IsNullableValueType(type))
+        {
             var underlyingType = Nullable.GetUnderlyingType(type)!;
-            var (actualReader, width) = CreateReader(dataReader, ordinalOffset, underlyingType, parameterChain);
-            return (Expression.Condition(
-                CreateIsNullReader(dataReader, ordinalOffset, underlyingType, parameterChain),
-                Expression.Constant(null, type),
-                Expression.New(type.GetConstructor([underlyingType])!, [actualReader])
-            ), width);
+            var (actualReader, width) = CreateReader(
+                dataReader,
+                ordinalOffset,
+                underlyingType,
+                parameterChain
+            );
+            return (
+                Expression.Condition(
+                    CreateIsNullReader(dataReader, ordinalOffset, underlyingType, parameterChain),
+                    Expression.Constant(null, type),
+                    Expression.New(type.GetConstructor([underlyingType])!, [actualReader])
+                ),
+                width
+            );
         }
 
-        if (dbAdapter.IsDbMapped(type)) {
-            var ordinal = parameterChain.Count == 0 ? ordinalOffset : GetOrdinalAfterExpression(dataReader, ordinalOffset, dbAdapter.ToColumnName(parameterChain));
+        if (type.GetWrappedType() is { } wrappedType)
+        {
+            var ordinal = GetOrdinalAfterExpression(
+                dataReader,
+                ordinalOffset,
+                dbAdapter,
+                parameterChain
+            );
+            var constructorInfo = type.GetConstructors().First(x => x.GetParameters().Length == 1);
+            return (
+                Expression.New(
+                    constructorInfo,
+                    CreateValueReader(dataReader, ordinal, wrappedType)
+                ),
+                1
+            );
+        }
+
+        if (dbAdapter.IsDbMapped(type))
+        {
+            var ordinal = GetOrdinalAfterExpression(
+                dataReader,
+                ordinalOffset,
+                dbAdapter,
+                parameterChain
+            );
             return (CreateValueReader(dataReader, ordinal, type), 1);
         }
 
-        if (type.IsAssignableTo(typeof(ITuple))) {
+        if (type.IsAssignableTo(typeof(ITuple)))
+        {
             return CreatePositionalReader(dataReader, ordinalOffset, type, parameterChain);
         }
 
-        if (type.IsClass) {
-            var (actualReader, width) = CreateNamedReader(dataReader, ordinalOffset, type, parameterChain);
-            return (Expression.Condition(
-                CreateIsNullReader(dataReader, ordinalOffset, type, parameterChain),
-                Expression.Constant(null, type),
-                actualReader
-            ), width);
+        if (type.IsClass)
+        {
+            var (actualReader, width) = CreateNamedReader(
+                dataReader,
+                ordinalOffset,
+                type,
+                parameterChain
+            );
+            return (
+                Expression.Condition(
+                    CreateIsNullReader(dataReader, ordinalOffset, type, parameterChain),
+                    Expression.Constant(null, type),
+                    actualReader
+                ),
+                width
+            );
         }
 
-        if (type.IsValueType) {
-            return CreateNamedReader(dataReader, ordinalOffset, type, ImmutableList<ObjectPathPart>.Empty);
+        if (type.IsValueType)
+        {
+            return CreateNamedReader(
+                dataReader,
+                ordinalOffset,
+                type,
+                ImmutableList<ObjectPathPart>.Empty
+            );
         }
 
         throw new NotSupportedException($"Cannot map type {type}");
     }
 
-    private Expression CreateIsNullReader(Expression dataReader,
+    private Expression CreateIsNullReader(
+        Expression dataReader,
         Expression ordinalOffset,
-        Type type, IImmutableList<ObjectPathPart> parameterChain)
+        Type type,
+        IImmutableList<ObjectPathPart> parameterChain
+    )
     {
-        if (dbAdapter.IsDbMapped(type)) {
+        if (dbAdapter.IsDbMapped(type))
+        {
             return CreateIsNullValueReader(dataReader, ordinalOffset);
         }
 
-        if (type.IsAssignableTo(typeof(ITuple)) || type.IsClass) {
+        if (type.IsAssignableTo(typeof(ITuple)) || type.IsClass)
+        {
             return CreateIsNullComplexReader(dataReader, ordinalOffset, type, parameterChain);
         }
 
@@ -108,7 +167,15 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
     )
     {
         var ctor = type.GetConstructors().First();
-        return ctor.GetParameters().Select(p => CreateIsNullReader(dataReader, ordinalOffset, p.ParameterType, parameterChain.Add(new ParameterPathPart(p))))
+        return ctor.GetParameters()
+            .Select(p =>
+                CreateIsNullReader(
+                    dataReader,
+                    ordinalOffset,
+                    p.ParameterType,
+                    parameterChain.Add(new ParameterPathPart(p))
+                )
+            )
             .Aggregate((Expression)Expression.Constant(true), Expression.And);
     }
 
@@ -116,7 +183,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain)
+        IImmutableList<ObjectPathPart> parameterChain
+    )
     {
         var ctor = type.GetConstructors().First();
         var width = 0;
@@ -180,9 +248,15 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
     private static Expression GetOrdinalAfterExpression(
         Expression dataReader,
         Expression ordinalOffset,
-        string name
+        IDbAdapter dbAdapter,
+        IImmutableList<ObjectPathPart> parameterChain
     )
     {
+        if (parameterChain.Count == 0)
+        {
+            return ordinalOffset;
+        }
+
         var getOrdinalInMethod =
             typeof(DefaultObjectReaderProvider).GetMethod(
                 nameof(GetOrdinalAfter),
@@ -195,14 +269,16 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             getOrdinalInMethod,
             dataReader,
             ordinalOffset,
-            Expression.Constant(name)
+            Expression.Constant(dbAdapter.ToColumnName(parameterChain))
         );
     }
 
     private static int GetOrdinalAfter(DbDataReader dataReader, int offset, string name)
     {
-        for (int ordinal = offset; ordinal < dataReader.FieldCount; ordinal++) {
-            if (dataReader.GetName(ordinal).Equals(name, StringComparison.OrdinalIgnoreCase)) {
+        for (int ordinal = offset; ordinal < dataReader.FieldCount; ordinal++)
+        {
+            if (dataReader.GetName(ordinal).Equals(name, StringComparison.OrdinalIgnoreCase))
+            {
                 return ordinal;
             }
         }
@@ -212,6 +288,6 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         );
     }
 
-    private static bool IsNullableValueType(Type type) => type.IsValueType && Nullable.GetUnderlyingType(type) != null;
-
+    private static bool IsNullableValueType(Type type) =>
+        type.IsValueType && Nullable.GetUnderlyingType(type) != null;
 }

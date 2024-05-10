@@ -15,7 +15,6 @@ namespace Cooke.Gnissel.Test;
 public class MappingTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
-        .AddTypeInfoResolverFactory()
         .Build();
     private TestDbContext _db;
 
@@ -172,7 +171,6 @@ public class MappingTests
     }
 
     [Test]
-    //[Ignore("Currently not supported")]
     public async Task DirectPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
@@ -199,6 +197,7 @@ public class MappingTests
 
     private record UserWithTypedName(Name Name, int Age);
 
+    [DbMapping(DbMappingType.WrappedPrimitive)]
     private record Name(string Value);
 
     public record Device(string Id, string Name, int UserId);

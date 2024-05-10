@@ -15,58 +15,97 @@ internal static class ColumnBuilder
         var objectParameter = Expression.Parameter(typeof(T));
         return typeof(T)
             .GetProperties()
-            .SelectMany(
-                p =>
-                    CreateColumns<T>(
-                        options,
-                        p,
-                        objectParameter,
-                        Expression.Property(objectParameter, p)
-                    )
+            .SelectMany(p =>
+                CreateColumns<T>(
+                    options,
+                    p,
+                    objectParameter,
+                    Expression.Property(objectParameter, p)
+                )
             )
             .ToImmutableArray();
     }
 
-    private static IEnumerable<Column<T>> CreateColumns<T>(TableOptions options,
+    private static IEnumerable<Column<T>> CreateColumns<T>(
+        TableOptions options,
         PropertyInfo p,
         ParameterExpression rootExpression,
-        Expression memberExpression)
+        Expression memberExpression
+    )
     {
         var methodChain = ExpressionUtils.GetMemberChain(memberExpression);
         if (options.Ignores.Any(x => x.SequenceEqual(methodChain)))
             yield break;
 
-        if (p.GetDbType() != null)
-            yield return CreateColumn<T>(options, p, rootExpression, memberExpression);
-        else if (p.PropertyType == typeof(string) || p.PropertyType.IsPrimitive)
-            yield return CreateColumn<T>(options, p, rootExpression, memberExpression);
+        if (p.PropertyType.GetWrappedType() is { } wrappedType)
+        {
+            var innerProperty = p
+                .PropertyType.GetProperties()
+                .Single(x => x.PropertyType == wrappedType);
+            Expression innerMemberExpression = Expression.Property(memberExpression, innerProperty);
+            yield return CreateColumn<T>(
+                options,
+                innerProperty,
+                rootExpression,
+                innerMemberExpression,
+                ExpressionUtils.GetMemberChain(memberExpression)
+            );
+        }
+        else if (options.DbOptions.DbAdapter.IsDbMapped(p.PropertyType))
+        {
+            yield return CreateColumn<T>(
+                options,
+                p,
+                rootExpression,
+                memberExpression,
+                ExpressionUtils.GetMemberChain(memberExpression)
+            );
+        }
         else if (p.PropertyType.IsClass)
+        {
             foreach (
-                var column in p.PropertyType
-                    .GetProperties()
-                    .SelectMany<PropertyInfo, Column<T>>(
-                        innerProperty =>
-                            CreateColumns<T>(
-                                options,
-                                innerProperty,
-                                rootExpression,
-                                Expression.Property(memberExpression, innerProperty)
-                            )
+                var column in p
+                    .PropertyType.GetProperties()
+                    .SelectMany<PropertyInfo, Column<T>>(innerProperty =>
+                        CreateColumns<T>(
+                            options,
+                            innerProperty,
+                            rootExpression,
+                            Expression.Property(memberExpression, innerProperty)
+                        )
                     )
             )
                 yield return column;
+        }
         else
-            yield return CreateColumn<T>(options, p, rootExpression, memberExpression);
+        {
+            yield return CreateColumn<T>(
+                options,
+                p,
+                rootExpression,
+                memberExpression,
+                ExpressionUtils.GetMemberChain(memberExpression)
+            );
+        }
     }
 
-    private static Column<T> CreateColumn<T>(TableOptions options,
+    private static Column<T> CreateColumn<T>(
+        TableOptions options,
         PropertyInfo p,
         ParameterExpression objectExpression,
-        Expression memberExpression)
+        Expression memberExpression,
+        IReadOnlyCollection<MemberInfo> memberChain
+    )
     {
-        var memberChain = ExpressionUtils.GetMemberChain(memberExpression);
-        var columnOptions = options.Columns.FirstOrDefault(x => x.MemberChain.SequenceEqual(memberChain));
-        return new Column<T>(columnOptions?.Name ?? p.GetDbName() ?? options.DbOptions.DbAdapter.ToColumnName(memberChain.Select(x => new PropertyPathPart((PropertyInfo)x))),
+        var columnOptions = options.Columns.FirstOrDefault(x =>
+            x.MemberChain.SequenceEqual(memberChain)
+        );
+        return new Column<T>(
+            columnOptions?.Name
+                ?? p.GetDbName()
+                ?? options.DbOptions.DbAdapter.ToColumnName(
+                    memberChain.Select(x => new PropertyPathPart((PropertyInfo)x))
+                ),
             memberChain,
             CreateParameterFactory<T>(
                 options.DbOptions.DbAdapter,

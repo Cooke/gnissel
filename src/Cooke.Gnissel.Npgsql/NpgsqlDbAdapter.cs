@@ -104,7 +104,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public IMigrator Migrator { get; }
     
-    public bool IsDbMapped(Type type) => type.GetCustomAttribute<DbTypeAttribute>() != null || type.IsPrimitive || BuiltInTypes.Contains(type);
+    public bool IsDbMapped(Type type) => type.GetCustomAttribute<DbMapping>() != null || type.GetCustomAttribute<DbTypeAttribute>() != null || type.IsPrimitive || BuiltInTypes.Contains(type);
 
     public string ToColumnName(ParameterInfo parameterInfo) =>
         ConvertToSnakeCase(parameterInfo.Name);
@@ -113,11 +113,8 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
 
     public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
         string.Join(
-            ".",
-            path.Where(x => !(x is ParameterPathPart
-            {
-                ParameterInfo.Member: ConstructorInfo ctor
-            } param && ctor.GetParameters().Length == 1 && IsDbMapped(param.ParameterInfo.ParameterType)))
+            "_",
+            path
                 .Select(
                 part =>
                     part switch
