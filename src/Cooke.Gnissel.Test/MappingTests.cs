@@ -14,15 +14,15 @@ namespace Cooke.Gnissel.Test;
 
 public class MappingTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
+        .AddTypeInfoResolverFactory()
+        .Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(
-            new NpgsqlDbAdapter(_dataSource)
-        ));
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -137,14 +137,15 @@ public class MappingTests
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { (withTimeZone, withoutTimeZone) }, results);
     }
-    
+
     [Test]
     public async Task NullComplexType()
     {
-        var results = await _db.Query<User>($"SELECT null as id, null as name, null as age").ToArrayAsync();
+        var results = await _db.Query<User>($"SELECT null as id, null as name, null as age")
+            .ToArrayAsync();
         CollectionAssert.AreEqual(new User?[] { null }, results);
     }
-    
+
     [Test]
     public async Task NullNullableStruct()
     {
@@ -162,17 +163,26 @@ public class MappingTests
     }
 
     [Test]
-    public async Task TypedPrimitiveMapping()
+    public async Task ComplexTypeWithTypedPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<UserWithTypedName>($"SELECT name, age FROM users").ToArrayAsync();
+        var results = await _db.Query<UserWithTypedName>($"SELECT name, age FROM users")
+            .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new UserWithTypedName(new("Bob"), 25) }, results);
+    }
+
+    [Test]
+    //[Ignore("Currently not supported")]
+    public async Task DirectPrimitiveMapping()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        var results = await _db.Query<Name>($"SELECT name FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new Name("Bob") }, results);
     }
 
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
-
     }
 
     private record User(
@@ -186,7 +196,7 @@ public class MappingTests
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name
     );
-    
+
     private record UserWithTypedName(Name Name, int Age);
 
     private record Name(string Value);
