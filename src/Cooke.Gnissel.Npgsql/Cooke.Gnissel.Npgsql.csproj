@@ -10,12 +10,12 @@
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/Cooke/gnissel?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
         <Company>Cooke Software Solutions AB</Company>
-        <Version>0.2.0</Version>
+        <Version>0.2.1</Version>
         <LangVersion>latestmajor</LangVersion>
     </PropertyGroup>
 
     <ItemGroup>
-      <PackageReference Include="Npgsql" Version="8.0.1" />
+      <PackageReference Include="Npgsql" Version="8.0.3" />
     </ItemGroup>
 
     <ItemGroup>

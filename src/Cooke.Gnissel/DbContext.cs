@@ -46,20 +46,21 @@ public class DbContext(DbOptions dbOptions)
             );
 
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
-        new(
-            _dbAdapter.RenderSql(sql),
-            (reader, ct) => reader.ReadRows(mapper, ct),
-            _dbConnector
-        );
+        new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
-    public SingleOrDefaultQuery<TOut?> QuerySingleOrDefault<TOut>(
-        Sql sql
-    ) => _objectReaderProvider
-        .Get<TOut>()
-        .Let(
-            objectReader => new SingleOrDefaultQuery<TOut?>(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(objectReader, ct), _dbConnector));
-    
-    public SingleOrDefaultQuery<TOut?> QuerySingleOrDefault<TOut>(
+    public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(Sql sql) =>
+        _objectReaderProvider
+            .Get<TOut>()
+            .Let(
+                objectReader =>
+                    new SingleOrDefaultQuery<TOut>(
+                        _dbAdapter.RenderSql(sql),
+                        (reader, ct) => reader.ReadRows(objectReader, ct),
+                        _dbConnector
+                    )
+            );
+
+    public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(
         Sql sql,
         Func<DbDataReader, TOut> mapper
     ) => new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
