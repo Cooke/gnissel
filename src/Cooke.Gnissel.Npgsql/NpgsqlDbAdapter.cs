@@ -27,16 +27,13 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
         typeof(Guid),
         typeof(byte[])
     ];
-    
+
     private readonly NpgsqlDataSource _dataSource;
 
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
         : this(dataSource, NullLogger.Instance) { }
 
-    public NpgsqlDbAdapter(
-        NpgsqlDataSource dataSource,
-        ILogger logger
-    )
+    public NpgsqlDbAdapter(NpgsqlDataSource dataSource, ILogger logger)
     {
         _dataSource = dataSource;
         TypedSqlGenerator = new NpgsqlTypedSqlGenerator(this);
@@ -55,18 +52,17 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
             ? new NpgsqlParameter { Value = value, DataTypeName = dbType }
             : new NpgsqlParameter<TValue> { TypedValue = value, DataTypeName = dbType };
 
-    public RenderedSql RenderSql(Sql sql)
+    public RenderedSql RenderSql(Sql sql, DbOptions options)
     {
         var sb = new StringBuilder(
-            sql.Fragments.Sum(
-                x =>
-                    x switch
-                    {
-                        Sql.Literal { Value: var s } => s.Length,
-                        Sql.IParameter => 3,
-                        Sql.Identifier { Value: var s } => s.Length + 2,
-                        _ => 0
-                    }
+            sql.Fragments.Sum(x =>
+                x switch
+                {
+                    Sql.Literal { Value: var s } => s.Length,
+                    Sql.IParameter => 3,
+                    Sql.Identifier { Value: var s } => s.Length + 2,
+                    _ => 0
+                }
             )
         );
 
@@ -82,7 +78,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                 case Sql.IParameter p:
                     sb.Append('$');
                     sb.Append(parameters.Count + 1);
-                    parameters.Add(p.ToParameter(this));
+                    parameters.Add(p.ToParameter(options));
                     break;
 
                 case Sql.Identifier { Value: var identifier }:
@@ -103,8 +99,12 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     public ITypedSqlGenerator TypedSqlGenerator { get; }
 
     public IMigrator Migrator { get; }
-    
-    public bool IsDbMapped(Type type) => type.GetCustomAttribute<DbMapping>() != null || type.GetCustomAttribute<DbTypeAttribute>() != null || type.IsPrimitive || BuiltInTypes.Contains(type);
+
+    public bool IsDbMapped(Type type) =>
+        type.GetCustomAttribute<DbMapping>() != null
+        || type.GetCustomAttribute<DbTypeAttribute>() != null
+        || type.IsPrimitive
+        || BuiltInTypes.Contains(type);
 
     public string ToColumnName(ParameterInfo parameterInfo) =>
         ConvertToSnakeCase(parameterInfo.Name);
@@ -114,17 +114,13 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
         string.Join(
             "_",
-            path
-                .Select(
-                part =>
-                    part switch
-                    {
-                        ParameterPathPart parameterPart
-                            => ToColumnName(parameterPart.ParameterInfo),
-                        PropertyPathPart propertyPart
-                            => ToColumnName(propertyPart.PropertyInfo),
-                        _ => throw new InvalidOperationException()
-                    }
+            path.Select(part =>
+                part switch
+                {
+                    ParameterPathPart parameterPart => ToColumnName(parameterPart.ParameterInfo),
+                    PropertyPathPart propertyPart => ToColumnName(propertyPart.PropertyInfo),
+                    _ => throw new InvalidOperationException()
+                }
             )
         );
 

@@ -23,57 +23,48 @@ public class DbContext(DbOptions dbOptions)
     public Query<TOut> Query<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
-            .Let(
-                objectReader =>
-                    new Query<TOut>(
-                        _dbAdapter.RenderSql(sql),
-                        (reader, ct) => reader.ReadRows(objectReader, ct),
-                        _dbConnector
-                    )
-            );
+            .Let(objectReader => new Query<TOut>(
+                dbOptions.RenderSql(sql),
+                (reader, ct) => reader.ReadRows(objectReader, ct),
+                _dbConnector
+            ));
 
     [Pure]
     public Query<TOut> Query<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
-        new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
+        new(dbOptions.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
     [Pure]
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
-            .Let(
-                objectReader =>
-                    new SingleQuery<TOut>(
-                        _dbAdapter.RenderSql(sql),
-                        (reader, ct) => reader.ReadRows(objectReader, ct),
-                        _dbConnector
-                    )
-            );
+            .Let(objectReader => new SingleQuery<TOut>(
+                dbOptions.RenderSql(sql),
+                (reader, ct) => reader.ReadRows(objectReader, ct),
+                _dbConnector
+            ));
 
     [Pure]
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql, Func<DbDataReader, TOut> mapper) =>
-        new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
+        new(dbOptions.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
     [Pure]
     public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(Sql sql) =>
         _objectReaderProvider
             .Get<TOut>()
-            .Let(
-                objectReader =>
-                    new SingleOrDefaultQuery<TOut>(
-                        _dbAdapter.RenderSql(sql),
-                        (reader, ct) => reader.ReadRows(objectReader, ct),
-                        _dbConnector
-                    )
-            );
+            .Let(objectReader => new SingleOrDefaultQuery<TOut>(
+                dbOptions.RenderSql(sql),
+                (reader, ct) => reader.ReadRows(objectReader, ct),
+                _dbConnector
+            ));
 
     [Pure]
     public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(
         Sql sql,
         Func<DbDataReader, TOut> mapper
-    ) => new(_dbAdapter.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
+    ) => new(dbOptions.RenderSql(sql), (reader, ct) => reader.ReadRows(mapper, ct), _dbConnector);
 
     [Pure]
-    public NonQuery NonQuery(Sql sql) => new(_dbConnector, _dbAdapter.RenderSql(sql));
+    public NonQuery NonQuery(Sql sql) => new(_dbConnector, dbOptions.RenderSql(sql));
 
     public ValueTask Batch(params INonQuery[] statements) =>
         Batch((IEnumerable<INonQuery>)statements);

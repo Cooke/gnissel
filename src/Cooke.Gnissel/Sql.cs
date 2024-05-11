@@ -89,17 +89,16 @@ public class Sql
 
     public interface IParameter : IFragment
     {
-        DbParameter ToParameter(IDbAdapter adapter);
+        DbParameter ToParameter(DbOptions options);
     }
 
     private record Parameter<T>(T Value, string? DbType) : IParameter
     {
-        public DbParameter ToParameter(IDbAdapter adapter) =>
-            adapter.CreateParameter(Value, DbType);
+        public DbParameter ToParameter(DbOptions options) => options.CreateParameter(Value, DbType);
     }
 
     private record ExistingParameter(DbParameter Parameter) : IParameter
     {
-        public DbParameter ToParameter(IDbAdapter adapter) => Parameter;
+        public DbParameter ToParameter(DbOptions options) => Parameter;
     }
 }

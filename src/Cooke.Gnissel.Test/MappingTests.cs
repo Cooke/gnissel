@@ -2,7 +2,10 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
+using System.Data.Common;
+using System.Text.Json.Serialization;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
 using Npgsql;
@@ -14,14 +17,15 @@ namespace Cooke.Gnissel.Test;
 
 public class MappingTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
-        .Build();
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
+        _db = new TestDbContext(
+            new(new NpgsqlDbAdapter(_dataSource)) { Converters = [new UserNameDbConverter()] }
+        );
 
         await _dataSource
             .CreateCommand(
@@ -178,6 +182,20 @@ public class MappingTests
         CollectionAssert.AreEqual(new[] { new Name("Bob") }, results);
     }
 
+    [Test]
+    public async Task EnumMapping()
+    {
+        await _db.NonQuery($"INSERT INTO users (name) VALUES ({UserName.Bob})");
+        var results = await _db.Query<UserName>($"SELECT name FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
+    }
+
+    [DbConverter(typeof(UserNameDbConverter))]
+    private enum UserName
+    {
+        Bob
+    }
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
@@ -201,4 +219,15 @@ public class MappingTests
     private record Name(string Value);
 
     public record Device(string Id, string Name, int UserId);
+
+    private class UserNameDbConverter : DbConverter<UserName>
+    {
+        public override DbParameter ToParameter(UserName value, IDbAdapter adapter) =>
+            adapter.CreateParameter(value.ToString());
+
+        public override UserName FromReader(DbDataReader reader, int ordinal) =>
+            Enum.TryParse(reader.GetString(ordinal), false, out UserName value)
+                ? value
+                : throw new DbConvertException(reader.GetFieldType(ordinal), typeof(UserName));
+    }
 }

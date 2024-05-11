@@ -15,7 +15,6 @@ public interface IInsertQuery
 
 public record RowParameters(IReadOnlyCollection<DbParameter> Parameters);
 
-
 public class InsertQuery<T>(
     Table<T> table,
     IReadOnlyCollection<Column<T>> columns,
@@ -37,9 +36,8 @@ public class InsertQuery<T>(
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(
             options.DbConnector,
-            options.DbAdapter.RenderSql(options.TypedSqlGenerator.Generate(this))
+            options.RenderSql(options.TypedSqlGenerator.Generate(this))
         ).ExecuteAsync(cancellationToken);
 
-    public RenderedSql RenderedSql =>
-        options.DbAdapter.RenderSql(options.TypedSqlGenerator.Generate(this));
+    public RenderedSql RenderedSql => options.RenderSql(options.TypedSqlGenerator.Generate(this));
 }

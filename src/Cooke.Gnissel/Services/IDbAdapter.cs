@@ -18,7 +18,7 @@ public interface IDbAdapter
 
     DbParameter CreateParameter<TValue>(TValue value, string? dbType = null);
 
-    RenderedSql RenderSql(Sql sql);
+    RenderedSql RenderSql(Sql sql, DbOptions options);
 
     DbBatchCommand CreateBatchCommand();
 
@@ -29,6 +29,6 @@ public interface IDbAdapter
     ITypedSqlGenerator TypedSqlGenerator { get; }
 
     IMigrator Migrator { get; }
-    
+
     bool IsDbMapped(Type type);
 }

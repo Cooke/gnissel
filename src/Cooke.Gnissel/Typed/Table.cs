@@ -28,7 +28,7 @@ public record TableOptions(DbOptions DbOptions)
 public record ColumnOptions(IReadOnlyCollection<MemberInfo> MemberChain)
 {
     public string? Name { get; init; }
-    
+
     public bool IsDatabaseGenerated { get; init; }
 }
 
@@ -43,15 +43,19 @@ public class TableOptionsBuilder<T>(DbOptions dbOptions)
         this.name = name;
         return this;
     }
-    
-    public TableOptions Build() => new(dbOptions)
-    {
-        Name = name,
-        Columns = _columns.ToArray(),
-        Ignores = _ignores,
-    };
 
-    public TableOptionsBuilder<T> Column<TProp>(Expression<Func<T, TProp>> selector, Action<ColumnOptionsBuilder> configure)
+    public TableOptions Build() =>
+        new(dbOptions)
+        {
+            Name = name,
+            Columns = _columns.ToArray(),
+            Ignores = _ignores,
+        };
+
+    public TableOptionsBuilder<T> Column<TProp>(
+        Expression<Func<T, TProp>> selector,
+        Action<ColumnOptionsBuilder> configure
+    )
     {
         var memberChain = ExpressionUtils.GetMemberChain(selector.Body);
         var columnOptionsBuilder = new ColumnOptionsBuilder(memberChain);
@@ -59,11 +63,15 @@ public class TableOptionsBuilder<T>(DbOptions dbOptions)
         _columns.Add(columnOptionsBuilder.Build());
         return this;
     }
-    
-    public TableOptionsBuilder<T> Column<TProp>(Expression<Func<T, TProp>> selector, string columnName)
+
+    public TableOptionsBuilder<T> Column<TProp>(
+        Expression<Func<T, TProp>> selector,
+        string columnName
+    )
     {
         return Column(selector, x => x.Name(columnName));
     }
+
     public TableOptionsBuilder<T> Ignore<TProp>(Expression<Func<T, TProp>> selector)
     {
         _ignores.Add(ExpressionUtils.GetMemberChain(selector.Body));
@@ -74,7 +82,7 @@ public class TableOptionsBuilder<T>(DbOptions dbOptions)
 public class ColumnOptionsBuilder(IReadOnlyCollection<MemberInfo> memberChain)
 {
     private string? _name;
-    
+
     public ColumnOptionsBuilder Name(string name)
     {
         this._name = name;
@@ -84,13 +92,13 @@ public class ColumnOptionsBuilder(IReadOnlyCollection<MemberInfo> memberChain)
     public ColumnOptions Build() => new ColumnOptions(memberChain) { Name = _name };
 }
 
-
 public class Table<T> : ITable, IToQuery<T>
 {
     private readonly DbOptions options;
     private readonly Column<T>[] insertColumns;
 
-    public Table(Table<T> copy, DbOptions options) : this(options)
+    public Table(Table<T> copy, DbOptions options)
+        : this(options)
     {
         Columns = copy.Columns;
         Name = copy.Name;
@@ -98,9 +106,8 @@ public class Table<T> : ITable, IToQuery<T>
         insertColumns = copy.insertColumns;
     }
 
-    public Table(DbOptions options) : this(new TableOptions(options))
-    {
-    }
+    public Table(DbOptions options)
+        : this(new TableOptions(options)) { }
 
     public Table(TableOptions options)
     {
@@ -110,27 +117,26 @@ public class Table<T> : ITable, IToQuery<T>
         this.options = dbOptions;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
     }
-    
+
     public string Name { get; }
 
     IReadOnlyCollection<IColumn> ITable.Columns => Columns;
-    
-    public IReadOnlyCollection<Column<T>> Columns { get; } 
+
+    public IReadOnlyCollection<Column<T>> Columns { get; }
 
     public Type Type => typeof(T);
-    
-    public InsertQuery<T> Insert(T instance) 
-        => new (this, insertColumns, options, [CreateRowParameters(instance)]);
 
-    public InsertQuery<T> Insert(params T[] instances) 
-        => new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
-    
-    public InsertQuery<T> Insert(IEnumerable<T> instances) 
-        => new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
-    
-    public DeleteQueryWithoutWhere<T> Delete() 
-        => new (this, options);
-    
+    public InsertQuery<T> Insert(T instance) =>
+        new(this, insertColumns, options, [CreateRowParameters(instance)]);
+
+    public InsertQuery<T> Insert(params T[] instances) =>
+        new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
+
+    public InsertQuery<T> Insert(IEnumerable<T> instances) =>
+        new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
+
+    public DeleteQueryWithoutWhere<T> Delete() => new(this, options);
+
     public UpdateQueryWithoutWhere<T> Set<TProperty>(
         Expression<Func<T, TProperty>> propertySelector,
         TProperty value
@@ -141,59 +147,71 @@ public class Table<T> : ITable, IToQuery<T>
         Expression<Func<T, TProperty>> value
     ) => new(this, options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
 
-    public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) 
-        => new(CreateExpressionQuery().Select(selector));
+    public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
+        new(CreateExpressionQuery().Select(selector));
 
-    public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) 
-        => new (CreateExpressionQuery().Where(predicate));
+    public TypedQuery<T> Where(Expression<Func<T, bool>> predicate) =>
+        new(CreateExpressionQuery().Where(predicate));
 
     public SingleQuery<T> First() => CreateExpressionQuery().First<T>();
-    
-    public SingleQuery<T> First(Expression<Func<T, bool>> predicate) => CreateExpressionQuery().First<T>(predicate);
-    
-    public SingleOrDefaultQuery<T> FirstOrDefault()
-        => CreateExpressionQuery().FirstOrDefault<T>();
 
-    public SingleOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate)
-        => CreateExpressionQuery().FirstOrDefault<T>(predicate);
-    
-    public Query<T> ToQuery() => 
+    public SingleQuery<T> First(Expression<Func<T, bool>> predicate) =>
+        CreateExpressionQuery().First<T>(predicate);
+
+    public SingleOrDefaultQuery<T> FirstOrDefault() => CreateExpressionQuery().FirstOrDefault<T>();
+
+    public SingleOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) =>
+        CreateExpressionQuery().FirstOrDefault<T>(predicate);
+
+    public Query<T> ToQuery() =>
         new(
-            options.DbAdapter.RenderSql(options.TypedSqlGenerator.Generate(CreateExpressionQuery())),
+            options.RenderSql(options.TypedSqlGenerator.Generate(CreateExpressionQuery())),
             options.ObjectReaderProvider.GetReaderFunc<T>(),
             options.DbConnector
         );
-    
-    public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) 
-        => new(CreateExpressionQuery().OrderBy(propSelector));
 
-    public OrderByQuery<T> OrderByDesc<TProp>(Expression<Func<T, TProp>> propSelector) 
-        => new(CreateExpressionQuery().OrderByDesc(propSelector));
+    public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
+        new(CreateExpressionQuery().OrderBy(propSelector));
 
-    public GroupByQuery<T> GroupBy<TProp>(Expression<Func<T, TProp>> propSelector) 
-        => new(CreateExpressionQuery().GroupBy(propSelector));
-    
-    public TypedQuery<T, TJoin> Join<TJoin>(Table<TJoin> joinTable, Expression<Func<T,TJoin, bool>> predicate) 
-        => new (CreateExpressionQuery().Join(joinTable, predicate));
-    
-    public TypedQuery<T, T2?> LeftJoin<T2>(Table<T2> joinTable, Expression<Func<T, T2, bool>> predicate)
-     => new(CreateExpressionQuery().LeftJoin(joinTable, predicate));
-    
-    public TypedQuery<T?, T2> RightJoin<T2>(Table<T2> joinTable, Expression<Func<T, T2, bool>> predicate)
-        => new(CreateExpressionQuery().RightJoin(joinTable, predicate));
-    
-    public TypedQuery<T?, T2?> FullJoin<T2>(Table<T2> joinTable, Expression<Func<T, T2, bool>> predicate)
-        => new(CreateExpressionQuery().FullJoin(joinTable, predicate));
-    
-    public TypedQuery<T, T2> CrossJoin<T2>(Table<T2> joinTable)
-        => new(CreateExpressionQuery().CrossJoin(joinTable));
-    
-    public TypedQuery<T> Limit(int limit) 
-        => new(CreateExpressionQuery() with { Limit = limit });
-    
-    private ExpressionQuery CreateExpressionQuery() 
-        => new (options, new TableSource(this), null, [],  [], [], []);
-    
-    private RowParameters CreateRowParameters(T instance) 
-        => new RowParameters(Columns.Where(x => !x.IsDatabaseGenerated).Select(c => c.CreateParameter(instance)).ToArray());
+    public OrderByQuery<T> OrderByDesc<TProp>(Expression<Func<T, TProp>> propSelector) =>
+        new(CreateExpressionQuery().OrderByDesc(propSelector));
+
+    public GroupByQuery<T> GroupBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
+        new(CreateExpressionQuery().GroupBy(propSelector));
+
+    public TypedQuery<T, TJoin> Join<TJoin>(
+        Table<TJoin> joinTable,
+        Expression<Func<T, TJoin, bool>> predicate
+    ) => new(CreateExpressionQuery().Join(joinTable, predicate));
+
+    public TypedQuery<T, T2?> LeftJoin<T2>(
+        Table<T2> joinTable,
+        Expression<Func<T, T2, bool>> predicate
+    ) => new(CreateExpressionQuery().LeftJoin(joinTable, predicate));
+
+    public TypedQuery<T?, T2> RightJoin<T2>(
+        Table<T2> joinTable,
+        Expression<Func<T, T2, bool>> predicate
+    ) => new(CreateExpressionQuery().RightJoin(joinTable, predicate));
+
+    public TypedQuery<T?, T2?> FullJoin<T2>(
+        Table<T2> joinTable,
+        Expression<Func<T, T2, bool>> predicate
+    ) => new(CreateExpressionQuery().FullJoin(joinTable, predicate));
+
+    public TypedQuery<T, T2> CrossJoin<T2>(Table<T2> joinTable) =>
+        new(CreateExpressionQuery().CrossJoin(joinTable));
+
+    public TypedQuery<T> Limit(int limit) => new(CreateExpressionQuery() with { Limit = limit });
+
+    private ExpressionQuery CreateExpressionQuery() =>
+        new(options, new TableSource(this), null, [], [], [], []);
+
+    private RowParameters CreateRowParameters(T instance) =>
+        new RowParameters(
+            Columns
+                .Where(x => !x.IsDatabaseGenerated)
+                .Select(c => c.CreateParameter(instance))
+                .ToArray()
+        );
 }

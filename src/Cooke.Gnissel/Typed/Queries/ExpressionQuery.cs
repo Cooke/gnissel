@@ -37,34 +37,31 @@ public record ExpressionQuery(
     private IEnumerable<TableSource> Sources =>
         new[] { TableSource }.Concat(Joins.Select(x => x.TableSource));
 
-    public ExpressionQuery Where(LambdaExpression predicate)
-        => this with
+    public ExpressionQuery Where(LambdaExpression predicate) =>
+        this with
         {
-            Conditions =
-            [
-                ..Conditions,
-                Transform(predicate)
-            ]
+            Conditions = [.. Conditions, Transform(predicate)]
         };
+
     public ExpressionQuery Select(LambdaExpression selector) =>
         this with
         {
             Selector = Transform(selector)
         };
 
-    public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate) => Join(JoinType.Default, joinTable, predicate);
+    public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate) =>
+        Join(JoinType.Default, joinTable, predicate);
 
-    public ExpressionQuery LeftJoin(ITable joinTable, LambdaExpression predicate)
-        => Join(JoinType.Left, joinTable, predicate);
+    public ExpressionQuery LeftJoin(ITable joinTable, LambdaExpression predicate) =>
+        Join(JoinType.Left, joinTable, predicate);
 
-    public ExpressionQuery RightJoin(ITable joinTable, LambdaExpression predicate)
-        => Join(JoinType.Right, joinTable, predicate);
+    public ExpressionQuery RightJoin(ITable joinTable, LambdaExpression predicate) =>
+        Join(JoinType.Right, joinTable, predicate);
 
-    public ExpressionQuery FullJoin(ITable joinTable, LambdaExpression predicate)
-        => Join(JoinType.Full, joinTable, predicate);
+    public ExpressionQuery FullJoin(ITable joinTable, LambdaExpression predicate) =>
+        Join(JoinType.Full, joinTable, predicate);
 
-    public ExpressionQuery CrossJoin(ITable joinTable)
-        => Join(JoinType.Cross, joinTable, null);
+    public ExpressionQuery CrossJoin(ITable joinTable) => Join(JoinType.Cross, joinTable, null);
 
     private ExpressionQuery Join(JoinType type, ITable joinTable, LambdaExpression? predicate)
     {
@@ -75,58 +72,90 @@ public record ExpressionQuery(
         {
             Joins =
             [
-                ..Joins,
+                .. Joins,
                 new Join(
                     type,
                     joinSource,
-                    predicate?.Let(p => ParameterExpressionReplacer.Replace(
-                        p.Body,
-                        Sources.Concat([joinSource]).Select((source, index) => (predicate.Parameters[index], (Expression)new TableExpression(source))).ToArray())
-                    ))
+                    predicate?.Let(p =>
+                        ParameterExpressionReplacer.Replace(
+                            p.Body,
+                            Sources
+                                .Concat([joinSource])
+                                .Select(
+                                    (source, index) =>
+                                        (
+                                            predicate.Parameters[index],
+                                            (Expression)new TableExpression(source)
+                                        )
+                                )
+                                .ToArray()
+                        )
+                    )
+                )
             ]
         };
     }
 
-
-
     public ExpressionQuery OrderBy(LambdaExpression propSelector) =>
         this with
         {
-            OrderBys = [..this.OrderBys, new(Transform(propSelector), false)]
+            OrderBys = [.. this.OrderBys, new(Transform(propSelector), false)]
         };
 
     public ExpressionQuery OrderByDesc(LambdaExpression propSelector) =>
         this with
         {
-            OrderBys = [..this.OrderBys, new(Transform(propSelector), true)]
+            OrderBys = [.. this.OrderBys, new(Transform(propSelector), true)]
         };
 
-    public ExpressionQuery GroupBy(LambdaExpression propSelector)
-        => this with
+    public ExpressionQuery GroupBy(LambdaExpression propSelector) =>
+        this with
         {
-            Groupings = [..this.Groupings, Transform(propSelector)]
+            Groupings = [.. this.Groupings, Transform(propSelector)]
         };
 
     public Query<T> ToQuery<T>() =>
         new(
-            Options.DbAdapter.RenderSql(Options.TypedSqlGenerator.Generate(this)),
+            Options.RenderSql(Options.TypedSqlGenerator.Generate(this)),
             Options.ObjectReaderProvider.GetReaderFunc<T>(),
             Options.DbConnector
         );
 
-    public SingleQuery<T> First<T>() => new((this with {Limit = 1}).ToQuery<T>());
-    
-    public SingleOrDefaultQuery<T> FirstOrDefault<T>() => new((this with { Limit = 1}).ToQuery<T>());
+    public SingleQuery<T> First<T>() => new((this with { Limit = 1 }).ToQuery<T>());
+
+    public SingleOrDefaultQuery<T> FirstOrDefault<T>() =>
+        new((this with { Limit = 1 }).ToQuery<T>());
 
     public SingleQuery<T> First<T>(LambdaExpression predicate) =>
-        new((this with { Limit = 1, Conditions = [..this.Conditions, Transform(predicate)] }).ToQuery<T>());
-    
+        new(
+            (
+                this with
+                {
+                    Limit = 1,
+                    Conditions = [.. this.Conditions, Transform(predicate)]
+                }
+            ).ToQuery<T>()
+        );
+
     public SingleOrDefaultQuery<T> FirstOrDefault<T>(LambdaExpression predicate) =>
-        new((this with { Limit = 1, Conditions = [..this.Conditions, Transform(predicate)] }).ToQuery<T>());
+        new(
+            (
+                this with
+                {
+                    Limit = 1,
+                    Conditions = [.. this.Conditions, Transform(predicate)]
+                }
+            ).ToQuery<T>()
+        );
 
-    private Expression Transform(LambdaExpression predicate)
-        => ParameterExpressionReplacer.Replace(
+    private Expression Transform(LambdaExpression predicate) =>
+        ParameterExpressionReplacer.Replace(
             predicate.Body,
-            Sources.Select((source, index) => (predicate.Parameters[index], (Expression)new TableExpression(source))).ToArray());
-
+            Sources
+                .Select(
+                    (source, index) =>
+                        (predicate.Parameters[index], (Expression)new TableExpression(source))
+                )
+                .ToArray()
+        );
 }
