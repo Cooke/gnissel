@@ -25,8 +25,6 @@ public record DbOptions(
 
     public ITypedSqlGenerator TypedSqlGenerator => DbAdapter.TypedSqlGenerator;
 
-    public IImmutableList<IDbConverter> Converters { get; init; } = Converters;
-
     public DbParameter CreateParameter<T>(T value, string? dbType) =>
         Converters.OfType<DbConverter<T>>().FirstOrDefault()?.ToParameter(value, DbAdapter)
         ?? DbAdapter.CreateParameter(value, dbType);
@@ -46,9 +44,45 @@ public class DbConvertException : Exception
 
 public abstract class DbConverter<T> : IDbConverter
 {
+    public virtual bool CanConvert(Type type) => type == typeof(T);
+
     public abstract DbParameter ToParameter(T value, IDbAdapter adapter);
 
     public abstract T FromReader(DbDataReader reader, int ordinal);
 }
 
-public interface IDbConverter;
+public interface IDbConverter
+{
+    bool CanConvert(Type type);
+}
+
+public abstract class DbConverterFactory : IDbConverter
+{
+    public abstract bool CanConvert(Type type);
+
+    public abstract IDbConverter CreateConverter(Type type);
+}
+
+public class EnumStringDbConverter<TEnum> : DbConverter<TEnum>
+    where TEnum : struct, Enum
+{
+    public override DbParameter ToParameter(TEnum value, IDbAdapter adapter) =>
+        adapter.CreateParameter(value.ToString());
+
+    public override TEnum FromReader(DbDataReader reader, int ordinal) =>
+        Enum.TryParse(reader.GetString(ordinal), false, out TEnum value)
+            ? value
+            : throw new DbConvertException(reader.GetFieldType(ordinal), typeof(TEnum));
+}
+
+public class EnumStringDbConverter : DbConverterFactory
+{
+    public override bool CanConvert(Type type) => type.IsEnum;
+
+    public override IDbConverter CreateConverter(Type type)
+    {
+        return (IDbConverter?)
+                Activator.CreateInstance(typeof(EnumStringDbConverter<>).MakeGenericType(type))
+            ?? throw new InvalidOperationException();
+    }
+}
