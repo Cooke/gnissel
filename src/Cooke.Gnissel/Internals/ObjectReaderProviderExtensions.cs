@@ -9,7 +9,7 @@ internal static class ObjectReaderProviderExtensions
         this IObjectReaderProvider provider
     )
     {
-        var objectReader = provider.Get<TOut>();
+        var objectReader = provider.Get<TOut>(TODO);
         return (reader, cancellationToken) => reader.ReadRows(objectReader, cancellationToken);
     }
 }

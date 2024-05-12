@@ -22,7 +22,7 @@ public class DbContext(DbOptions dbOptions)
     [Pure]
     public Query<TOut> Query<TOut>(Sql sql) =>
         _objectReaderProvider
-            .Get<TOut>()
+            .Get<TOut>(TODO)
             .Let(objectReader => new Query<TOut>(
                 dbOptions.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
@@ -36,7 +36,7 @@ public class DbContext(DbOptions dbOptions)
     [Pure]
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql) =>
         _objectReaderProvider
-            .Get<TOut>()
+            .Get<TOut>(TODO)
             .Let(objectReader => new SingleQuery<TOut>(
                 dbOptions.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
@@ -50,7 +50,7 @@ public class DbContext(DbOptions dbOptions)
     [Pure]
     public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(Sql sql) =>
         _objectReaderProvider
-            .Get<TOut>()
+            .Get<TOut>(TODO)
             .Let(objectReader => new SingleOrDefaultQuery<TOut>(
                 dbOptions.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
