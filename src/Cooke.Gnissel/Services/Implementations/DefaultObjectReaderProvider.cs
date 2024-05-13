@@ -16,15 +16,14 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
 
-    public ObjectReader<TOut> Get<TOut>(DbRuntimeContext dbRuntimeContext)
+    public ObjectReader<TOut> Get<TOut>()
     {
-        return (ObjectReader<TOut>)GetReader(typeof(TOut), dbRuntimeContext);
+        return (ObjectReader<TOut>)GetReader(typeof(TOut));
     }
 
-    private object GetReader(Type type, DbRuntimeContext dbRuntimeContext) =>
-        _readers.GetOrAdd(type, _ => CreateReader(type, dbRuntimeContext));
+    private object GetReader(Type type) => _readers.GetOrAdd(type, _ => CreateReader(type));
 
-    private object CreateReader(Type type, DbRuntimeContext dbRuntimeContext)
+    private object CreateReader(Type type)
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
@@ -32,8 +31,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             dataReader,
             ordinalOffset,
             type,
-            ImmutableList<ObjectPathPart>.Empty,
-            dbRuntimeContext
+            ImmutableList<ObjectPathPart>.Empty
         );
         var objectReader = Expression
             .Lambda(
@@ -54,8 +52,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain,
-        DbRuntimeContext dbRuntimeContext
+        IImmutableList<ObjectPathPart> parameterChain
     )
     {
         if (IsNullableValueType(type))
@@ -65,8 +62,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                 dataReader,
                 ordinalOffset,
                 underlyingType,
-                parameterChain,
-                dbRuntimeContext
+                parameterChain
             );
             return (
                 Expression.Condition(
@@ -78,29 +74,9 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             );
         }
 
-        if (dbRuntimeContext.TryGetConverter(type, out var converter))
-        {
-            var ordinal = GetOrdinalByMemberChain(
-                dataReader,
-                ordinalOffset,
-                dbAdapter,
-                parameterChain
-            );
-            return (
-                Expression.Call(
-                    Expression.Constant(converter),
-                    "FromReader",
-                    [],
-                    dataReader,
-                    ordinal
-                ),
-                1
-            );
-        }
-
         if (type.GetWrappedType() is { } wrappedType)
         {
-            var ordinal = GetOrdinalByMemberChain(
+            var ordinal = GetOrdinalAfterExpression(
                 dataReader,
                 ordinalOffset,
                 dbAdapter,
@@ -118,7 +94,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
 
         if (dbAdapter.IsDbMapped(type))
         {
-            var ordinal = GetOrdinalByMemberChain(
+            var ordinal = GetOrdinalAfterExpression(
                 dataReader,
                 ordinalOffset,
                 dbAdapter,
@@ -269,7 +245,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression ordinal
     ) => Expression.Call(rowReader, "IsDBNull", [], ordinal);
 
-    private static Expression GetOrdinalByMemberChain(
+    private static Expression GetOrdinalAfterExpression(
         Expression dataReader,
         Expression ordinalOffset,
         IDbAdapter dbAdapter,
