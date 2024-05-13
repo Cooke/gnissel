@@ -1,5 +1,6 @@
 #region
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.Common;
 using Cooke.Gnissel.Services;
@@ -17,6 +18,18 @@ public record DbOptions(
     IImmutableList<IDbConverter> Converters
 )
 {
+    private readonly ConcurrentDictionary<Type, IDbConverter> _concreteConverters =
+        new ConcurrentDictionary<Type, IDbConverter>(
+            Converters
+                .Select(x => (forType: GetConverterFor(x.GetType()), converter: x))
+                .Where(x => x.forType != null)
+                .Select(x => new KeyValuePair<Type, IDbConverter>(x.forType!, x.converter))
+        );
+
+    private readonly ImmutableList<DbConverterFactory> _converterFactories = Converters
+        .OfType<DbConverterFactory>()
+        .ToImmutableList();
+
     public DbOptions(IDbAdapter dbAdapter)
         : this(dbAdapter, new DefaultObjectReaderProvider(dbAdapter)) { }
 
@@ -25,11 +38,44 @@ public record DbOptions(
 
     public ITypedSqlGenerator TypedSqlGenerator => DbAdapter.TypedSqlGenerator;
 
-    public DbParameter CreateParameter<T>(T value, string? dbType) =>
-        Converters.OfType<DbConverter<T>>().FirstOrDefault()?.ToParameter(value, DbAdapter)
-        ?? DbAdapter.CreateParameter(value, dbType);
+    public DbParameter CreateParameter<T>(T value, string? dbType)
+    {
+        var concreteConverter = _concreteConverters.GetValueOrDefault(typeof(T));
+        if (concreteConverter != null)
+        {
+            return ((DbConverter<T>)concreteConverter).ToParameter(value, DbAdapter);
+        }
+
+        var converterFactory = _converterFactories.FirstOrDefault(x => x.CanCreateFor(typeof(T)));
+        if (converterFactory != null)
+        {
+            var converter = converterFactory.Create(typeof(T));
+            _concreteConverters.TryAdd(typeof(T), converter);
+            return ((DbConverter<T>)converter).ToParameter(value, DbAdapter);
+        }
+
+        return DbAdapter.CreateParameter(value, dbType);
+    }
 
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
+
+    private static Type? GetConverterFor(Type? type)
+    {
+        while (true)
+        {
+            if (type is null)
+            {
+                return null;
+            }
+
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(DbConverter<>))
+            {
+                return type.GetGenericArguments().Single();
+            }
+
+            type = type.BaseType;
+        }
+    }
 }
 
 public class DbConverterAttribute(Type converterType) : Attribute
@@ -44,23 +90,18 @@ public class DbConvertException : Exception
 
 public abstract class DbConverter<T> : IDbConverter
 {
-    public virtual bool CanConvert(Type type) => type == typeof(T);
-
     public abstract DbParameter ToParameter(T value, IDbAdapter adapter);
 
     public abstract T FromReader(DbDataReader reader, int ordinal);
 }
 
-public interface IDbConverter
-{
-    bool CanConvert(Type type);
-}
+public interface IDbConverter { }
 
 public abstract class DbConverterFactory : IDbConverter
 {
-    public abstract bool CanConvert(Type type);
+    public abstract bool CanCreateFor(Type type);
 
-    public abstract IDbConverter CreateConverter(Type type);
+    public abstract IDbConverter Create(Type type);
 }
 
 public class EnumStringDbConverter<TEnum> : DbConverter<TEnum>
@@ -77,9 +118,9 @@ public class EnumStringDbConverter<TEnum> : DbConverter<TEnum>
 
 public class EnumStringDbConverter : DbConverterFactory
 {
-    public override bool CanConvert(Type type) => type.IsEnum;
+    public override bool CanCreateFor(Type type) => type.IsEnum;
 
-    public override IDbConverter CreateConverter(Type type)
+    public override IDbConverter Create(Type type)
     {
         return (IDbConverter?)
                 Activator.CreateInstance(typeof(EnumStringDbConverter<>).MakeGenericType(type))
