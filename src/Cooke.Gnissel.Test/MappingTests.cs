@@ -215,8 +215,28 @@ public class MappingTests
 
     private record UserWithTypedName(Name Name, int Age);
 
-    [DbMapping(DbMappingType.WrappedPrimitive)]
-    private record Name(string Value);
+    [DbConverter(typeof(PrimitiveWrapperDbConverter))]
+    private record Name(string Value)
+    {
+        private class PrimitiveWrapperDbConverter : DbConverterFactory
+        {
+            public override bool CanCreateFor(Type type)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override IDbConverter Create(Type type) { }
+
+            public static Type? GetWrappedType(this Type type) =>
+                type.GetCustomAttribute<DbMapping>() is { Type: DbMappingType.WrappedPrimitive }
+                    ? type.GetConstructors()
+                        .Single(x => x.GetParameters().Length == 1)
+                        .GetParameters()
+                        .Single()
+                        .ParameterType
+                    : null;
+        }
+    }
 
     public record Device(string Id, string Name, int UserId);
 

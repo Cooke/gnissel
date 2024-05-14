@@ -99,24 +99,6 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             );
         }
 
-        if (type.GetWrappedType() is { } wrappedType)
-        {
-            var ordinal = GetOrdinalAfterExpression(
-                dataReader,
-                ordinalOffset,
-                dbAdapter,
-                parameterChain
-            );
-            var constructorInfo = type.GetConstructors().First(x => x.GetParameters().Length == 1);
-            return (
-                Expression.New(
-                    constructorInfo,
-                    CreateValueReader(dataReader, ordinal, wrappedType)
-                ),
-                1
-            );
-        }
-
         if (dbAdapter.IsDbMapped(type))
         {
             var ordinal = GetOrdinalAfterExpression(

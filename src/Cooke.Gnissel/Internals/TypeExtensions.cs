@@ -12,7 +12,7 @@ namespace Cooke.Gnissel.Utils;
 internal static class TypeExtensions
 {
     public static string? GetDbType(this Type type) =>
-        type.GetCustomAttribute<DbTypeAttribute>()?.DbType ?? type.GetWrappedType()?.GetDbType();
+        type.GetCustomAttribute<DbTypeAttribute>()?.DbType;
 
     public static string? GetDbType(this PropertyInfo propInfo) =>
         propInfo.GetCustomAttribute<DbTypeAttribute>()?.DbType ?? propInfo.PropertyType.GetDbType();
@@ -30,13 +30,4 @@ internal static class TypeExtensions
     public static string? GetDbName(this ParameterInfo paramInfo) =>
         paramInfo.GetCustomAttribute<DbNameAttribute>()?.DbName
         ?? paramInfo.ParameterType.GetDbName();
-
-    public static Type? GetWrappedType(this Type type) =>
-        type.GetCustomAttribute<DbMapping>() is { Type: DbMappingType.WrappedPrimitive }
-            ? type.GetConstructors()
-                .Single(x => x.GetParameters().Length == 1)
-                .GetParameters()
-                .Single()
-                .ParameterType
-            : null;
 }
