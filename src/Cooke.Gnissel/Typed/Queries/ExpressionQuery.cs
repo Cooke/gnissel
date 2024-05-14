@@ -117,7 +117,7 @@ public record ExpressionQuery(
     public Query<T> ToQuery<T>() =>
         new(
             Options.RenderSql(Options.TypedSqlGenerator.Generate(this)),
-            Options.ObjectReaderProvider.GetReaderFunc<T>(),
+            Options.ObjectReaderProvider.GetReaderFunc<T>(Options),
             Options.DbConnector
         );
 

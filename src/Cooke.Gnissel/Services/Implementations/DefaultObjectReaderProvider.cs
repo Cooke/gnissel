@@ -16,14 +16,15 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
 
-    public ObjectReader<TOut> Get<TOut>()
+    public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions)
     {
-        return (ObjectReader<TOut>)GetReader(typeof(TOut));
+        return (ObjectReader<TOut>)GetReader(typeof(TOut), dbOptions);
     }
 
-    private object GetReader(Type type) => _readers.GetOrAdd(type, _ => CreateReader(type));
+    private object GetReader(Type type, DbOptions dbOptions) =>
+        _readers.GetOrAdd(type, _ => CreateReader(type, dbOptions));
 
-    private object CreateReader(Type type)
+    private object CreateReader(Type type, DbOptions dbOptions)
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
@@ -31,7 +32,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             dataReader,
             ordinalOffset,
             type,
-            ImmutableList<ObjectPathPart>.Empty
+            ImmutableList<ObjectPathPart>.Empty,
+            dbOptions
         );
         var objectReader = Expression
             .Lambda(
@@ -52,7 +54,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain,
+        DbOptions dbOptions
     )
     {
         if (IsNullableValueType(type))
@@ -62,7 +65,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                 dataReader,
                 ordinalOffset,
                 underlyingType,
-                parameterChain
+                parameterChain,
+                dbOptions
             );
             return (
                 Expression.Condition(
@@ -71,6 +75,27 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                     Expression.New(type.GetConstructor([underlyingType])!, [actualReader])
                 ),
                 width
+            );
+        }
+
+        var converter = dbOptions.GetConverter(type);
+        if (converter != null)
+        {
+            var ordinal = GetOrdinalAfterExpression(
+                dataReader,
+                ordinalOffset,
+                dbAdapter,
+                parameterChain
+            );
+            return (
+                Expression.Call(
+                    Expression.Constant(converter, typeof(DbConverter<>).MakeGenericType(type)),
+                    "FromReader",
+                    [],
+                    dataReader,
+                    ordinal
+                ),
+                1
             );
         }
 
@@ -105,7 +130,13 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
 
         if (type.IsAssignableTo(typeof(ITuple)))
         {
-            return CreatePositionalReader(dataReader, ordinalOffset, type, parameterChain);
+            return CreatePositionalReader(
+                dataReader,
+                ordinalOffset,
+                type,
+                parameterChain,
+                dbOptions
+            );
         }
 
         if (type.IsClass)
@@ -114,7 +145,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                 dataReader,
                 ordinalOffset,
                 type,
-                parameterChain
+                parameterChain,
+                dbOptions
             );
             return (
                 Expression.Condition(
@@ -132,7 +164,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                 dataReader,
                 ordinalOffset,
                 type,
-                ImmutableList<ObjectPathPart>.Empty
+                ImmutableList<ObjectPathPart>.Empty,
+                dbOptions
             );
         }
 
@@ -183,7 +216,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain,
+        DbOptions dbOptions
     )
     {
         var ctor = type.GetConstructors().First();
@@ -198,7 +232,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                         dataReader,
                         ordinalOffset,
                         p.ParameterType,
-                        parameterChain.Add(new ParameterPathPart(p))
+                        parameterChain.Add(new ParameterPathPart(p)),
+                        dbOptions
                     );
                     width += innerWidth;
                     return body;
@@ -211,7 +246,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain,
+        DbOptions dbOptions
     )
     {
         var ctor = type.GetConstructors().First();
@@ -225,7 +261,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                         dataReader,
                         Expression.Add(ordinalOffset, Expression.Constant(totalWidth)),
                         p.ParameterType,
-                        parameterChain
+                        parameterChain,
+                        dbOptions
                     );
                     totalWidth += innerWidth;
                     return reader;

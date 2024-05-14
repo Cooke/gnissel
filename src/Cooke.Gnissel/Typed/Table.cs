@@ -166,7 +166,7 @@ public class Table<T> : ITable, IToQuery<T>
     public Query<T> ToQuery() =>
         new(
             options.RenderSql(options.TypedSqlGenerator.Generate(CreateExpressionQuery())),
-            options.ObjectReaderProvider.GetReaderFunc<T>(),
+            options.ObjectReaderProvider.GetReaderFunc<T>(options),
             options.DbConnector
         );
 
