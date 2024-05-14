@@ -22,7 +22,7 @@ public record DbOptions(
     private readonly ConcurrentDictionary<Type, IDbConverter> _concreteConverters =
         new ConcurrentDictionary<Type, IDbConverter>(
             Converters
-                .Select(x => (forType: GetConverterTypeForType(x.GetType()), converter: x))
+                .Select(x => (forType: GetTypeToConvertFor(x.GetType()), converter: x))
                 .Where(x => x.forType != null)
                 .Select(x => new KeyValuePair<Type, IDbConverter>(x.forType!, x.converter))
         );
@@ -41,19 +41,15 @@ public record DbOptions(
 
     public DbParameter CreateParameter<T>(T value, string? dbType)
     {
-        var converter = GetConverter(typeof(T));
-        if (converter != null)
-        {
-            var typedConverter = (DbConverter<T>)converter;
-            return typedConverter.ToParameter(value, DbAdapter);
-        }
-
-        return DbAdapter.CreateParameter(value, dbType);
+        var converter = GetConverter<T>();
+        return converter != null
+            ? converter.ToParameter(value, DbAdapter)
+            : DbAdapter.CreateParameter(value, dbType);
     }
 
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
 
-    private static Type? GetConverterTypeForType(Type? type)
+    private static Type? GetTypeToConvertFor(Type? type)
     {
         while (true)
         {
@@ -71,19 +67,9 @@ public record DbOptions(
         }
     }
 
-    public bool CanConvert(Type type)
+    public DbConverter<T>? GetConverter<T>()
     {
-        if (_concreteConverters.ContainsKey(type))
-        {
-            return true;
-        }
-
-        if (_converterFactories.Any(x => x.CanCreateFor(type)))
-        {
-            return true;
-        }
-
-        return false;
+        return (DbConverter<T>?)GetConverter(typeof(T));
     }
 
     public object? GetConverter(Type type)
@@ -150,55 +136,5 @@ public record DbOptions(
         throw new InvalidOperationException(
             $"Converter of type {converterAttribute.ConverterType} is not a valid converter for type {type}"
         );
-    }
-}
-
-public class DbConverterAttribute(Type converterType) : Attribute
-{
-    public Type ConverterType => converterType;
-}
-
-public class DbConvertException : Exception
-{
-    public DbConvertException(Type fromType, Type toType) { }
-}
-
-public abstract class DbConverter<T> : IDbConverter
-{
-    public abstract DbParameter ToParameter(T value, IDbAdapter adapter);
-
-    public abstract T FromReader(DbDataReader reader, int ordinal);
-}
-
-public interface IDbConverter { }
-
-public abstract class DbConverterFactory : IDbConverter
-{
-    public abstract bool CanCreateFor(Type type);
-
-    public abstract IDbConverter Create(Type type);
-}
-
-public class EnumStringDbConverter<TEnum> : DbConverter<TEnum>
-    where TEnum : struct, Enum
-{
-    public override DbParameter ToParameter(TEnum value, IDbAdapter adapter) =>
-        adapter.CreateParameter(value.ToString());
-
-    public override TEnum FromReader(DbDataReader reader, int ordinal) =>
-        Enum.TryParse(reader.GetString(ordinal), false, out TEnum value)
-            ? value
-            : throw new DbConvertException(reader.GetFieldType(ordinal), typeof(TEnum));
-}
-
-public class EnumStringDbConverter : DbConverterFactory
-{
-    public override bool CanCreateFor(Type type) => type.IsEnum;
-
-    public override IDbConverter Create(Type type)
-    {
-        return (IDbConverter?)
-                Activator.CreateInstance(typeof(EnumStringDbConverter<>).MakeGenericType(type))
-            ?? throw new InvalidOperationException();
     }
 }
