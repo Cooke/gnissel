@@ -37,18 +37,29 @@ internal static class ColumnBuilder
         if (options.Ignores.Any(x => x.SequenceEqual(methodChain)))
             yield break;
 
-        if (p.PropertyType.GetWrappedType() is { } wrappedType)
+        var converter = options.DbOptions.GetConverter<T>();
+        if (converter != null)
         {
-            var innerProperty = p
-                .PropertyType.GetProperties()
-                .Single(x => x.PropertyType == wrappedType);
             Expression innerMemberExpression = Expression.Property(memberExpression, innerProperty);
-            yield return CreateColumn<T>(
-                options,
-                innerProperty,
-                rootExpression,
-                innerMemberExpression,
-                ExpressionUtils.GetMemberChain(memberExpression)
+            var memberChain = ExpressionUtils.GetMemberChain(memberExpression);
+
+            var columnOptions = options.Columns.FirstOrDefault(x =>
+                x.MemberChain.SequenceEqual(memberChain)
+            );
+            yield return new Column<T>(
+                columnOptions?.Name
+                    ?? p.GetDbName()
+                    ?? options.DbOptions.DbAdapter.ToColumnName(
+                        memberChain.Select(x => new PropertyPathPart((PropertyInfo)x))
+                    ),
+                memberChain,
+                CreateParameterFactory<T>(
+                    options.DbOptions.DbAdapter,
+                    memberExpression,
+                    p.GetDbType(),
+                    objectExpression
+                ),
+                p.GetCustomAttribute<DatabaseGeneratedAttribute>() != null
             );
         }
         else if (options.DbOptions.DbAdapter.IsDbMapped(p.PropertyType))
