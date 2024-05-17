@@ -3,7 +3,10 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Data.Common;
+using System.Linq.Expressions;
+using System.Reflection;
 using System.Text.Json.Serialization;
+using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
@@ -175,7 +178,7 @@ public class MappingTests
     }
 
     [Test]
-    public async Task DirectPrimitiveMapping()
+    public async Task WrappedPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<Name>($"SELECT name FROM users").ToArrayAsync();
@@ -190,7 +193,7 @@ public class MappingTests
         CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
     }
 
-    [DbConverter(typeof(UserNameDbConverter))]
+    [DbConverter(typeof(EnumStringDbConverter))]
     private enum UserName
     {
         Bob
@@ -216,27 +219,7 @@ public class MappingTests
     private record UserWithTypedName(Name Name, int Age);
 
     [DbConverter(typeof(PrimitiveWrapperDbConverter))]
-    private record Name(string Value)
-    {
-        private class PrimitiveWrapperDbConverter : DbConverterFactory
-        {
-            public override bool CanCreateFor(Type type)
-            {
-                throw new NotImplementedException();
-            }
-
-            public override IDbConverter Create(Type type) { }
-
-            public static Type? GetWrappedType(this Type type) =>
-                type.GetCustomAttribute<DbMapping>() is { Type: DbMappingType.WrappedPrimitive }
-                    ? type.GetConstructors()
-                        .Single(x => x.GetParameters().Length == 1)
-                        .GetParameters()
-                        .Single()
-                        .ParameterType
-                    : null;
-        }
-    }
+    private record Name(string Value);
 
     public record Device(string Id, string Name, int UserId);
 

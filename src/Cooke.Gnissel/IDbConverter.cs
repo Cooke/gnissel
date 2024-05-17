@@ -1,3 +1,3 @@
 ﻿namespace Cooke.Gnissel;
 
-public interface IDbConverter { }
+public interface IDbConverter;

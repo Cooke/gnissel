@@ -27,4 +27,9 @@ public static class ExpressionUtils
             }
         }
     }
+
+    public static Expression ToMemberExpression(
+        this Expression instance,
+        IReadOnlyCollection<PropertyInfo> memberChain
+    ) => memberChain.Aggregate(instance, Expression.Property);
 }

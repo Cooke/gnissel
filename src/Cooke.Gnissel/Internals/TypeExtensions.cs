@@ -30,4 +30,11 @@ internal static class TypeExtensions
     public static string? GetDbName(this ParameterInfo paramInfo) =>
         paramInfo.GetCustomAttribute<DbNameAttribute>()?.DbName
         ?? paramInfo.ParameterType.GetDbName();
+
+    public static string? GetDbName(this MemberInfo memberInfo) =>
+        memberInfo switch
+        {
+            PropertyInfo propInfo => propInfo.GetDbName(),
+            _ => null
+        };
 }

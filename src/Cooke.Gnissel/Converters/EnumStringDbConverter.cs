@@ -1,7 +1,7 @@
 ﻿using System.Data.Common;
 using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel;
+namespace Cooke.Gnissel.Converters;
 
 public class EnumStringDbConverter : DbConverterFactory
 {

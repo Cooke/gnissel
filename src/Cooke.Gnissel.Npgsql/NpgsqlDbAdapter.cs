@@ -101,8 +101,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     public IMigrator Migrator { get; }
 
     public bool IsDbMapped(Type type) =>
-        type.GetCustomAttribute<DbMapping>() != null
-        || type.GetCustomAttribute<DbTypeAttribute>() != null
+        type.GetCustomAttribute<DbTypeAttribute>() != null
         || type.IsPrimitive
         || BuiltInTypes.Contains(type);
 
