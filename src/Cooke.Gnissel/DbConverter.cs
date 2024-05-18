@@ -3,7 +3,9 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel;
 
-public abstract class DbConverter<T> : IDbConverter
+public abstract class DbConverter { }
+
+public abstract class DbConverter<T> : DbConverter
 {
     public abstract DbParameter ToParameter(T value, IDbAdapter adapter);
 

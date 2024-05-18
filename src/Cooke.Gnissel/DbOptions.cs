@@ -16,15 +16,15 @@ public class DbOptions(
     IDbAdapter adapter,
     IObjectReaderProvider objectReaderProvider,
     IDbConnector connector,
-    IImmutableList<IDbConverter> converters
+    IImmutableList<DbConverter> converters
 )
 {
-    private readonly ConcurrentDictionary<Type, IDbConverter> _concreteConverters =
+    private readonly ConcurrentDictionary<Type, DbConverter> _concreteConverters =
         new(
             converters
                 .Select(x => (forType: GetTypeToConvertFor(x.GetType()), converter: x))
                 .Where(x => x.forType != null)
-                .Select(x => new KeyValuePair<Type, IDbConverter>(x.forType!, x.converter))
+                .Select(x => new KeyValuePair<Type, DbConverter>(x.forType!, x.converter))
         );
 
     private readonly ImmutableList<DbConverterFactory> _converterFactories = converters
@@ -37,7 +37,7 @@ public class DbOptions(
     public DbOptions(IDbAdapter adapter, IObjectReaderProvider objectReaderProvider)
         : this(adapter, objectReaderProvider, adapter.CreateConnector(), []) { }
 
-    public DbOptions(IDbAdapter adapter, IImmutableList<IDbConverter> converters)
+    public DbOptions(IDbAdapter adapter, IImmutableList<DbConverter> converters)
         : this(
             adapter,
             new DefaultObjectReaderProvider(adapter),
@@ -115,7 +115,7 @@ public class DbOptions(
 
     private object GetConverterFromAttribute(Type type, DbConverterAttribute converterAttribute)
     {
-        IDbConverter? converter;
+        DbConverter? converter;
         if (converterAttribute.ConverterType.IsAssignableTo(typeof(DbConverterFactory)))
         {
             var factory =
@@ -142,7 +142,7 @@ public class DbOptions(
         )
         {
             converter =
-                (IDbConverter?)Activator.CreateInstance(converterAttribute.ConverterType)
+                (DbConverter?)Activator.CreateInstance(converterAttribute.ConverterType)
                 ?? throw new InvalidOperationException(
                     $"Could not create an instance of converter of type {converterAttribute.ConverterType}"
                 );

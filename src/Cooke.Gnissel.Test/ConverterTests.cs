@@ -30,7 +30,7 @@ public class ConverterTests
             .ExecuteNonQueryAsync();
     }
 
-    private TestDbContext CreateDb(IImmutableList<IDbConverter> converters) =>
+    private TestDbContext CreateDb(IImmutableList<DbConverter> converters) =>
         new(new(new NpgsqlDbAdapter(_dataSource), converters));
 
     [OneTimeTearDown]

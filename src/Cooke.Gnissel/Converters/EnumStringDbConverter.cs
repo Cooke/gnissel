@@ -7,9 +7,9 @@ public class EnumStringDbConverter : DbConverterFactory
 {
     public override bool CanCreateFor(Type type) => type.IsEnum;
 
-    public override IDbConverter Create(Type type)
+    public override DbConverter Create(Type type)
     {
-        return (IDbConverter?)
+        return (DbConverter?)
                 Activator.CreateInstance(typeof(EnumStringDbConverter<>).MakeGenericType(type))
             ?? throw new InvalidOperationException();
     }
