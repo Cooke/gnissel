@@ -12,32 +12,49 @@ using Cooke.Gnissel.Typed.Services;
 
 namespace Cooke.Gnissel;
 
-public record DbOptions(
-    IDbAdapter DbAdapter,
-    IObjectReaderProvider ObjectReaderProvider,
-    IDbConnector DbConnector,
-    IImmutableList<IDbConverter> Converters
+public class DbOptions(
+    IDbAdapter adapter,
+    IObjectReaderProvider objectReaderProvider,
+    IDbConnector connector,
+    IImmutableList<IDbConverter> converters
 )
 {
     private readonly ConcurrentDictionary<Type, IDbConverter> _concreteConverters =
-        new ConcurrentDictionary<Type, IDbConverter>(
-            Converters
+        new(
+            converters
                 .Select(x => (forType: GetTypeToConvertFor(x.GetType()), converter: x))
                 .Where(x => x.forType != null)
                 .Select(x => new KeyValuePair<Type, IDbConverter>(x.forType!, x.converter))
         );
 
-    private readonly ImmutableList<DbConverterFactory> _converterFactories = Converters
+    private readonly ImmutableList<DbConverterFactory> _converterFactories = converters
         .OfType<DbConverterFactory>()
         .ToImmutableList();
 
-    public DbOptions(IDbAdapter dbAdapter)
-        : this(dbAdapter, new DefaultObjectReaderProvider(dbAdapter)) { }
+    public DbOptions(IDbAdapter adapter)
+        : this(adapter, new DefaultObjectReaderProvider(adapter)) { }
 
-    public DbOptions(IDbAdapter dbAdapter, IObjectReaderProvider objectReaderProvider)
-        : this(dbAdapter, objectReaderProvider, dbAdapter.CreateConnector(), []) { }
+    public DbOptions(IDbAdapter adapter, IObjectReaderProvider objectReaderProvider)
+        : this(adapter, objectReaderProvider, adapter.CreateConnector(), []) { }
+
+    public DbOptions(IDbAdapter adapter, IImmutableList<IDbConverter> converters)
+        : this(
+            adapter,
+            new DefaultObjectReaderProvider(adapter),
+            adapter.CreateConnector(),
+            converters
+        ) { }
+
+    public DbOptions(IDbAdapter adapter, IDbConnector connector)
+        : this(adapter, new DefaultObjectReaderProvider(adapter), connector, []) { }
 
     public ITypedSqlGenerator TypedSqlGenerator => DbAdapter.TypedSqlGenerator;
+
+    public IDbAdapter DbAdapter => adapter;
+
+    public IObjectReaderProvider ObjectReaderProvider => objectReaderProvider;
+
+    public IDbConnector DbConnector => connector;
 
     public DbParameter CreateParameter<T>(T value, string? dbType)
     {
@@ -137,4 +154,7 @@ public record DbOptions(
             $"Converter of type {converterAttribute.ConverterType} is not a valid converter for type {type}"
         );
     }
+
+    public DbOptions WithDbConnector(IDbConnector connector) =>
+        new(DbAdapter, ObjectReaderProvider, connector, converters);
 }

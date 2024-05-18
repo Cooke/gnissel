@@ -1,4 +1,5 @@
-﻿using Cooke.Gnissel.Typed.Queries;
+﻿using Cooke.Gnissel.AsyncEnumerable;
+using Cooke.Gnissel.Typed.Queries;
 using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Typed;

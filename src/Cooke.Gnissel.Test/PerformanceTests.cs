@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
@@ -23,9 +24,7 @@ public class PerformanceTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(
-            new NpgsqlDbAdapter(_dataSource)
-        ));
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -117,7 +116,7 @@ public class PerformanceTests
         var result = await connection.QueryAsync<User>($"SELECT * FROM users");
         var array = result.ToArray();
     }
-    
+
     [Test]
     public async Task QueryGnisselTyped()
     {

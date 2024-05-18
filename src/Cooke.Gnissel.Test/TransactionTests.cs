@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
@@ -18,9 +19,7 @@ public class TransactionTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(
-            new NpgsqlDbAdapter(_dataSource)
-        ));
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.History;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
@@ -19,38 +20,44 @@ public class NpgsqlMigrator(ILogger logger, IDbAdapter dbAdapter) : IMigrator
         await using var connection = dbAdapter.CreateConnector().CreateConnection();
         await connection.OpenAsync(cancellationToken);
 
-        while (true) {
+        while (true)
+        {
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
-            var dbContext = new DbContext(new DbOptions(dbAdapter)
-                {
-                    DbConnector = new FixedConnectionDbConnector(connection, dbAdapter)
-                }
+            var dbContext = new DbContext(
+                new DbOptions(dbAdapter, new FixedConnectionDbConnector(connection, dbAdapter))
             );
-            await dbContext.NonQuery($"LOCK TABLE __migration_history").ExecuteAsync(cancellationToken);
+            await dbContext
+                .NonQuery($"LOCK TABLE __migration_history")
+                .ExecuteAsync(cancellationToken);
             var appliedMigrationNames = await dbContext
                 .Query<string>($"SELECT id FROM __migration_history")
                 .ToHashSetAsync(cancellationToken);
 
             var migration = migrations.FirstOrDefault(x => !appliedMigrationNames.Contains(x.Id));
-            if (migration == null) {
+            if (migration == null)
+            {
                 break;
             }
-            
+
             var sw = Stopwatch.StartNew();
             logger.LogInformation("Applying migration: {Id}", migration.Id);
             await migration.Migrate(dbContext, cancellationToken);
-            await dbContext.NonQuery(
-                $"INSERT INTO __migration_history (id, applied_at) VALUES ({migration.Id}, now())"
-            ).ExecuteAsync(cancellationToken);
+            await dbContext
+                .NonQuery(
+                    $"INSERT INTO __migration_history (id, applied_at) VALUES ({migration.Id}, now())"
+                )
+                .ExecuteAsync(cancellationToken);
             logger.LogInformation("Applied migration: {Id} in {Elapsed}", migration.Id, sw.Elapsed);
-
 
             await transaction.CommitAsync(cancellationToken);
         }
     }
-    private static async Task CreateMigrationHistoryTableIfNotExist(IDbAdapter dbAdapter, CancellationToken cancellationToken)
-    {
 
+    private static async Task CreateMigrationHistoryTableIfNotExist(
+        IDbAdapter dbAdapter,
+        CancellationToken cancellationToken
+    )
+    {
         var initialOptions = new DbOptions(dbAdapter);
         var initialContext = new DbContext(initialOptions);
 

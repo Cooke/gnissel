@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.History;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
@@ -39,11 +40,11 @@ public class MigrationTests
                 async (db, ct) =>
                     await db.NonQuery(
                             $"""
-                     create table users
-                     (
-                         id   integer primary key generated always as identity
-                     );
-                 """
+                                create table users
+                                (
+                                    id   integer primary key generated always as identity
+                                );
+                            """
                         )
                         .ExecuteAsync(ct)
             )

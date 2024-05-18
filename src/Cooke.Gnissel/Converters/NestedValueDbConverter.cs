@@ -4,12 +4,14 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Converters;
 
-public class PrimitiveWrapperDbConverter : DbConverterFactory
+public class NestedValueDbConverter : DbConverterFactory
 {
     public override bool CanCreateFor(Type type)
     {
-        return type.GetConstructors().Any(x => x.GetParameters().Length == 1)
-            && type.GetProperties().Any();
+        var ctor = type.GetConstructors().FirstOrDefault(x => x.GetParameters().Length == 1);
+        return ctor != null
+            && type.GetProperties()
+                .Any(x => x.PropertyType == ctor.GetParameters().Single().ParameterType);
     }
 
     public override IDbConverter Create(Type type)

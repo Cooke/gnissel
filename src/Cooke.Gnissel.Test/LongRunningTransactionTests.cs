@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
@@ -19,9 +20,7 @@ public class LongRunningTransactionTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(
-            new NpgsqlDbAdapter(_dataSource)
-        ));
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -148,7 +147,7 @@ public class LongRunningTransactionTests
             await connection.OpenAsync(cancellationToken);
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
             var transactionCommandFactory = new FixedConnectionDbConnector(connection, dbAdapter);
-            var transactionDbOptions = _options with { DbConnector = transactionCommandFactory };
+            var transactionDbOptions = _options.WithDbConnector(transactionCommandFactory);
             await action(new TestDbContext(this, transactionDbOptions));
             await transaction.CommitAsync(cancellationToken);
         }

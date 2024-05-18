@@ -2,6 +2,7 @@
 
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Utils;
@@ -19,15 +20,13 @@ public class MappingJsonTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _dataSource = Fixture.DataSourceBuilder
-            .ConfigureJsonOptions(
+        _dataSource = Fixture
+            .DataSourceBuilder.ConfigureJsonOptions(
                 new JsonSerializerOptions { Converters = { new GameClassConverter() } }
             )
             .EnableDynamicJson()
             .Build();
-        _db = new TestDbContext(new(
-            new NpgsqlDbAdapter(_dataSource)
-        ));
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(

@@ -79,8 +79,7 @@ internal static class ColumnBuilder
         }
         else
         {
-            // yield return CreateColumn<T>(options, memberChain);
-            throw new Exception("Not supported type. TEST!");
+            throw new Exception("Not supported column type.");
         }
     }
 

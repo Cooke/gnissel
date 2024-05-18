@@ -2,6 +2,7 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Text.Json;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
@@ -181,6 +182,6 @@ public class QueryTests
 
     public record Device(DeviceId Id, string Name, int UserId);
 
-    [DbConverter(typeof(PrimitiveWrapperDbConverter))]
+    [DbConverter(typeof(NestedValueDbConverter))]
     public record DeviceId(string Value);
 }

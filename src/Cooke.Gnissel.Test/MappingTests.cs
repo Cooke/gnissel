@@ -6,6 +6,7 @@ using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text.Json.Serialization;
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Services;
@@ -26,9 +27,7 @@ public class MappingTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(
-            new(new NpgsqlDbAdapter(_dataSource)) { Converters = [new UserNameDbConverter()] }
-        );
+        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
 
         await _dataSource
             .CreateCommand(
@@ -218,7 +217,7 @@ public class MappingTests
 
     private record UserWithTypedName(Name Name, int Age);
 
-    [DbConverter(typeof(PrimitiveWrapperDbConverter))]
+    [DbConverter(typeof(NestedValueDbConverter))]
     private record Name(string Value);
 
     public record Device(string Id, string Name, int UserId);
