@@ -9,7 +9,7 @@ using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Queries;
 
-public class SingleQuery<TOut> : IQuery
+public class SingleQuery<TOut>
 {
     private readonly Query<TOut> _innerQuery;
 

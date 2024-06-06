@@ -92,7 +92,7 @@ public class ColumnOptionsBuilder(IReadOnlyCollection<MemberInfo> memberChain)
     public ColumnOptions Build() => new ColumnOptions(memberChain) { Name = _name };
 }
 
-public class Table<T> : ITable, IEnumerableQuery<T>
+public class Table<T> : ITable, IQuery<T>
 {
     private readonly DbOptions options;
     private readonly Column<T>[] insertColumns;

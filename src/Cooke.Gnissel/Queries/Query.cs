@@ -12,7 +12,7 @@ public class Query<TOut>(
     RenderedSql renderedSql,
     Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
     IDbConnector dbConnector
-) : IEnumerableQuery<TOut>
+) : IQuery<TOut>
 {
     public RenderedSql RenderedSql => renderedSql;
 

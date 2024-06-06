@@ -3,7 +3,7 @@ using Cooke.Gnissel.Queries;
 
 namespace Cooke.Gnissel.Typed.Queries;
 
-public class GroupByQuery<T>(ExpressionQuery expressionQuery) : IEnumerableQuery<T>
+public class GroupByQuery<T>(ExpressionQuery expressionQuery) : IQuery<T>
 {
     private Query<T>? _query;
     private Query<T> LazyQuery => _query ??= expressionQuery.ToQuery<T>();

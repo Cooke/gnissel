@@ -1,6 +1,6 @@
-﻿namespace Cooke.Gnissel.Queries;
+namespace Cooke.Gnissel.Queries;
 
-public interface IQuery
+public interface IQuery<out T> : IAsyncEnumerable<T>
 {
     RenderedSql RenderedSql { get; }
 }
