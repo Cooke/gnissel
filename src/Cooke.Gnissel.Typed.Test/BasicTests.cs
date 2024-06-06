@@ -339,6 +339,28 @@ public class BasicTests : IDisposable
     }
 
     [Fact]
+    public async Task NonQueriesInTransaction()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        await db.Transaction(
+            db.Users.Set(x => x.Name, "Bubba").Where(x => x.Id == 1),
+            db.Users.Delete().Where(x => x.Id == 2),
+            db.Users.Insert(new User(3, "Chad", 27))
+        );
+
+        var user1 = await db.Users.FirstOrDefault(x => x.Id == 1);
+        Assert.Equal(new User(1, "Bubba", 25), user1);
+
+        var user2 = await db.Users.FirstOrDefault(x => x.Id == 2);
+        Assert.Null(user2);
+
+        var user3 = await db.Users.FirstOrDefault(x => x.Id == 3);
+        Assert.Equal(new User(3, "Chad", 27), user3);
+    }
+
+    [Fact]
     public async Task OrderBy()
     {
         var bob = new User(1, "Bob", 30);

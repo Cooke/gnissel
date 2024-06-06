@@ -5,7 +5,7 @@ using Cooke.Gnissel.Typed.Internals;
 
 namespace Cooke.Gnissel.Typed.Queries;
 
-public interface IUpdateQuery
+public interface IUpdateQuery : INonQuery
 {
     ITable Table { get; }
 
@@ -95,8 +95,7 @@ public class UpdateQuery<T>(
         new(table, options, Setters);
 
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
-        new NonQuery(
-            options.DbConnector,
-            options.RenderSql(options.TypedSqlGenerator.Generate(this))
-        ).ExecuteAsync(cancellationToken);
+        new NonQuery(options.DbConnector, RenderedSql).ExecuteAsync(cancellationToken);
+
+    public RenderedSql RenderedSql => options.RenderSql(options.TypedSqlGenerator.Generate(this));
 }

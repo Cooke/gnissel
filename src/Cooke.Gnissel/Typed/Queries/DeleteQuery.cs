@@ -5,7 +5,7 @@ using Cooke.Gnissel.Typed.Internals;
 
 namespace Cooke.Gnissel.Typed.Queries;
 
-public interface IDeleteQuery
+public interface IDeleteQuery : INonQuery
 {
     ITable Table { get; }
 
@@ -38,8 +38,7 @@ public class DeleteQuery<T>(Table<T> table, DbOptions options, Expression? condi
     public ValueTaskAwaiter<int> GetAwaiter() => ExecuteAsync().GetAwaiter();
 
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
-        new NonQuery(
-            options.DbConnector,
-            options.RenderSql(options.TypedSqlGenerator.Generate(this))
-        ).ExecuteAsync(cancellationToken);
+        new NonQuery(options.DbConnector, RenderedSql).ExecuteAsync(cancellationToken);
+
+    public RenderedSql RenderedSql => options.RenderSql(options.TypedSqlGenerator.Generate(this));
 }
