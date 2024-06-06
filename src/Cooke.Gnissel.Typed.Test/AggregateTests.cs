@@ -1,3 +1,4 @@
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Cooke.Gnissel.Utils;
@@ -10,13 +11,11 @@ namespace Cooke.Gnissel.Typed.Test;
 public class AggregateTests : IDisposable
 {
     private readonly TestDbContext db;
-        
-    public AggregateTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper) 
+
+    public AggregateTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-        db = new TestDbContext(new(
-            new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())
-        ));
+        db = new TestDbContext(new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
         db.NonQuery(
                 $"""
                     create table users
@@ -26,15 +25,16 @@ public class AggregateTests : IDisposable
                         age  integer
                     );
                 """
-            ).GetAwaiter().GetResult();
+            )
+            .GetAwaiter()
+            .GetResult();
     }
-    
+
     public void Dispose()
     {
         db.NonQuery($"DROP TABLE users").GetAwaiter().GetResult();
     }
-    
-    
+
     [Fact]
     public async Task Count()
     {
@@ -42,15 +42,15 @@ public class AggregateTests : IDisposable
         var sara = new User(2, "Sara", 20);
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
-        
-        var numUsersByAge = await db.Users.GroupBy(x => x.Age).Select(x => new { x.Age, Count = Db.Count(x.Id) }).ToArrayAsync();
-        
-        Assert.Equal(
-            [new { Age = 30, Count = 1 }, new { Age = 20 , Count = 2}],
-            numUsersByAge
-        );
+
+        var numUsersByAge = await db
+            .Users.GroupBy(x => x.Age)
+            .Select(x => new { x.Age, Count = Db.Count(x.Id) })
+            .ToArrayAsync();
+
+        Assert.Equal([new { Age = 30, Count = 1 }, new { Age = 20, Count = 2 }], numUsersByAge);
     }
-    
+
     [Fact]
     public async Task CountStar()
     {
@@ -58,15 +58,15 @@ public class AggregateTests : IDisposable
         var sara = new User(2, "Sara", 20);
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
-        
-        var numUsersByAge = await db.Users.GroupBy(x => x.Age).Select(x => new { x.Age, Count = Db.Count() }).ToArrayAsync();
-        
-        Assert.Equal(
-            [new { Age = 30, Count = 1 }, new { Age = 20 , Count = 2}],
-            numUsersByAge
-        );
+
+        var numUsersByAge = await db
+            .Users.GroupBy(x => x.Age)
+            .Select(x => new { x.Age, Count = Db.Count() })
+            .ToArrayAsync();
+
+        Assert.Equal([new { Age = 30, Count = 1 }, new { Age = 20, Count = 2 }], numUsersByAge);
     }
-    
+
     [Fact]
     public async Task Sum()
     {
@@ -74,15 +74,12 @@ public class AggregateTests : IDisposable
         var sara = new User(2, "Sara", 20);
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
-        
-        var numUsersByAge = await db.Users.Select(x => Db.Sum(x.Age) ).First();
-        
-        Assert.Equal(
-            70,
-            numUsersByAge
-        );
+
+        var numUsersByAge = await db.Users.Select(x => Db.Sum(x.Age)).First();
+
+        Assert.Equal(70, numUsersByAge);
     }
-    
+
     [Fact]
     public async Task Avg()
     {
@@ -90,15 +87,12 @@ public class AggregateTests : IDisposable
         var sara = new User(2, "Sara", 20);
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
-        
-        var numUsersByAge = await db.Users.Select(x => Db.Avg(x.Age) ).First();
-        
-        Assert.Equal(
-            23,
-            numUsersByAge
-        );
+
+        var numUsersByAge = await db.Users.Select(x => Db.Avg(x.Age)).First();
+
+        Assert.Equal(23, numUsersByAge);
     }
-    
+
     [Fact]
     public async Task Max()
     {
@@ -106,15 +100,12 @@ public class AggregateTests : IDisposable
         var sara = new User(2, "Sara", 20);
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
-        
-        var numUsersByAge = await db.Users.Select(x => Db.Max(x.Age) ).First();
-        
-        Assert.Equal(
-            30,
-            numUsersByAge
-        );
+
+        var numUsersByAge = await db.Users.Select(x => Db.Max(x.Age)).First();
+
+        Assert.Equal(30, numUsersByAge);
     }
-    
+
     [Fact]
     public async Task Min()
     {
@@ -122,23 +113,16 @@ public class AggregateTests : IDisposable
         var sara = new User(2, "Sara", 20);
         var alice = new User(3, "Alice", 20);
         await db.Users.Insert(bob, sara, alice);
-        
+
         var numUsersByAge = await db.Users.Select(x => Db.Min(x.Age)).First();
-        
-        Assert.Equal(
-            20,
-            numUsersByAge
-        );
+
+        Assert.Equal(20, numUsersByAge);
     }
-    
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
     }
-    
-    private record User(
-        int Id,
-        string Name,
-        int Age
-    );
+
+    private record User(int Id, string Name, int Age);
 }

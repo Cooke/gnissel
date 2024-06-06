@@ -92,10 +92,11 @@ public class ColumnOptionsBuilder(IReadOnlyCollection<MemberInfo> memberChain)
     public ColumnOptions Build() => new ColumnOptions(memberChain) { Name = _name };
 }
 
-public class Table<T> : ITable, IToQuery<T>
+public class Table<T> : ITable, IEnumerableQuery<T>
 {
     private readonly DbOptions options;
     private readonly Column<T>[] insertColumns;
+    private readonly Query<T> _query;
 
     public Table(Table<T> copy, DbOptions options)
         : this(options)
@@ -116,6 +117,11 @@ public class Table<T> : ITable, IToQuery<T>
         Name = options.Name ?? dbOptions.DbAdapter.ToTableName(typeof(T));
         this.options = dbOptions;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
+        _query = new Query<T>(
+            dbOptions.RenderSql(dbOptions.TypedSqlGenerator.Generate(CreateExpressionQuery())),
+            dbOptions.ObjectReaderProvider.GetReaderFunc<T>(dbOptions),
+            dbOptions.DbConnector
+        );
     }
 
     public string Name { get; }
@@ -163,13 +169,6 @@ public class Table<T> : ITable, IToQuery<T>
     public SingleOrDefaultQuery<T> FirstOrDefault(Expression<Func<T, bool>> predicate) =>
         CreateExpressionQuery().FirstOrDefault<T>(predicate);
 
-    public Query<T> ToQuery() =>
-        new(
-            options.RenderSql(options.TypedSqlGenerator.Generate(CreateExpressionQuery())),
-            options.ObjectReaderProvider.GetReaderFunc<T>(options),
-            options.DbConnector
-        );
-
     public OrderByQuery<T> OrderBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
         new(CreateExpressionQuery().OrderBy(propSelector));
 
@@ -214,4 +213,9 @@ public class Table<T> : ITable, IToQuery<T>
                 .Select(c => c.CreateParameter(instance))
                 .ToArray()
         );
+
+    public RenderedSql RenderedSql => _query.RenderedSql;
+
+    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new()) =>
+        _query.GetAsyncEnumerator(cancellationToken);
 }

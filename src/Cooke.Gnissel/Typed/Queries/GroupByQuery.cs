@@ -3,9 +3,15 @@ using Cooke.Gnissel.Queries;
 
 namespace Cooke.Gnissel.Typed.Queries;
 
-public class GroupByQuery<T>(ExpressionQuery expressionQuery) : IToQuery<T>
+public class GroupByQuery<T>(ExpressionQuery expressionQuery) : IEnumerableQuery<T>
 {
-    public Query<T> ToQuery() => expressionQuery.ToQuery<T>();
+    private Query<T>? _query;
+    private Query<T> LazyQuery => _query ??= expressionQuery.ToQuery<T>();
+
+    public RenderedSql RenderedSql => LazyQuery.RenderedSql;
+
+    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new()) =>
+        LazyQuery.GetAsyncEnumerator(cancellationToken);
 
     public GroupByQuery<T> ThenBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
         new(expressionQuery.GroupBy(propSelector));

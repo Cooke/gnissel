@@ -1,3 +1,4 @@
+using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Cooke.Gnissel.Utils;
