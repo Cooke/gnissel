@@ -216,6 +216,6 @@ public class Table<T> : ITable, IQuery<T>
 
     public RenderedSql RenderedSql => _query.RenderedSql;
 
-    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new()) =>
-        _query.GetAsyncEnumerator(cancellationToken);
+    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default) =>
+        _query.ExecuteAsync(cancellationToken);
 }

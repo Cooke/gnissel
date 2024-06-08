@@ -12,12 +12,12 @@ public class Query<TOut>(
     RenderedSql renderedSql,
     Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
     IDbConnector dbConnector
-) : IQuery<TOut>
+) : IQuery<TOut>, IAsyncEnumerable<TOut>
 {
     public RenderedSql RenderedSql => renderedSql;
 
     public async IAsyncEnumerable<TOut> ExecuteAsync(
-        [EnumeratorCancellation] CancellationToken cancellationToken
+        [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
         await using var cmd = dbConnector.CreateCommand();

@@ -9,8 +9,8 @@ public class SelectQuery<T>(ExpressionQuery expressionQuery) : IQuery<T>
 
     public RenderedSql RenderedSql => LazyQuery.RenderedSql;
 
-    public IAsyncEnumerator<T> GetAsyncEnumerator(CancellationToken cancellationToken = new()) =>
-        LazyQuery.GetAsyncEnumerator(cancellationToken);
+    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default) =>
+        LazyQuery.ExecuteAsync(cancellationToken);
 
     public SingleQuery<T> First() => expressionQuery.First<T>();
 
