@@ -29,5 +29,17 @@ public class TypedQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IQuery<(T
         Expression<Func<T1, T2, T3, TProp>> propSelector
     ) => new(expressionQuery.GroupBy(propSelector));
 
+    public SingleQuery<(T1, T2, T3)> First() => expressionQuery.First<(T1, T2, T3)>();
+
+    public SingleQuery<(T1, T2, T3)> First(Expression<Func<T1, T2, bool>> predicate) =>
+        expressionQuery.First<(T1, T2, T3)>(predicate);
+
+    public SingleOrDefaultQuery<(T1, T2, T3)> FirstOrDefault() =>
+        expressionQuery.FirstOrDefault<(T1, T2, T3)>();
+
+    public SingleOrDefaultQuery<(T1, T2, T3)> FirstOrDefault(
+        Expression<Func<T1, T2, bool>> predicate
+    ) => expressionQuery.FirstOrDefault<(T1, T2, T3)>(predicate);
+
     public TypedQuery<T1, T2, T3> Limit(int limit) => new(expressionQuery with { Limit = limit });
 }
