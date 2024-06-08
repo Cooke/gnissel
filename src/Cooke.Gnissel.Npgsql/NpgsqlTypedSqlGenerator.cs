@@ -309,20 +309,16 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                     }
                     sql.AppendLiteral(")");
                 }
+                else if (TryEvaluateExpression(methodCallExpression, out var value))
+                {
+                    sql.AppendParameter(value);
+                }
                 else
                 {
                     throw new NotSupportedException(
                         $"Method {methodCallExpression.Method.Name} not supported"
                     );
                 }
-                return;
-
-            case MemberExpression
-            {
-                Expression: ConstantExpression constantExpression,
-                Member: PropertyInfo or FieldInfo
-            } memberExpression:
-                sql.AppendParameter(GetValue(memberExpression.Member, constantExpression.Value));
                 return;
 
             case MemberExpression { Expression: TableExpression tableExpression } memberExpression:
@@ -363,10 +359,42 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
 
                 return;
 
+            case MemberExpression memberExpression:
+            {
+                if (TryEvaluateExpression(memberExpression, out var value))
+                {
+                    sql.AppendParameter(value);
+                }
+                else
+                {
+                    throw new NotSupportedException(
+                        $"Member expression with member {memberExpression.Member.Name} not supported"
+                    );
+                }
+
+                return;
+            }
+
             default:
                 throw new NotSupportedException(
                     $"Expression of type {expression.NodeType} not supported"
                 );
+        }
+    }
+
+    private static bool TryEvaluateExpression(Expression methodCallExpression, out object? result)
+    {
+        try
+        {
+            var lambda = Expression.Lambda(methodCallExpression);
+            var compiled = lambda.Compile();
+            result = compiled.DynamicInvoke();
+            return true;
+        }
+        catch
+        {
+            result = null;
+            return false;
         }
     }
 

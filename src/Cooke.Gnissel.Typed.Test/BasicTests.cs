@@ -1,3 +1,4 @@
+using System.Text;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
@@ -232,6 +233,30 @@ public class BasicTests : IDisposable
 
         var name = "Bob";
         var users = await db.Users.Where(x => x.Name == name).ToArrayAsync();
+
+        Assert.Equal([new User(1, "Bob", 25)], users);
+    }
+
+    [Fact]
+    public async Task WhereMethodCallOfConstant()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var name = new StringBuilder("Bob");
+        var users = await db.Users.Where(x => x.Name == name.ToString()).ToArrayAsync();
+
+        Assert.Equal([new User(1, "Bob", 25)], users);
+    }
+
+    [Fact]
+    public async Task WherePropertyOfConstant()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var name = new StringBuilder("B");
+        var users = await db.Users.Where(x => x.Id == name.Length).ToArrayAsync();
 
         Assert.Equal([new User(1, "Bob", 25)], users);
     }

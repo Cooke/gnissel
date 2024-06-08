@@ -79,7 +79,7 @@ internal static class ColumnBuilder
         }
         else
         {
-            throw new Exception("Not supported column type.");
+            throw new Exception($"Not supported column type: {memberType}.");
         }
     }
 
