@@ -29,23 +29,32 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
     ];
 
     private readonly NpgsqlDataSource _dataSource;
+    private readonly IGnisselNpgsqlNameProvider _nameProvider;
 
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
         : this(dataSource, NullLogger.Instance) { }
 
-    public NpgsqlDbAdapter(NpgsqlDataSource dataSource, ILogger logger)
+    public NpgsqlDbAdapter(
+        NpgsqlDataSource dataSource,
+        ILogger? logger = null,
+        IGnisselNpgsqlNameProvider? nameProvider = null
+    )
     {
         _dataSource = dataSource;
         TypedSqlGenerator = new NpgsqlTypedSqlGenerator(this);
-        Migrator = new NpgsqlMigrator(logger, this);
+        Migrator = new NpgsqlMigrator(logger ?? NullLogger.Instance, this);
+        _nameProvider = nameProvider ?? new GnisselNpgsqlSnakeCaseNameProvider();
     }
-
-    public string EscapeIdentifier(string identifier) => $"\"{identifier.Replace("\"", "\"\"")}\"";
 
     public string EscapeIdentifierIfNeeded(string identifier) =>
         Regex.IsMatch(identifier, @"[^a-z0-9_]")
             ? $"\"{identifier.Replace("\"", "\"\"")}\""
             : identifier;
+
+    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
+        _nameProvider.ToColumnName(path);
+
+    public string ToTableName(Type type) => _nameProvider.ToTableName(type);
 
     public DbParameter CreateParameter<TValue>(TValue value, string? dbType) =>
         typeof(TValue) == typeof(object)
@@ -104,32 +113,4 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
         type.GetCustomAttribute<DbTypeAttribute>() != null
         || type.IsPrimitive
         || BuiltInTypes.Contains(type);
-
-    public string ToColumnName(ParameterInfo parameterInfo) =>
-        ConvertToSnakeCase(parameterInfo.Name);
-
-    public string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
-
-    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
-        string.Join(
-            "_",
-            path.Select(part =>
-                part switch
-                {
-                    ParameterPathPart parameterPart => ToColumnName(parameterPart.ParameterInfo),
-                    PropertyPathPart propertyPart => ToColumnName(propertyPart.PropertyInfo),
-                    _ => throw new InvalidOperationException()
-                }
-            )
-        );
-
-    public string ToTableName(Type type) => ConvertToSnakeCase(type.Name) + "s";
-
-    private static string ConvertToSnakeCase(string? name)
-    {
-        return NpgsqlSnakeCaseNameTranslator.ConvertToSnakeCase(
-            name ?? throw new InvalidOperationException(),
-            CultureInfo.CurrentCulture
-        );
-    }
 }

@@ -398,15 +398,6 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         }
     }
 
-    private static object? GetValue(MemberInfo memberInfo, object? instance)
-    {
-        return memberInfo is PropertyInfo p
-            ? p.GetValue(instance)
-            : memberInfo is FieldInfo f
-                ? f.GetValue(instance)
-                : throw new InvalidOperationException();
-    }
-
     private static string RenderBinaryOperator(ExpressionType expressionType) =>
         expressionType switch
         {

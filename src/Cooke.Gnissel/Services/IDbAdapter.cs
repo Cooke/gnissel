@@ -10,8 +10,6 @@ namespace Cooke.Gnissel.Services;
 
 public interface IDbAdapter
 {
-    string EscapeIdentifier(string identifier);
-
     string ToColumnName(IEnumerable<ObjectPathPart> path);
 
     string ToTableName(Type type);
