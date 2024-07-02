@@ -1,5 +1,6 @@
 using System.Text;
 using Cooke.Gnissel.AsyncEnumerable;
+using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Cooke.Gnissel.Utils;
@@ -16,14 +17,20 @@ public class BasicTests : IDisposable
     public BasicTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-        db = new TestDbContext(new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
+        db = new TestDbContext(
+            new(
+                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
+                [new EnumStringDbConverter()]
+            )
+        );
         db.NonQuery(
                 $"""
                     create table users
                     (
                         id   integer primary key,
                         name text,
-                        age  integer
+                        age  integer,
+                        role text
                     )
                 """
             )
@@ -461,10 +468,30 @@ public class BasicTests : IDisposable
         Assert.Equal([new { Age = 30, Count = 1 }, new { Age = 20, Count = 2 }], numUsersByAge);
     }
 
+    [Fact]
+    public async Task CompareEnumValues()
+    {
+        var bob = new User(1, "Bob", 30);
+        var sara = new User(2, "Sara", 20) { Role = Role.Admin };
+        await db.Users.Insert(bob, sara);
+
+        var users = await db.Users.Where(x => x.Role == Role.Admin).ToArrayAsync();
+        Assert.Equal([sara], users);
+    }
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
     }
 
-    private record User(int Id, string Name, int Age);
+    private record User(int Id, string Name, int Age)
+    {
+        public Role Role { get; init; } = Role.User;
+    };
+
+    private enum Role
+    {
+        Admin,
+        User
+    }
 }

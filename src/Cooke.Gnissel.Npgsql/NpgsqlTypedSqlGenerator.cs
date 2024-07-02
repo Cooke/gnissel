@@ -276,7 +276,11 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         switch (expression)
         {
             case BinaryExpression binaryExpression:
-                RenderExpression(binaryExpression.Left, sql, options);
+                RenderExpression(
+                    Coercion(binaryExpression.Left, binaryExpression.Right),
+                    sql,
+                    options
+                );
                 sql.AppendLiteral(" ");
                 sql.AppendLiteral(RenderBinaryOperator(binaryExpression.NodeType));
                 sql.AppendLiteral(" ");
@@ -375,10 +379,32 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                 return;
             }
 
+            case UnaryExpression
+            {
+                NodeType: ExpressionType.Convert,
+                Operand: { Type: { IsEnum: true } }
+            } unaryExpression:
+                RenderExpression(unaryExpression.Operand, sql, options);
+                return;
+
             default:
                 throw new NotSupportedException(
                     $"Expression of type {expression.NodeType} not supported"
                 );
+        }
+    }
+
+    private Expression Coercion(Expression left, Expression right)
+    {
+        if (
+            left is UnaryExpression
+            {
+                NodeType: ExpressionType.Convert,
+                Operand: { Type: { IsEnum: true } }
+            } unaryExpression
+        )
+        {
+            return unaryExpression.Operand;
         }
     }
 
