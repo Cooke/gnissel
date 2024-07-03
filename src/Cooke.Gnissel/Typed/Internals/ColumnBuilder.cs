@@ -40,13 +40,21 @@ internal static class ColumnBuilder
             var paramFactory = Expression
                 .Lambda<Func<T, DbParameter>>(
                     Expression.Call(
-                        Expression.Constant(
-                            converter,
-                            typeof(ConcreteDbConverter<>).MakeGenericType(memberType)
+                        Expression.Call(
+                            Expression.Constant(
+                                converter,
+                                typeof(ConcreteDbConverter<>).MakeGenericType(memberType)
+                            ),
+                            typeof(ConcreteDbConverter<>)
+                                .MakeGenericType(memberType)
+                                .GetMethod(
+                                    nameof(ConcreteDbConverter<object>.ToDbValue),
+                                    [memberType]
+                                ) ?? throw new InvalidOperationException(),
+                            objectExpression.ToMemberExpression(memberChain)
                         ),
-                        nameof(ConcreteDbConverter<object>.ToParameter),
+                        nameof(DbValue.CreateParameter),
                         [],
-                        objectExpression.ToMemberExpression(memberChain),
                         Expression.Constant(options.DbOptions.DbAdapter)
                     ),
                     objectExpression

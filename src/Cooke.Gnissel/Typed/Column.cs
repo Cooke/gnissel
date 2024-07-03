@@ -8,17 +8,16 @@ public interface IColumn
     string Name { get; }
 
     IReadOnlyCollection<MemberInfo> MemberChain { get; }
-    
+
     bool IsDatabaseGenerated { get; }
 }
-
 
 public class Column<TTable>(
     string name,
     IReadOnlyCollection<MemberInfo> memberChain,
     Func<TTable, DbParameter> parameterFactory,
-    bool isDatabaseGenerated)
-    : IColumn
+    bool isDatabaseGenerated
+) : IColumn
 {
     public string Name { get; } = name;
 
@@ -26,8 +25,5 @@ public class Column<TTable>(
 
     public bool IsDatabaseGenerated { get; } = isDatabaseGenerated;
 
-    public DbParameter CreateParameter(TTable item)
-    {
-        return parameterFactory(item);
-    }
+    public DbParameter CreateParameter(TTable item) => parameterFactory(item);
 }

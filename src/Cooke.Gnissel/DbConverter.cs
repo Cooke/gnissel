@@ -1,5 +1,4 @@
 ﻿using System.Data.Common;
-using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel;
 
@@ -21,11 +20,11 @@ public abstract class ConcreteDbConverter : DbConverter
 
 public abstract class ConcreteDbConverter<T> : ConcreteDbConverter
 {
-    public abstract DbParameter ToParameter(T value, IDbAdapter adapter);
+    public abstract DbValue ToDbValue(T value);
 
     public abstract T FromReader(DbDataReader reader, int ordinal);
 
-    public override DbValue ToDbValue(object value) => new TypedDbValue<T>((T)value);
+    public override DbValue ToDbValue(object value) => new DbValue<T>((T)value, null);
 }
 
 public class DbConverterAttribute(Type converterType) : Attribute

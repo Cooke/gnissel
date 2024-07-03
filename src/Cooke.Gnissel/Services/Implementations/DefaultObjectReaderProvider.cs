@@ -99,7 +99,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                         converter,
                         typeof(ConcreteDbConverter<>).MakeGenericType(type)
                     ),
-                    "FromReader",
+                    nameof(ConcreteDbConverter<object>.FromReader),
                     [],
                     dataReader,
                     ordinal
@@ -176,7 +176,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         {
             return Expression.Call(
                 Expression.Constant(converter),
-                "IsNull",
+                nameof(ConcreteDbConverter.IsNull),
                 [],
                 dataReader,
                 ordinalOffset

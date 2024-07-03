@@ -474,18 +474,19 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         var converter = dbOptions.GetConverter(value.GetType());
         if (converter != null)
         {
-            return FormatLiteral(converter.ToDbValue(value));
+            // IMPROVEMENT: remove boxing of Value
+            return FormatLiteral(converter.ToDbValue(value).Value);
         }
 
-        return FormatLiteral(new UntypedDbValue(value));
+        return FormatLiteral(value);
     }
 
-    private static string FormatLiteral(DbValue value) =>
-        value.Value switch
+    private static string FormatLiteral(object? value) =>
+        value switch
         {
             null => "NULL",
             string str => FormatString(str),
-            _ => value.Value.ToString()
+            _ => value.ToString()
         } ?? throw new InvalidOperationException();
 
     private static string FormatString(string strValue) => $"'{strValue}'";

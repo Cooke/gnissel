@@ -224,8 +224,8 @@ public class MappingTests
 
     private class UserNameDbConverter : ConcreteDbConverter<UserName>
     {
-        public override DbParameter ToParameter(UserName value, IDbAdapter adapter) =>
-            adapter.CreateParameter(value.ToString());
+        public override DbValue ToDbValue(UserName value) =>
+            new DbValue<string>(value.ToString(), null);
 
         public override UserName FromReader(DbDataReader reader, int ordinal) =>
             Enum.TryParse(reader.GetString(ordinal), false, out UserName value)

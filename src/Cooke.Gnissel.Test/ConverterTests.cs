@@ -105,8 +105,8 @@ public class ConverterTests
 
     private class NameEnumDbConverter : ConcreteDbConverter<NameEnum>
     {
-        public override DbParameter ToParameter(NameEnum value, IDbAdapter adapter) =>
-            adapter.CreateParameter(value.ToString());
+        public override DbValue ToDbValue(NameEnum value) =>
+            new DbValue<string>(value.ToString(), null);
 
         public override NameEnum FromReader(DbDataReader reader, int ordinal) =>
             Enum.TryParse(reader.GetString(ordinal), false, out NameEnum value)

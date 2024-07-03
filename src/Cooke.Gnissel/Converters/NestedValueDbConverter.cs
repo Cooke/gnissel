@@ -20,18 +20,15 @@ public class NestedValueDbConverter : ConcreteDbConverterFactory
         var innerType = propertyInfo.PropertyType;
 
         var objectExpression = Expression.Parameter(type);
-        var adapterExpression = Expression.Parameter(typeof(IDbAdapter));
 
-        var toParameter = Expression
+        var toDbValue = Expression
             .Lambda(
-                Expression.Call(
-                    adapterExpression,
-                    nameof(IDbAdapter.CreateParameter),
-                    [innerType],
+                Expression.New(
+                    typeof(DbValue<>).MakeGenericType(innerType).GetConstructors().Single(),
                     Expression.Property(objectExpression, propertyInfo),
                     Expression.Constant(null, typeof(string))
                 ),
-                [objectExpression, adapterExpression]
+                [objectExpression]
             )
             .Compile();
 
@@ -56,18 +53,17 @@ public class NestedValueDbConverter : ConcreteDbConverterFactory
         return (ConcreteDbConverter)
             Activator.CreateInstance(
                 typeof(ConcreteConverter<>).MakeGenericType(type),
-                toParameter,
+                toDbValue,
                 fromReader
             )!;
     }
 
     private class ConcreteConverter<T>(
-        Func<T, IDbAdapter, DbParameter> toParameter,
+        Func<T, DbValue> toDbValue,
         Func<DbDataReader, int, T> fromReader
     ) : ConcreteDbConverter<T>
     {
-        public override DbParameter ToParameter(T value, IDbAdapter adapter) =>
-            toParameter(value, adapter);
+        public override DbValue ToDbValue(T value) => toDbValue(value);
 
         public override T FromReader(DbDataReader reader, int ordinal) =>
             fromReader(reader, ordinal);

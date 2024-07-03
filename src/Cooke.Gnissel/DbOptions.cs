@@ -61,7 +61,7 @@ public class DbOptions(
     {
         var converter = GetConverter<T>();
         return converter != null
-            ? converter.ToParameter(value, DbAdapter)
+            ? converter.ToDbValue(value).CreateParameter(DbAdapter)
             : DbAdapter.CreateParameter(value, dbType);
     }
 
