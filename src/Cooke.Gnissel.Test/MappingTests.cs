@@ -222,7 +222,7 @@ public class MappingTests
 
     public record Device(string Id, string Name, int UserId);
 
-    private class UserNameDbConverter : DbConverter<UserName>
+    private class UserNameDbConverter : ConcreteDbConverter<UserName>
     {
         public override DbParameter ToParameter(UserName value, IDbAdapter adapter) =>
             adapter.CreateParameter(value.ToString());

@@ -4,7 +4,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Converters;
 
-public class NestedValueDbConverter : DbConverterFactory
+public class NestedValueDbConverter : ConcreteDbConverterFactory
 {
     public override bool CanCreateFor(Type type)
     {
@@ -64,7 +64,7 @@ public class NestedValueDbConverter : DbConverterFactory
     private class ConcreteConverter<T>(
         Func<T, IDbAdapter, DbParameter> toParameter,
         Func<DbDataReader, int, T> fromReader
-    ) : DbConverter<T>
+    ) : ConcreteDbConverter<T>
     {
         public override DbParameter ToParameter(T value, IDbAdapter adapter) =>
             toParameter(value, adapter);

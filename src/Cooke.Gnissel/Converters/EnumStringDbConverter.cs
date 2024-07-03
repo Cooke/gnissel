@@ -3,7 +3,7 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Converters;
 
-public class EnumStringDbConverter : DbConverterFactory
+public class EnumStringDbConverter : ConcreteDbConverterFactory
 {
     public override bool CanCreateFor(Type type) => type.IsEnum;
 
@@ -15,7 +15,7 @@ public class EnumStringDbConverter : DbConverterFactory
     }
 }
 
-public class EnumStringDbConverter<TEnum> : DbConverter<TEnum>
+public class EnumStringDbConverter<TEnum> : ConcreteDbConverter<TEnum>
     where TEnum : struct, Enum
 {
     public override DbValue ToDbValue(object value)

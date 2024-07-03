@@ -95,7 +95,10 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             );
             return (
                 Expression.Call(
-                    Expression.Constant(converter, typeof(DbConverter<>).MakeGenericType(type)),
+                    Expression.Constant(
+                        converter,
+                        typeof(ConcreteDbConverter<>).MakeGenericType(type)
+                    ),
                     "FromReader",
                     [],
                     dataReader,

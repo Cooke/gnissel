@@ -28,8 +28,8 @@ public class DbOptions(
                 .Select(x => new KeyValuePair<Type, ConcreteDbConverter>(x.forType!, x.converter))
         );
 
-    private readonly ImmutableList<DbConverterFactory> _converterFactories = converters
-        .OfType<DbConverterFactory>()
+    private readonly ImmutableList<ConcreteDbConverterFactory> _converterFactories = converters
+        .OfType<ConcreteDbConverterFactory>()
         .ToImmutableList();
 
     public DbOptions(IDbAdapter adapter)
@@ -76,7 +76,10 @@ public class DbOptions(
                 return null;
             }
 
-            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(DbConverter<>))
+            if (
+                type.IsGenericType
+                && type.GetGenericTypeDefinition() == typeof(ConcreteDbConverter<>)
+            )
             {
                 return type.GetGenericArguments().Single();
             }
@@ -85,9 +88,9 @@ public class DbOptions(
         }
     }
 
-    public DbConverter<T>? GetConverter<T>()
+    public ConcreteDbConverter<T>? GetConverter<T>()
     {
-        return (DbConverter<T>?)GetConverter(typeof(T));
+        return (ConcreteDbConverter<T>?)GetConverter(typeof(T));
     }
 
     public ConcreteDbConverter? GetConverter(Type type)
@@ -120,10 +123,11 @@ public class DbOptions(
     )
     {
         ConcreteDbConverter? converter;
-        if (converterAttribute.ConverterType.IsAssignableTo(typeof(DbConverterFactory)))
+        if (converterAttribute.ConverterType.IsAssignableTo(typeof(ConcreteDbConverterFactory)))
         {
             var factory =
-                (DbConverterFactory?)Activator.CreateInstance(converterAttribute.ConverterType)
+                (ConcreteDbConverterFactory?)
+                    Activator.CreateInstance(converterAttribute.ConverterType)
                 ?? throw new InvalidOperationException(
                     $"Could not create an instance of converter factory of type {converterAttribute.ConverterType}"
                 );
@@ -141,7 +145,7 @@ public class DbOptions(
 
         if (
             converterAttribute.ConverterType.IsAssignableTo(
-                typeof(DbConverter<>).MakeGenericType(type)
+                typeof(ConcreteDbConverter<>).MakeGenericType(type)
             )
         )
         {

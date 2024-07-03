@@ -42,9 +42,9 @@ internal static class ColumnBuilder
                     Expression.Call(
                         Expression.Constant(
                             converter,
-                            typeof(DbConverter<>).MakeGenericType(memberType)
+                            typeof(ConcreteDbConverter<>).MakeGenericType(memberType)
                         ),
-                        nameof(DbConverter<object>.ToParameter),
+                        nameof(ConcreteDbConverter<object>.ToParameter),
                         [],
                         objectExpression.ToMemberExpression(memberChain),
                         Expression.Constant(options.DbOptions.DbAdapter)

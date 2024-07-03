@@ -103,7 +103,7 @@ public class ConverterTests
         Bob
     }
 
-    private class NameEnumDbConverter : DbConverter<NameEnum>
+    private class NameEnumDbConverter : ConcreteDbConverter<NameEnum>
     {
         public override DbParameter ToParameter(NameEnum value, IDbAdapter adapter) =>
             adapter.CreateParameter(value.ToString());
