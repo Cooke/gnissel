@@ -70,7 +70,13 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             );
             return (
                 Expression.Condition(
-                    CreateIsNullReader(dataReader, ordinalOffset, underlyingType, parameterChain),
+                    CreateIsNullReader(
+                        dataReader,
+                        ordinalOffset,
+                        underlyingType,
+                        parameterChain,
+                        dbOptions
+                    ),
                     Expression.Constant(null, type),
                     Expression.New(type.GetConstructor([underlyingType])!, [actualReader])
                 ),
@@ -132,7 +138,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
             );
             return (
                 Expression.Condition(
-                    CreateIsNullReader(dataReader, ordinalOffset, type, parameterChain),
+                    CreateIsNullReader(dataReader, ordinalOffset, type, parameterChain, dbOptions),
                     Expression.Constant(null, type),
                     actualReader
                 ),
@@ -158,9 +164,22 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain,
+        DbOptions dbOptions
     )
     {
+        var converter = dbOptions.GetConverter(type);
+        if (converter != null)
+        {
+            return Expression.Call(
+                Expression.Constant(converter),
+                "IsNull",
+                [],
+                dataReader,
+                ordinalOffset
+            );
+        }
+
         if (dbAdapter.IsDbMapped(type))
         {
             return CreateIsNullValueReader(dataReader, ordinalOffset);
@@ -168,7 +187,13 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
 
         if (type.IsAssignableTo(typeof(ITuple)) || type.IsClass)
         {
-            return CreateIsNullComplexReader(dataReader, ordinalOffset, type, parameterChain);
+            return CreateIsNullComplexReader(
+                dataReader,
+                ordinalOffset,
+                type,
+                parameterChain,
+                dbOptions
+            );
         }
 
         throw new NotSupportedException($"Cannot create is null reader for type {type}");
@@ -178,7 +203,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain
+        IImmutableList<ObjectPathPart> parameterChain,
+        DbOptions dbOptions
     )
     {
         var ctor = type.GetConstructors().First();
@@ -188,7 +214,8 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                     dataReader,
                     ordinalOffset,
                     p.ParameterType,
-                    parameterChain.Add(new ParameterPathPart(p))
+                    parameterChain.Add(new ParameterPathPart(p)),
+                    dbOptions
                 )
             )
             .Aggregate((Expression)Expression.Constant(true), Expression.And);

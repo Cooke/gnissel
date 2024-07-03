@@ -36,8 +36,9 @@ public class InsertQuery<T>(
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(
             options.DbConnector,
-            options.RenderSql(options.TypedSqlGenerator.Generate(this))
+            options.RenderSql(options.TypedSqlGenerator.Generate(this, options))
         ).ExecuteAsync(cancellationToken);
 
-    public RenderedSql RenderedSql => options.RenderSql(options.TypedSqlGenerator.Generate(this));
+    public RenderedSql RenderedSql =>
+        options.RenderSql(options.TypedSqlGenerator.Generate(this, options));
 }

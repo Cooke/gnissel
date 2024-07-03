@@ -118,7 +118,9 @@ public class Table<T> : ITable, IQuery<T>
         this.options = dbOptions;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
         _query = new Query<T>(
-            dbOptions.RenderSql(dbOptions.TypedSqlGenerator.Generate(CreateExpressionQuery())),
+            dbOptions.RenderSql(
+                dbOptions.TypedSqlGenerator.Generate(CreateExpressionQuery(), dbOptions)
+            ),
             dbOptions.ObjectReaderProvider.GetReaderFunc<T>(dbOptions),
             dbOptions.DbConnector
         );

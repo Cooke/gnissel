@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Services;
@@ -5,12 +6,13 @@ using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Queries;
 using Cooke.Gnissel.Typed.Services;
+using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
 public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
 {
-    public Sql Generate(IInsertQuery query)
+    public Sql Generate(IInsertQuery query, DbOptions dbOptions)
     {
         var sql = new Sql(20 + query.Columns.Count * 4);
         sql.AppendLiteral("INSERT INTO ");
@@ -55,7 +57,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         return sql;
     }
 
-    public Sql Generate(IDeleteQuery query)
+    public Sql Generate(IDeleteQuery query, DbOptions dbOptions)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral($"DELETE FROM ");
@@ -64,13 +66,13 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql, new RenderOptions());
+            RenderExpression(query.Condition, sql, new RenderOptions(dbOptions));
         }
 
         return sql;
     }
 
-    public Sql Generate(IUpdateQuery query)
+    public Sql Generate(IUpdateQuery query, DbOptions dbOptions)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral("UPDATE ");
@@ -89,7 +91,11 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
             sql.AppendIdentifier(setter.Column.Name);
             sql.AppendLiteral(" = ");
 
-            RenderExpression(setter.Value, sql, new RenderOptions { ConstantsAsParameters = true });
+            RenderExpression(
+                setter.Value,
+                sql,
+                new RenderOptions(dbOptions) { ConstantsAsParameters = true }
+            );
 
             first = false;
         }
@@ -97,18 +103,18 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql, new RenderOptions());
+            RenderExpression(query.Condition, sql, new RenderOptions(dbOptions));
         }
 
         return sql;
     }
 
-    public Sql Generate(ExpressionQuery query)
+    public Sql Generate(ExpressionQuery query, DbOptions dbOptions)
     {
         var tableSource = query.TableSource;
         var joins = query.Joins;
         var selector = query.Selector;
-        var options = new RenderOptions { QualifyColumns = query.Joins.Any() };
+        var options = new RenderOptions(dbOptions) { QualifyColumns = query.Joins.Any(), };
 
         var sql = new Sql(100, 2);
         // var tableIndices = CreateTableIndicesMap();
@@ -264,7 +270,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         }
     }
 
-    private record RenderOptions
+    private record RenderOptions(DbOptions DbOptions)
     {
         public bool ConstantsAsParameters { get; init; }
 
@@ -276,15 +282,12 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         switch (expression)
         {
             case BinaryExpression binaryExpression:
-                RenderExpression(
-                    Coercion(binaryExpression.Left, binaryExpression.Right),
-                    sql,
-                    options
-                );
+                var (left, right) = Coercion(binaryExpression.Left, binaryExpression.Right);
+                RenderExpression(left, sql, options);
                 sql.AppendLiteral(" ");
                 sql.AppendLiteral(RenderBinaryOperator(binaryExpression.NodeType));
                 sql.AppendLiteral(" ");
-                RenderExpression(binaryExpression.Right, sql, options);
+                RenderExpression(right, sql, options);
                 return;
 
             case ConstantExpression constExp:
@@ -294,7 +297,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                 }
                 else
                 {
-                    sql.AppendLiteral(FormatValue(constExp.Value));
+                    sql.AppendLiteral(FormatLiteral(constExp.Value, options.DbOptions));
                 }
                 return;
 
@@ -382,7 +385,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
             case UnaryExpression
             {
                 NodeType: ExpressionType.Convert,
-                Operand: { Type: { IsEnum: true } }
+                Operand.Type.IsEnum: true
             } unaryExpression:
                 RenderExpression(unaryExpression.Operand, sql, options);
                 return;
@@ -394,17 +397,35 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         }
     }
 
-    private Expression Coercion(Expression left, Expression right)
+    private (Expression left, Expression right) Coercion(Expression left, Expression right)
     {
-        if (
-            left is UnaryExpression
-            {
-                NodeType: ExpressionType.Convert,
-                Operand: { Type: { IsEnum: true } }
-            } unaryExpression
+        var (left1, right1) = CoerceInner(left, right);
+        var (right2, left2) = CoerceInner(right1, left1);
+        return (left2, right2);
+
+        static (Expression operand1, Expression operand2) CoerceInner(
+            Expression operand1,
+            Expression operand2
         )
         {
-            return unaryExpression.Operand;
+            if (
+                operand1
+                    is UnaryExpression
+                    {
+                        NodeType: ExpressionType.Convert,
+                        Operand: { Type.IsEnum: true } operand1Value
+                    }
+                && operand2
+                    is ConstantExpression { Type.IsPrimitive: true, Value: { } operand2Value }
+            )
+            {
+                return (
+                    operand1Value,
+                    Expression.Constant(Enum.ToObject(operand1Value.Type, operand2Value))
+                );
+            }
+
+            return (operand1, operand2);
         }
     }
 
@@ -443,10 +464,29 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
             _ => throw new ArgumentOutOfRangeException(nameof(expressionType), expressionType, null)
         };
 
-    private static string FormatValue(object? value) =>
-        value switch
+    private static string FormatLiteral(object? value, DbOptions dbOptions)
+    {
+        if (value is null)
         {
-            string => $"'{value}'",
-            _ => value?.ToString() ?? "NULL"
-        };
+            return "NULL";
+        }
+
+        var converter = dbOptions.GetConverter(value.GetType());
+        if (converter != null)
+        {
+            return FormatLiteral(converter.ToDbValue(value));
+        }
+
+        return FormatLiteral(new UntypedDbValue(value));
+    }
+
+    private static string FormatLiteral(DbValue value) =>
+        value.Value switch
+        {
+            null => "NULL",
+            string str => FormatString(str),
+            _ => value.Value.ToString()
+        } ?? throw new InvalidOperationException();
+
+    private static string FormatString(string strValue) => $"'{strValue}'";
 }

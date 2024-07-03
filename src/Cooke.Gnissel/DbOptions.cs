@@ -19,12 +19,13 @@ public class DbOptions(
     IImmutableList<DbConverter> converters
 )
 {
-    private readonly ConcurrentDictionary<Type, DbConverter> _concreteConverters =
+    private readonly ConcurrentDictionary<Type, ConcreteDbConverter> _concreteConverters =
         new(
             converters
+                .OfType<ConcreteDbConverter>()
                 .Select(x => (forType: GetTypeToConvertFor(x.GetType()), converter: x))
                 .Where(x => x.forType != null)
-                .Select(x => new KeyValuePair<Type, DbConverter>(x.forType!, x.converter))
+                .Select(x => new KeyValuePair<Type, ConcreteDbConverter>(x.forType!, x.converter))
         );
 
     private readonly ImmutableList<DbConverterFactory> _converterFactories = converters
@@ -89,7 +90,7 @@ public class DbOptions(
         return (DbConverter<T>?)GetConverter(typeof(T));
     }
 
-    public object? GetConverter(Type type)
+    public ConcreteDbConverter? GetConverter(Type type)
     {
         if (_concreteConverters.TryGetValue(type, out var converter))
         {
@@ -113,9 +114,12 @@ public class DbOptions(
         return null;
     }
 
-    private object GetConverterFromAttribute(Type type, DbConverterAttribute converterAttribute)
+    private ConcreteDbConverter GetConverterFromAttribute(
+        Type type,
+        DbConverterAttribute converterAttribute
+    )
     {
-        DbConverter? converter;
+        ConcreteDbConverter? converter;
         if (converterAttribute.ConverterType.IsAssignableTo(typeof(DbConverterFactory)))
         {
             var factory =
@@ -142,7 +146,7 @@ public class DbOptions(
         )
         {
             converter =
-                (DbConverter?)Activator.CreateInstance(converterAttribute.ConverterType)
+                (ConcreteDbConverter?)Activator.CreateInstance(converterAttribute.ConverterType)
                 ?? throw new InvalidOperationException(
                     $"Could not create an instance of converter of type {converterAttribute.ConverterType}"
                 );

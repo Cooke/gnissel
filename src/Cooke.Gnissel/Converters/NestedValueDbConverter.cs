@@ -14,7 +14,7 @@ public class NestedValueDbConverter : DbConverterFactory
                 .Any(x => x.PropertyType == ctor.GetParameters().Single().ParameterType);
     }
 
-    public override DbConverter Create(Type type)
+    public override ConcreteDbConverter Create(Type type)
     {
         var propertyInfo = type.GetProperties().Single();
         var innerType = propertyInfo.PropertyType;
@@ -53,7 +53,7 @@ public class NestedValueDbConverter : DbConverterFactory
             )
             .Compile();
 
-        return (DbConverter)
+        return (ConcreteDbConverter)
             Activator.CreateInstance(
                 typeof(ConcreteConverter<>).MakeGenericType(type),
                 toParameter,

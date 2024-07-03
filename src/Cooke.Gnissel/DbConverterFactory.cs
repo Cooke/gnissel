@@ -4,5 +4,5 @@ public abstract class DbConverterFactory : DbConverter
 {
     public abstract bool CanCreateFor(Type type);
 
-    public abstract DbConverter Create(Type type);
+    public abstract ConcreteDbConverter Create(Type type);
 }

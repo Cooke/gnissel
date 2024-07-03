@@ -7,9 +7,9 @@ public class EnumStringDbConverter : DbConverterFactory
 {
     public override bool CanCreateFor(Type type) => type.IsEnum;
 
-    public override DbConverter Create(Type type)
+    public override ConcreteDbConverter Create(Type type)
     {
-        return (DbConverter?)
+        return (ConcreteDbConverter?)
                 Activator.CreateInstance(typeof(EnumStringDbConverter<>).MakeGenericType(type))
             ?? throw new InvalidOperationException();
     }
@@ -18,6 +18,11 @@ public class EnumStringDbConverter : DbConverterFactory
 public class EnumStringDbConverter<TEnum> : DbConverter<TEnum>
     where TEnum : struct, Enum
 {
+    public override DbValue ToDbValue(object value)
+    {
+        return new TypedDbValue<string>(((TEnum)value).ToString());
+    }
+
     public override DbParameter ToParameter(TEnum value, IDbAdapter adapter) =>
         adapter.CreateParameter(value.ToString());
 
