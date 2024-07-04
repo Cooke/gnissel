@@ -91,11 +91,21 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
             sql.AppendIdentifier(setter.Column.Name);
             sql.AppendLiteral(" = ");
 
-            RenderExpression(
-                setter.Value,
-                sql,
-                new RenderOptions(dbOptions) { ConstantsAsParameters = true }
-            );
+            switch (setter)
+            {
+                case ExpressionSetter expressionSetter:
+                    RenderExpression(
+                        expressionSetter.Value,
+                        sql,
+                        new RenderOptions(dbOptions) { ConstantsAsParameters = true }
+                    );
+                    break;
+                case ValueSetter valueSetter:
+                    valueSetter.AppendParameter(sql);
+                    break;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(setter));
+            }
 
             first = false;
         }

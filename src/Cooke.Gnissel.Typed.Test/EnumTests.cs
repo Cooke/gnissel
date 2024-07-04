@@ -55,6 +55,18 @@ public class EnumTests : IDisposable
     }
 
     [Fact]
+    public async Task Update()
+    {
+        var bob = new User(1, "Bob", 25, Role.Admin);
+        await db.Users.Insert(bob);
+
+        await db.Users.Set(x => x.Role, Role.User).WithoutWhere();
+
+        var users = await db.Query<User>($"SELECT * FROM users").ToArrayAsync();
+        Assert.Equal([bob with { Role = Role.User }], users);
+    }
+
+    [Fact]
     public async Task CompareEnumValues()
     {
         var bob = new User(1, "Bob", 30, Role.User);

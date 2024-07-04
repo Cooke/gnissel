@@ -24,7 +24,7 @@ public abstract class ConcreteDbConverter<T> : ConcreteDbConverter
 
     public abstract T FromReader(DbDataReader reader, int ordinal);
 
-    public override DbValue ToDbValue(object value) => new DbValue<T>((T)value, null);
+    public override DbValue ToDbValue(object value) => ToDbValue((T)value);
 }
 
 public class DbConverterAttribute(Type converterType) : Attribute

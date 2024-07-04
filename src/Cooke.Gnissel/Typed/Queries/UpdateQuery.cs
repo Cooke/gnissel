@@ -14,7 +14,22 @@ public interface IUpdateQuery : INonQuery
     IReadOnlyCollection<Setter> Setters { get; }
 }
 
-public record Setter(IColumn Column, Expression Value);
+public abstract record Setter(IColumn Column);
+
+public record ExpressionSetter(IColumn Column, Expression Value) : Setter(Column);
+
+public abstract record ValueSetter(IColumn Column) : Setter(Column)
+{
+    public abstract void AppendParameter(Sql sql);
+}
+
+public record ValueSetter<T>(IColumn Column, T Value) : ValueSetter(Column)
+{
+    public override void AppendParameter(Sql sql)
+    {
+        sql.AppendParameter(Value);
+    }
+}
 
 public class UpdateQueryWithoutWhere<T>(
     Table<T> table,

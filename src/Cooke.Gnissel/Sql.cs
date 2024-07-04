@@ -30,14 +30,9 @@ public class Sql
 
     public IReadOnlyList<IFragment> Fragments => _fragments;
 
-    public void AddFragment(IFragment fragment)
+    private void AddFragment(IFragment fragment)
     {
         _fragments.Add(fragment);
-    }
-
-    public void AddFragments(IEnumerable<IFragment> fragments)
-    {
-        _fragments.AddRange(fragments);
     }
 
     public void AppendLiteral(string s)
@@ -90,6 +85,11 @@ public class Sql
     public interface IParameter : IFragment
     {
         DbParameter ToParameter(DbOptions options);
+    }
+
+    private record Parameter(object Value, string? DbType) : IParameter
+    {
+        public DbParameter ToParameter(DbOptions options) => options.CreateParameter(Value, DbType);
     }
 
     private record Parameter<T>(T Value, string? DbType) : IParameter
