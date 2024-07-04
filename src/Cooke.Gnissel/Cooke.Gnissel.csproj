@@ -5,7 +5,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Henrik Cooke</Authors>
-        <Version>0.6.4</Version>
+        <Version>0.7.0</Version>
         <Description>An alternative database mapper for .NET, instead of Dapper or Entity Framework.</Description>
         <Copyright>Cooke Software Solutions AB</Copyright>
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
