@@ -185,7 +185,13 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
 
         if (dbAdapter.IsDbMapped(type))
         {
-            return CreateIsNullValueReader(dataReader, ordinalOffset);
+            var ordinal = GetOrdinalAfterExpression(
+                dataReader,
+                ordinalOffset,
+                dbAdapter,
+                parameterChain
+            );
+            return CreateIsNullValueReader(dataReader, ordinal);
         }
 
         if (type.IsAssignableTo(typeof(ITuple)) || type.IsClass)
@@ -251,6 +257,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
                     return body;
                 })
         );
+
         return (body, width);
     }
 
@@ -287,7 +294,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         Expression rowReader,
         Expression ordinal,
         Type type
-    ) => Expression.Call(rowReader, "GetFieldValue", new[] { type }, ordinal);
+    ) => Expression.Call(rowReader, "GetFieldValue", [type], ordinal);
 
     private static MethodCallExpression CreateIsNullValueReader(
         Expression rowReader,

@@ -159,6 +159,19 @@ public class MappingTests
     }
 
     [Test]
+    public async Task NullComplexInPositionalType()
+    {
+        var results = await _db.Query<(User, User, User?)>(
+                $"SELECT 1 as id, 'Bob' as name, 30 as age, 2 as id, 'Sara' as name, 25 as age, null as id, null as name, null as age"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(
+            new (User, User, User?)[] { (new User(1, "Bob", 30), new User(2, "Sara", 25), null) },
+            results
+        );
+    }
+
+    [Test]
     [Ignore("Should warn when over fetching")]
     public async Task NotAllValuesMapped()
     {
