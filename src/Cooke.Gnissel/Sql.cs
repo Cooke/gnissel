@@ -2,7 +2,6 @@
 
 using System.Data.Common;
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel.Services;
 
 #endregion
 
@@ -11,24 +10,24 @@ namespace Cooke.Gnissel;
 [InterpolatedStringHandler]
 public class Sql
 {
-    private readonly List<IFragment> _fragments;
+    private readonly List<Fragment> _fragments;
 
     public Sql()
     {
-        _fragments = new List<IFragment>();
+        _fragments = new List<Fragment>();
     }
 
     public Sql(int fragmentCapacity)
     {
-        _fragments = new List<IFragment>(fragmentCapacity);
+        _fragments = new List<Fragment>(fragmentCapacity);
     }
 
     public Sql(int literalLength, int formattedCount)
     {
-        _fragments = new List<IFragment>(literalLength + formattedCount);
+        _fragments = new List<Fragment>(literalLength + formattedCount);
     }
 
-    public IReadOnlyList<IFragment> Fragments => _fragments;
+    public IReadOnlyList<Fragment> Fragments => _fragments;
 
     public void AppendSql(Sql sql)
     {
@@ -70,35 +69,31 @@ public class Sql
         _fragments.Add(new Parameter<T>(t, format));
     }
 
+    public readonly record struct Raw(String Value);
+
     public static Raw Inject(string raw) => new(raw);
 
     public static Identifier Id(string identifier) => new(identifier);
 
-    public readonly record struct Raw(String Value);
+    public abstract record Fragment;
 
-    public interface IFragment;
+    public record Literal(string Value) : Fragment;
 
-    public record Literal(string Value) : IFragment;
+    public record Identifier(string Value) : Fragment;
 
-    public record Identifier(string Value) : IFragment;
-
-    public interface IParameter : IFragment
+    public abstract record Parameter : Fragment
     {
-        DbParameter ToParameter(DbOptions options);
+        public abstract DbParameter ToParameter(DbOptions options);
     }
 
-    private record Parameter(object Value, string? DbType) : IParameter
+    private record Parameter<T>(T Value, string? DbType) : Parameter
     {
-        public DbParameter ToParameter(DbOptions options) => options.CreateParameter(Value, DbType);
+        public override DbParameter ToParameter(DbOptions options) =>
+            options.CreateParameter(Value, DbType);
     }
 
-    private record Parameter<T>(T Value, string? DbType) : IParameter
+    private record ExistingParameter(DbParameter Parameter) : Parameter
     {
-        public DbParameter ToParameter(DbOptions options) => options.CreateParameter(Value, DbType);
-    }
-
-    private record ExistingParameter(DbParameter Parameter) : IParameter
-    {
-        public DbParameter ToParameter(DbOptions options) => Parameter;
+        public override DbParameter ToParameter(DbOptions options) => Parameter;
     }
 }

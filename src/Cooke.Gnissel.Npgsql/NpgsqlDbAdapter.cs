@@ -68,7 +68,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                 x switch
                 {
                     Sql.Literal { Value: var s } => s.Length,
-                    Sql.IParameter => 3,
+                    Sql.Parameter => 3,
                     Sql.Identifier { Value: var s } => s.Length + 2,
                     _ => 0
                 }
@@ -84,7 +84,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                     sb.Append(s);
                     break;
 
-                case Sql.IParameter p:
+                case Sql.Parameter p:
                     sb.Append('$');
                     sb.Append(parameters.Count + 1);
                     parameters.Add(p.ToParameter(options));

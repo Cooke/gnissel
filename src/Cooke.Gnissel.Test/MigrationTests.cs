@@ -33,9 +33,9 @@ public class MigrationTests
     [Test]
     public async Task Migrate()
     {
-        var migrations = new List<Migration>()
+        var migrations = new List<FuncMigration>()
         {
-            new Migration(
+            new FuncMigration(
                 "create users table",
                 async (db, ct) =>
                     await db.NonQuery(
@@ -59,7 +59,7 @@ public class MigrationTests
         );
 
         migrations.Add(
-            new Migration(
+            new FuncMigration(
                 "add name to users table",
                 async (db, ct) =>
                     await db.NonQuery($"ALTER TABLE users ADD COLUMN name text").ExecuteAsync(ct)

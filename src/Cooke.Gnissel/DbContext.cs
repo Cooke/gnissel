@@ -104,7 +104,7 @@ public class DbContext(DbOptions dbOptions)
     }
 
     public ValueTask Migrate(
-        IReadOnlyList<IMigration> migrations,
+        IReadOnlyList<Migration> migrations,
         CancellationToken cancellationToken = default
     ) => _dbAdapter.Migrator.Migrate(migrations, cancellationToken);
 }

@@ -5,7 +5,7 @@ namespace Cooke.Gnissel.Services;
 public interface IMigrator
 {
     ValueTask Migrate(
-        IReadOnlyCollection<IMigration> migrations,
+        IReadOnlyCollection<Migration> migrations,
         CancellationToken cancellationToken
     );
 }
