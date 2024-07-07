@@ -15,7 +15,7 @@ public interface IColumn
 public class Column<TTable>(
     string name,
     IReadOnlyCollection<MemberInfo> memberChain,
-    Func<TTable, DbParameter> parameterFactory,
+    Func<TTable, Sql.Parameter> parameterFactory,
     bool isDatabaseGenerated
 ) : IColumn
 {
@@ -25,5 +25,5 @@ public class Column<TTable>(
 
     public bool IsDatabaseGenerated { get; } = isDatabaseGenerated;
 
-    public DbParameter CreateParameter(TTable item) => parameterFactory(item);
+    public Sql.Parameter CreateParameter(TTable item) => parameterFactory(item);
 }

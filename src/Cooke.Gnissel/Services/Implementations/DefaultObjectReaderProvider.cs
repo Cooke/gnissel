@@ -240,11 +240,10 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
     {
         var width = 0;
         var ctor = type.GetConstructors().First();
-        var props = type.GetProperties(
-                BindingFlags.SetProperty | BindingFlags.Public | BindingFlags.Instance
-            )
+        var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(prop =>
-                !ctor.GetParameters()
+                prop.CanWrite
+                && !ctor.GetParameters()
                     .Select(x => x.Name)
                     .Contains(prop.Name, StringComparer.InvariantCultureIgnoreCase)
             );

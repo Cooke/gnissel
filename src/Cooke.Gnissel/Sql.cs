@@ -1,9 +1,5 @@
-#region
-
 using System.Data.Common;
 using System.Runtime.CompilerServices;
-
-#endregion
 
 namespace Cooke.Gnissel;
 
@@ -39,41 +35,26 @@ public class Sql
         _fragments.Add(new Literal(s));
     }
 
-    public void AppendIdentifier(string identifier)
-    {
-        _fragments.Add(new Identifier(identifier));
-    }
+    public static Identifier Id(string identifier) => new(identifier);
 
-    public void AppendFormatted(Raw raw)
-    {
-        _fragments.Add(new Literal(raw.Value));
-    }
-
-    public void AppendFormatted<T>(T t)
-    {
-        AppendParameter(t);
-    }
-
-    public void AppendParameter<T>(T t)
-    {
-        _fragments.Add(new Parameter<T>(t, null));
-    }
-
-    public void AppendFormatted(DbParameter parameter)
-    {
-        _fragments.Add(new ExistingParameter(parameter));
-    }
-
-    public void AppendFormatted<T>(T t, string? format)
-    {
-        _fragments.Add(new Parameter<T>(t, format));
-    }
+    public void AppendIdentifier(string identifier) => _fragments.Add(new Identifier(identifier));
 
     public readonly record struct Raw(String Value);
 
     public static Raw Inject(string raw) => new(raw);
 
-    public static Identifier Id(string identifier) => new(identifier);
+    public void AppendFormatted(Raw raw) => _fragments.Add(new Literal(raw.Value));
+
+    public void AppendFormatted<T>(T t) => AppendParameter(t);
+
+    public void AppendParameter<T>(T t) => _fragments.Add(new Parameter<T>(t, null));
+
+    public void AppendParameter(Parameter parameter) => _fragments.Add(parameter);
+
+    public void AppendFormatted<T>(T t, string? format)
+    {
+        _fragments.Add(new Parameter<T>(t, format));
+    }
 
     public abstract record Fragment;
 
@@ -83,17 +64,12 @@ public class Sql
 
     public abstract record Parameter : Fragment
     {
-        public abstract DbParameter ToParameter(DbOptions options);
+        public abstract DbParameter CreateDbParameter(DbOptions options);
     }
 
-    private record Parameter<T>(T Value, string? DbType) : Parameter
+    public record Parameter<T>(T TypedValue, string? Format) : Parameter
     {
-        public override DbParameter ToParameter(DbOptions options) =>
-            options.CreateParameter(Value, DbType);
-    }
-
-    private record ExistingParameter(DbParameter Parameter) : Parameter
-    {
-        public override DbParameter ToParameter(DbOptions options) => Parameter;
+        public override DbParameter CreateDbParameter(DbOptions options) =>
+            options.CreateParameter(TypedValue, Format);
     }
 }

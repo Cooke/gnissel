@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Services;
@@ -23,50 +22,9 @@ internal static class ColumnBuilder
         if (options.Ignores.Any(x => x.SequenceEqual(memberChain)))
             yield break;
 
-        var converter = options.DbOptions.GetConverter(memberType);
-        if (converter != null)
+        if (options.DbOptions.GetConverter(memberType) != null)
         {
-            var columnOptions = options.Columns.FirstOrDefault(x =>
-                x.MemberChain.SequenceEqual(memberChain)
-            );
-            var columnName =
-                columnOptions?.Name
-                ?? member.GetDbName()
-                ?? options.DbOptions.DbAdapter.ToColumnName(
-                    memberChain.Select(x => new PropertyPathPart(x))
-                );
-
-            var objectExpression = Expression.Parameter(typeof(T));
-            var paramFactory = Expression
-                .Lambda<Func<T, DbParameter>>(
-                    Expression.Call(
-                        Expression.Call(
-                            Expression.Constant(
-                                converter,
-                                typeof(ConcreteDbConverter<>).MakeGenericType(memberType)
-                            ),
-                            typeof(ConcreteDbConverter<>)
-                                .MakeGenericType(memberType)
-                                .GetMethod(
-                                    nameof(ConcreteDbConverter<object>.ToDbValue),
-                                    [memberType]
-                                ) ?? throw new InvalidOperationException(),
-                            objectExpression.ToMemberExpression(memberChain)
-                        ),
-                        nameof(DbValue.CreateParameter),
-                        [],
-                        Expression.Constant(options.DbOptions.DbAdapter)
-                    ),
-                    objectExpression
-                )
-                .Compile();
-
-            yield return new Column<T>(
-                columnName,
-                memberChain,
-                paramFactory,
-                member.GetCustomAttribute<DatabaseGeneratedAttribute>() != null
-            );
+            yield return CreateColumn<T>(options, memberChain);
         }
         else if (options.DbOptions.DbAdapter.IsDbMapped(memberType))
         {
@@ -96,39 +54,42 @@ internal static class ColumnBuilder
         IReadOnlyList<PropertyInfo> memberChain
     )
     {
-        var p = memberChain.Last();
+        var property = memberChain[^1];
         var columnOptions = options.Columns.FirstOrDefault(x =>
             x.MemberChain.SequenceEqual(memberChain)
         );
         return new Column<T>(
             columnOptions?.Name
-                ?? p.GetDbName()
+                ?? property.GetDbName()
                 ?? options.DbOptions.DbAdapter.ToColumnName(
                     memberChain.Select(x => new PropertyPathPart(x))
                 ),
             memberChain,
-            CreateParameterFactory<T>(options.DbOptions.DbAdapter, memberChain),
-            p.GetCustomAttribute<DatabaseGeneratedAttribute>() != null
+            CreateParameterFactory<T>(memberChain),
+            property.GetCustomAttribute<DatabaseGeneratedAttribute>() != null
         );
     }
 
-    private static Func<T, DbParameter> CreateParameterFactory<T>(
-        IDbAdapter dbAdapter,
+    private static Func<T, Sql.Parameter> CreateParameterFactory<T>(
         IReadOnlyList<PropertyInfo> memberChain
     )
     {
-        var rootObjectExpression = Expression.Parameter(typeof(T));
         var propertyInfo = memberChain[^1];
+        var objectExpression = Expression.Parameter(typeof(T));
         return Expression
-            .Lambda<Func<T, DbParameter>>(
-                Expression.Call(
-                    Expression.Constant(dbAdapter),
-                    nameof(dbAdapter.CreateParameter),
-                    [propertyInfo.PropertyType],
-                    rootObjectExpression.ToMemberExpression(memberChain),
-                    Expression.Constant(propertyInfo.GetDbType(), typeof(string))
+            .Lambda<Func<T, Sql.Parameter>>(
+                Expression.Convert(
+                    Expression.New(
+                        typeof(Sql.Parameter<>)
+                            .MakeGenericType(propertyInfo.PropertyType)
+                            .GetConstructors()
+                            .Single(),
+                        objectExpression.ToMemberExpression(memberChain),
+                        Expression.Constant(propertyInfo.GetDbType(), typeof(string))
+                    ),
+                    typeof(Sql.Parameter)
                 ),
-                rootObjectExpression
+                objectExpression
             )
             .Compile();
     }

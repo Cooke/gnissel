@@ -47,7 +47,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                     sql.AppendLiteral(", ");
                 }
 
-                sql.AppendFormatted(par);
+                sql.AppendParameter(par);
                 firstParam = false;
             }
 

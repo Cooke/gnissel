@@ -13,7 +13,7 @@ public interface IInsertQuery
     IReadOnlyCollection<RowParameters> Rows { get; }
 }
 
-public record RowParameters(IReadOnlyCollection<DbParameter> Parameters);
+public record RowParameters(IReadOnlyCollection<Sql.Parameter> Parameters);
 
 public class InsertQuery<T>(
     Table<T> table,

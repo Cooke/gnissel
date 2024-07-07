@@ -209,7 +209,7 @@ public class Table<T> : ITable, IQuery<T>
         new(options, new TableSource(this), null, [], [], [], []);
 
     private RowParameters CreateRowParameters(T instance) =>
-        new RowParameters(
+        new(
             Columns
                 .Where(x => !x.IsDatabaseGenerated)
                 .Select(c => c.CreateParameter(instance))
