@@ -1,7 +1,7 @@
 #region
 
 using System.Data.Common;
-using Cooke.Gnissel.Typed.Services;
+using Cooke.Gnissel.Typed.Queries;
 
 #endregion
 
@@ -23,9 +23,18 @@ public interface IDbAdapter
 
     IDbConnector CreateConnector();
 
-    ITypedSqlGenerator TypedSqlGenerator { get; }
-
-    IMigrator Migrator { get; }
+    ValueTask Migrate(
+        IReadOnlyCollection<Migration> migrations,
+        CancellationToken cancellationToken
+    );
 
     bool IsDbMapped(Type type);
+
+    Sql Generate(IInsertQuery query);
+
+    Sql Generate(IDeleteQuery query);
+
+    Sql Generate(IUpdateQuery query);
+
+    Sql Generate(ExpressionQuery query);
 }

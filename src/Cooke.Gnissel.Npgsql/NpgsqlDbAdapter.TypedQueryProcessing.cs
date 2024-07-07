@@ -4,11 +4,10 @@ using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Queries;
-using Cooke.Gnissel.Typed.Services;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
+public partial class NpgsqlDbAdapter
 {
     public Sql Generate(IInsertQuery query)
     {
@@ -263,7 +262,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         sql.AppendLiteral(".");
         sql.AppendIdentifier(column.Name);
 
-        var parameterColumnName = dbAdapter.ToColumnName(
+        var parameterColumnName = ToColumnName(
             column.MemberChain.Select(x => new PropertyPathPart((PropertyInfo)x))
         );
 
@@ -358,7 +357,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                     RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
-                        dbAdapter.ToColumnName(
+                        ToColumnName(
                             [
                                 new ParameterPathPart(
                                     newExpression.Constructor!.GetParameters()[index]
