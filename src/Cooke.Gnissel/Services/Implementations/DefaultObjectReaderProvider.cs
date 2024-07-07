@@ -238,24 +238,46 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         DbOptions dbOptions
     )
     {
-        var ctor = type.GetConstructors().First();
         var width = 0;
+        var ctor = type.GetConstructors().First();
+        var props = type.GetProperties(
+                BindingFlags.SetProperty | BindingFlags.Public | BindingFlags.Instance
+            )
+            .Where(prop =>
+                !ctor.GetParameters()
+                    .Select(x => x.Name)
+                    .Contains(prop.Name, StringComparer.InvariantCultureIgnoreCase)
+            );
 
-        var body = Expression.New(
-            ctor,
-            ctor.GetParameters()
-                .Select(p =>
-                {
-                    var (body, innerWidth) = CreateReader(
-                        dataReader,
-                        ordinalOffset,
-                        p.ParameterType,
-                        parameterChain.Add(new ParameterPathPart(p)),
-                        dbOptions
-                    );
-                    width += innerWidth;
-                    return body;
-                })
+        var body = Expression.MemberInit(
+            Expression.New(
+                ctor,
+                ctor.GetParameters()
+                    .Select(p =>
+                    {
+                        var (body, innerWidth) = CreateReader(
+                            dataReader,
+                            ordinalOffset,
+                            p.ParameterType,
+                            parameterChain.Add(new ParameterPathPart(p)),
+                            dbOptions
+                        );
+                        width += innerWidth;
+                        return body;
+                    })
+            ),
+            props.Select(p =>
+            {
+                var (body, innerWidth) = CreateReader(
+                    dataReader,
+                    ordinalOffset,
+                    p.PropertyType,
+                    parameterChain.Add(new PropertyPathPart(p)),
+                    dbOptions
+                );
+                width += innerWidth;
+                return Expression.Bind(p, body);
+            })
         );
 
         return (body, width);

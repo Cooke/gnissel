@@ -13,6 +13,9 @@ public class TypedQuery<T1, T2>(ExpressionQuery expressionQuery) : IQuery<(T1, T
     public IAsyncEnumerable<(T1, T2)> ExecuteAsync(CancellationToken cancellationToken = default) =>
         LazyQuery.ExecuteAsync(cancellationToken);
 
+    public TypedQuery<T1, T2> Where(Expression<Func<T1, bool>> predicate) =>
+        new(expressionQuery.Where(predicate));
+
     public TypedQuery<T1, T2> Where(Expression<Func<T1, T2, bool>> predicate) =>
         new(expressionQuery.Where(predicate));
 
@@ -41,11 +44,17 @@ public class TypedQuery<T1, T2>(ExpressionQuery expressionQuery) : IQuery<(T1, T
 
     public SingleQuery<(T1, T2)> First() => expressionQuery.First<(T1, T2)>();
 
+    public SingleQuery<(T1, T2)> First(Expression<Func<T1, bool>> predicate) =>
+        expressionQuery.First<(T1, T2)>(predicate);
+
     public SingleQuery<(T1, T2)> First(Expression<Func<T1, T2, bool>> predicate) =>
         expressionQuery.First<(T1, T2)>(predicate);
 
     public SingleOrDefaultQuery<(T1, T2)> FirstOrDefault() =>
         expressionQuery.FirstOrDefault<(T1, T2)>();
+
+    public SingleOrDefaultQuery<(T1, T2)> FirstOrDefault(Expression<Func<T1, bool>> predicate) =>
+        expressionQuery.FirstOrDefault<(T1, T2)>(predicate);
 
     public SingleOrDefaultQuery<(T1, T2)> FirstOrDefault(
         Expression<Func<T1, T2, bool>> predicate

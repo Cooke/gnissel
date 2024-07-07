@@ -152,6 +152,7 @@ public record ExpressionQuery(
         ParameterExpressionReplacer.Replace(
             predicate.Body,
             Sources
+                .Take(predicate.Parameters.Count)
                 .Select(
                     (source, index) =>
                         (predicate.Parameters[index], (Expression)new TableExpression(source))

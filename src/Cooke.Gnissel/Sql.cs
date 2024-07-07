@@ -30,14 +30,9 @@ public class Sql
 
     public IReadOnlyList<IFragment> Fragments => _fragments;
 
-    public void AddFragment(IFragment fragment)
+    public void AppendSql(Sql sql)
     {
-        _fragments.Add(fragment);
-    }
-
-    public void AddFragments(IEnumerable<IFragment> fragments)
-    {
-        _fragments.AddRange(fragments);
+        _fragments.AddRange(sql.Fragments);
     }
 
     public void AppendLiteral(string s)

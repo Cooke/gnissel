@@ -14,6 +14,12 @@ public class TypedQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IQuery<(T
         CancellationToken cancellationToken = default
     ) => LazyQuery.ExecuteAsync(cancellationToken);
 
+    public TypedQuery<T1, T2, T3> Where(Expression<Func<T1, bool>> predicate) =>
+        new(expressionQuery.Where(predicate));
+
+    public TypedQuery<T1, T2, T3> Where(Expression<Func<T1, T2, bool>> predicate) =>
+        new(expressionQuery.Where(predicate));
+
     public TypedQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate) =>
         new(expressionQuery.Where(predicate));
 
@@ -38,7 +44,15 @@ public class TypedQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IQuery<(T
         expressionQuery.FirstOrDefault<(T1, T2, T3)>();
 
     public SingleOrDefaultQuery<(T1, T2, T3)> FirstOrDefault(
+        Expression<Func<T1, bool>> predicate
+    ) => expressionQuery.FirstOrDefault<(T1, T2, T3)>(predicate);
+
+    public SingleOrDefaultQuery<(T1, T2, T3)> FirstOrDefault(
         Expression<Func<T1, T2, bool>> predicate
+    ) => expressionQuery.FirstOrDefault<(T1, T2, T3)>(predicate);
+
+    public SingleOrDefaultQuery<(T1, T2, T3)> FirstOrDefault(
+        Expression<Func<T1, T2, T3, bool>> predicate
     ) => expressionQuery.FirstOrDefault<(T1, T2, T3)>(predicate);
 
     public TypedQuery<T1, T2, T3> Limit(int limit) => new(expressionQuery with { Limit = limit });
