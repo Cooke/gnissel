@@ -2,8 +2,8 @@ using System.Collections.Immutable;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
+using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Typed.Internals;
 

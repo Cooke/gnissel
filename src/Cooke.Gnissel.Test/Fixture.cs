@@ -1,15 +1,9 @@
 #region
 
-using System.Diagnostics;
-using DotNet.Testcontainers;
 using Extensions.Logging.NUnit;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Logging.Configuration;
-using Microsoft.Extensions.Logging.Console;
-using Microsoft.Extensions.Options;
 using Npgsql;
-using NUnit.Framework.Interfaces;
 using Testcontainers.PostgreSql;
 
 #endregion

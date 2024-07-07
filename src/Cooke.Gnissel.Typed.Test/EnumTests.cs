@@ -1,10 +1,7 @@
-using System.Text;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
-using Cooke.Gnissel.Utils;
-using Npgsql;
 using Xunit.Abstractions;
 
 namespace Cooke.Gnissel.Typed.Test;

@@ -1,7 +1,7 @@
 ﻿using System.Data.Common;
 using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel.Utils;
+namespace Cooke.Gnissel.Internals;
 
 internal static class ObjectReaderProviderExtensions
 {

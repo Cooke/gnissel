@@ -5,7 +5,6 @@ using System.Text.Json.Serialization;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
-using Cooke.Gnissel.Utils;
 using Npgsql;
 
 #endregion

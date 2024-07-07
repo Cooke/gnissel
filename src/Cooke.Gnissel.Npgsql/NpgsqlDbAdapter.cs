@@ -1,7 +1,6 @@
 #region
 
 using System.Data.Common;
-using System.Globalization;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -10,7 +9,6 @@ using Cooke.Gnissel.Typed.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
 using Npgsql;
-using Npgsql.NameTranslation;
 
 #endregion
 

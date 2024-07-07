@@ -1,13 +1,10 @@
 ﻿#region
 
-using System.Collections.Immutable;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using Cooke.Gnissel.Services;
 
 #endregion
 
-namespace Cooke.Gnissel.Utils;
+namespace Cooke.Gnissel.Internals;
 
 internal static class TypeExtensions
 {

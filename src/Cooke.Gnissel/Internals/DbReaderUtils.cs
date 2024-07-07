@@ -1,8 +1,7 @@
 using System.Data.Common;
 using System.Runtime.CompilerServices;
-using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel.Utils;
+namespace Cooke.Gnissel.Internals;
 
 internal static class DbReaderUtils
 {

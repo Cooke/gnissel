@@ -2,9 +2,9 @@
 
 using System.Data.Common;
 using System.Diagnostics.Contracts;
+using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Utils;
 
 #endregion
 

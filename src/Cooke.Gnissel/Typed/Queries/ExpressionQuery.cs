@@ -1,7 +1,7 @@
 using System.Linq.Expressions;
+using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Internals;
-using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.Typed.Queries;
 

@@ -1,6 +1,6 @@
 using System.Runtime.CompilerServices;
+using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Queries;
-using Cooke.Gnissel.Utils;
 
 namespace Cooke.Gnissel.AsyncEnumerable;
 

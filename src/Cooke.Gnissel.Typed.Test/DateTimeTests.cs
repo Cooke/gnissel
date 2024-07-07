@@ -1,6 +1,5 @@
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
-using Npgsql;
 using Xunit.Abstractions;
 
 namespace Cooke.Gnissel.Typed.Test;
@@ -13,11 +12,7 @@ public class DateTimeTests : IDisposable
     public DateTimeTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-        db = new TestDbContext(
-            new(
-                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())
-            )
-        );
+        db = new TestDbContext(new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
         db.NonQuery(
                 $"""
                     create table users

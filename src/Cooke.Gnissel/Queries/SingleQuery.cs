@@ -3,7 +3,6 @@
 using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Utils;
 
 #endregion
 
