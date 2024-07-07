@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Linq.Expressions;
 using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Queries;
@@ -117,7 +116,7 @@ public record ExpressionQuery(
 
     public Query<T> ToQuery<T>() =>
         new(
-            Options.RenderSql(Options.DbAdapter.TypedSqlGenerator.Generate(this, Options)),
+            Options.RenderSql(Options.DbAdapter.TypedSqlGenerator.Generate(this)),
             (reader, cancellationToken) =>
                 reader.ReadRows(Options.GetReader<T>(), cancellationToken),
             Options.DbConnector

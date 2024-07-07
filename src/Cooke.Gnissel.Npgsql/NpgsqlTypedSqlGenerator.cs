@@ -10,7 +10,7 @@ namespace Cooke.Gnissel.Npgsql;
 
 public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
 {
-    public Sql Generate(IInsertQuery query, DbOptions dbOptions)
+    public Sql Generate(IInsertQuery query)
     {
         var sql = new Sql(20 + query.Columns.Count * 4);
         sql.AppendLiteral("INSERT INTO ");
@@ -55,7 +55,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         return sql;
     }
 
-    public Sql Generate(IDeleteQuery query, DbOptions dbOptions)
+    public Sql Generate(IDeleteQuery query)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral($"DELETE FROM ");
@@ -64,13 +64,13 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql, new RenderOptions(dbOptions));
+            RenderExpression(query.Condition, sql, new RenderOptions());
         }
 
         return sql;
     }
 
-    public Sql Generate(IUpdateQuery query, DbOptions dbOptions)
+    public Sql Generate(IUpdateQuery query)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral("UPDATE ");
@@ -95,7 +95,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                     RenderExpression(
                         expressionSetter.Value,
                         sql,
-                        new RenderOptions(dbOptions) { ConstantsAsParameters = true }
+                        new RenderOptions() { ConstantsAsParameters = true }
                     );
                     break;
                 case ValueSetter valueSetter:
@@ -111,24 +111,20 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql, new RenderOptions(dbOptions));
+            RenderExpression(query.Condition, sql, new RenderOptions());
         }
 
         return sql;
     }
 
-    public Sql Generate(ExpressionQuery query, DbOptions dbOptions)
+    public Sql Generate(ExpressionQuery query)
     {
         var tableSource = query.TableSource;
         var joins = query.Joins;
         var selector = query.Selector;
-        var options = new RenderOptions(dbOptions) { QualifyColumns = query.Joins.Any(), };
+        var options = new RenderOptions() { QualifyColumns = query.Joins.Any(), };
 
         var sql = new Sql(100, 2);
-        // var tableIndices = CreateTableIndicesMap();
-        // var tableAlias = tableIndices.ContainsKey(tableSource.Table.Name) ? $"{tableSource.Table.Name}{tableIndices[tableSource.Table.Name]++}" : null;
-        // var joinAliases = joins.Select(x => tableIndices.ContainsKey(x.Table.Name) ? $"{x.Table.Name}{tableIndices[x.Table.Name]++}" : null);
-        // var tableSourcesWithAliases = ((IReadOnlyCollection<TableSource>)[tableSource, ..joins]).Zip([tableAlias, ..joinAliases]).ToArray();
 
         sql.AppendLiteral("SELECT ");
         if (selector == null)
@@ -278,7 +274,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         }
     }
 
-    private record RenderOptions(DbOptions DbOptions)
+    private record RenderOptions
     {
         public bool ConstantsAsParameters { get; init; }
 
@@ -305,7 +301,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
                 }
                 else
                 {
-                    sql.AppendLiteral(FormatLiteral(constExp.Value, options.DbOptions));
+                    sql.AppendLiteralValue(constExp.Value);
                 }
                 return;
 
@@ -471,31 +467,4 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
             ExpressionType.AndAlso => "AND",
             _ => throw new ArgumentOutOfRangeException(nameof(expressionType), expressionType, null)
         };
-
-    private static string FormatLiteral(object? value, DbOptions dbOptions)
-    {
-        if (value is null)
-        {
-            return "NULL";
-        }
-
-        var converter = dbOptions.GetConverter(value.GetType());
-        if (converter != null)
-        {
-            // IMPROVEMENT: remove boxing of Value
-            return FormatLiteral(converter.ToValue(value).Value);
-        }
-
-        return FormatLiteral(value);
-    }
-
-    private static string FormatLiteral(object? value) =>
-        value switch
-        {
-            null => "NULL",
-            string str => FormatString(str),
-            _ => value.ToString()
-        } ?? throw new InvalidOperationException();
-
-    private static string FormatString(string strValue) => $"'{strValue}'";
 }

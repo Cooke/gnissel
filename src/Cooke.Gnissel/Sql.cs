@@ -25,15 +25,11 @@ public class Sql
 
     public IReadOnlyList<Fragment> Fragments => _fragments;
 
-    public void AppendSql(Sql sql)
-    {
-        _fragments.AddRange(sql.Fragments);
-    }
+    public void AppendSql(Sql sql) => _fragments.AddRange(sql.Fragments);
 
-    public void AppendLiteral(string s)
-    {
-        _fragments.Add(new Literal(s));
-    }
+    public void AppendLiteral(string s) => _fragments.Add(new Literal(s));
+
+    public void AppendLiteralValue(object? value) => _fragments.Add(new LiteralValue(value));
 
     public static Identifier Id(string identifier) => new(identifier);
 
@@ -51,10 +47,8 @@ public class Sql
 
     public void AppendParameter(Parameter parameter) => _fragments.Add(parameter);
 
-    public void AppendFormatted<T>(T t, string? format)
-    {
+    public void AppendFormatted<T>(T t, string? format) =>
         _fragments.Add(new Parameter<T>(t, format));
-    }
 
     public abstract record Fragment;
 
@@ -72,4 +66,6 @@ public class Sql
         public override DbParameter CreateParameter(DbOptions options) =>
             options.CreateParameter(TypedValue, Format);
     }
+
+    public record LiteralValue(object? Value) : Fragment;
 }

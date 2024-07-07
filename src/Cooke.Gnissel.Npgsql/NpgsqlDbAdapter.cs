@@ -91,6 +91,10 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                 case Sql.Identifier { Value: var identifier }:
                     sb.Append(EscapeIdentifierIfNeeded(identifier));
                     break;
+
+                case Sql.LiteralValue { Value: var value }:
+                    sb.Append(FormatLiteralValue(value, options));
+                    break;
             }
         }
 
@@ -111,4 +115,31 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
         type.GetCustomAttribute<DbTypeAttribute>() != null
         || type.IsPrimitive
         || BuiltInTypes.Contains(type);
+
+    private static string FormatLiteralValue(object? value, DbOptions dbOptions)
+    {
+        if (value is null)
+        {
+            return "NULL";
+        }
+
+        var converter = dbOptions.GetConverter(value.GetType());
+        if (converter != null)
+        {
+            // IMPROVEMENT: remove boxing of Value
+            return FormatLiteralValue(converter.ToValue(value).Value);
+        }
+
+        return FormatLiteralValue(value);
+    }
+
+    private static string FormatLiteralValue(object? value) =>
+        value switch
+        {
+            null => "NULL",
+            string str => FormatString(str),
+            _ => value.ToString()
+        } ?? throw new InvalidOperationException();
+
+    private static string FormatString(string strValue) => $"'{strValue}'";
 }

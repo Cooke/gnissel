@@ -121,7 +121,7 @@ public class Table<T> : ITable, IQuery<T>
 
         _query = new Query<T>(
             dbOptions.RenderSql(
-                dbOptions.DbAdapter.TypedSqlGenerator.Generate(CreateExpressionQuery(), dbOptions)
+                dbOptions.DbAdapter.TypedSqlGenerator.Generate(CreateExpressionQuery())
             ),
             (reader, cancellationToken) => reader.ReadRows(objectReader, cancellationToken),
             dbOptions.DbConnector
