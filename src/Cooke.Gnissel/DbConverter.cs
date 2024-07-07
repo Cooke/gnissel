@@ -13,18 +13,18 @@ public abstract class ConcreteDbConverterFactory : DbConverter
 
 public abstract class ConcreteDbConverter : DbConverter
 {
-    public abstract DbValue ToDbValue(object value);
+    public abstract DbValue ToValue(object value);
 
     public virtual bool IsNull(DbDataReader reader, int ordinal) => reader.IsDBNull(ordinal);
 }
 
 public abstract class ConcreteDbConverter<T> : ConcreteDbConverter
 {
-    public abstract DbValue ToDbValue(T value);
+    public abstract DbValue ToValue(T value);
 
     public abstract T FromReader(DbDataReader reader, int ordinal);
 
-    public override DbValue ToDbValue(object value) => ToDbValue((T)value);
+    public override DbValue ToValue(object value) => ToValue((T)value);
 }
 
 public class DbConverterAttribute(Type converterType) : Attribute

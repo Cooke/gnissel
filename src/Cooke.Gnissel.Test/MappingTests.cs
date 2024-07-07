@@ -3,17 +3,11 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using System.Data.Common;
-using System.Linq.Expressions;
-using System.Reflection;
-using System.Text.Json.Serialization;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
-using Cooke.Gnissel.Utils;
 using Npgsql;
-using Org.BouncyCastle.Asn1.X509;
 
 #endregion
 
@@ -237,7 +231,7 @@ public class MappingTests
 
     private class UserNameDbConverter : ConcreteDbConverter<UserName>
     {
-        public override DbValue ToDbValue(UserName value) =>
+        public override DbValue ToValue(UserName value) =>
             new DbValue<string>(value.ToString(), null);
 
         public override UserName FromReader(DbDataReader reader, int ordinal) =>

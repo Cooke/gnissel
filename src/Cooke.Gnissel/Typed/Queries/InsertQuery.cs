@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Queries;
 
@@ -36,9 +35,9 @@ public class InsertQuery<T>(
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(
             options.DbConnector,
-            options.RenderSql(options.TypedSqlGenerator.Generate(this, options))
+            options.RenderSql(options.DbAdapter.TypedSqlGenerator.Generate(this, options))
         ).ExecuteAsync(cancellationToken);
 
     public RenderedSql RenderedSql =>
-        options.RenderSql(options.TypedSqlGenerator.Generate(this, options));
+        options.RenderSql(options.DbAdapter.TypedSqlGenerator.Generate(this, options));
 }

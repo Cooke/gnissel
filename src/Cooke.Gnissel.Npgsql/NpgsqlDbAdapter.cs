@@ -87,7 +87,7 @@ public sealed class NpgsqlDbAdapter : IDbAdapter
                 case Sql.Parameter p:
                     sb.Append('$');
                     sb.Append(parameters.Count + 1);
-                    parameters.Add(p.CreateDbParameter(options));
+                    parameters.Add(p.CreateParameter(options));
                     break;
 
                 case Sql.Identifier { Value: var identifier }:

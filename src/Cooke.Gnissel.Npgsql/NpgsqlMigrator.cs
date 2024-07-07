@@ -1,6 +1,5 @@
 using System.Diagnostics;
 using Cooke.Gnissel.AsyncEnumerable;
-using Cooke.Gnissel.History;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Utils;

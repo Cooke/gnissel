@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Services;
@@ -6,7 +5,6 @@ using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Queries;
 using Cooke.Gnissel.Typed.Services;
-using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
@@ -485,7 +483,7 @@ public class NpgsqlTypedSqlGenerator(IDbAdapter dbAdapter) : ITypedSqlGenerator
         if (converter != null)
         {
             // IMPROVEMENT: remove boxing of Value
-            return FormatLiteral(converter.ToDbValue(value).Value);
+            return FormatLiteral(converter.ToValue(value).Value);
         }
 
         return FormatLiteral(value);

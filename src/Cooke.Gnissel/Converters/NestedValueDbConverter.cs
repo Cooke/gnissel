@@ -1,6 +1,5 @@
 using System.Data.Common;
 using System.Linq.Expressions;
-using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Converters;
 
@@ -63,7 +62,7 @@ public class NestedValueDbConverter : ConcreteDbConverterFactory
         Func<DbDataReader, int, T> fromReader
     ) : ConcreteDbConverter<T>
     {
-        public override DbValue ToDbValue(T value) => toDbValue(value);
+        public override DbValue ToValue(T value) => toDbValue(value);
 
         public override T FromReader(DbDataReader reader, int ordinal) =>
             fromReader(reader, ordinal);

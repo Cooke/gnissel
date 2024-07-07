@@ -64,12 +64,12 @@ public class Sql
 
     public abstract record Parameter : Fragment
     {
-        public abstract DbParameter CreateDbParameter(DbOptions options);
+        public abstract DbParameter CreateParameter(DbOptions options);
     }
 
     public record Parameter<T>(T TypedValue, string? Format) : Parameter
     {
-        public override DbParameter CreateDbParameter(DbOptions options) =>
+        public override DbParameter CreateParameter(DbOptions options) =>
             options.CreateParameter(TypedValue, Format);
     }
 }

@@ -1,4 +1,4 @@
-namespace Cooke.Gnissel.History;
+namespace Cooke.Gnissel;
 
 public abstract class Migration
 {

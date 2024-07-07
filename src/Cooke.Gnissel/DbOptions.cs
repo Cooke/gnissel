@@ -6,7 +6,6 @@ using System.Data.Common;
 using System.Reflection;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
-using Cooke.Gnissel.Typed.Services;
 
 #endregion
 
@@ -49,44 +48,24 @@ public class DbOptions(
     public DbOptions(IDbAdapter adapter, IDbConnector connector)
         : this(adapter, new DefaultObjectReaderProvider(adapter), connector, []) { }
 
-    public ITypedSqlGenerator TypedSqlGenerator => DbAdapter.TypedSqlGenerator;
-
     public IDbAdapter DbAdapter => adapter;
 
     public IObjectReaderProvider ObjectReaderProvider => objectReaderProvider;
 
     public IDbConnector DbConnector => connector;
 
+    public DbOptions WithDbConnector(IDbConnector newConnector) =>
+        new(DbAdapter, ObjectReaderProvider, newConnector, converters);
+
     public DbParameter CreateParameter<T>(T value, string? dbType)
     {
         var converter = GetConverter<T>();
         return converter != null
-            ? converter.ToDbValue(value).CreateParameter(DbAdapter)
+            ? converter.ToValue(value).CreateParameter(DbAdapter)
             : DbAdapter.CreateParameter(value, dbType);
     }
 
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
-
-    private static Type? GetTypeToConvertFor(Type? type)
-    {
-        while (true)
-        {
-            if (type is null)
-            {
-                return null;
-            }
-
-            if (
-                type.IsGenericType
-                && type.GetGenericTypeDefinition() == typeof(ConcreteDbConverter<>)
-            )
-            {
-                return type.GetGenericArguments().Single();
-            }
-
-            type = type.BaseType;
-        }
-    }
 
     public ConcreteDbConverter<T>? GetConverter<T>()
     {
@@ -115,6 +94,27 @@ public class DbOptions(
         }
 
         return null;
+    }
+
+    private static Type? GetTypeToConvertFor(Type? type)
+    {
+        while (true)
+        {
+            if (type is null)
+            {
+                return null;
+            }
+
+            if (
+                type.IsGenericType
+                && type.GetGenericTypeDefinition() == typeof(ConcreteDbConverter<>)
+            )
+            {
+                return type.GetGenericArguments().Single();
+            }
+
+            type = type.BaseType;
+        }
     }
 
     private ConcreteDbConverter GetConverterFromAttribute(
@@ -162,7 +162,4 @@ public class DbOptions(
             $"Converter of type {converterAttribute.ConverterType} is not a valid converter for type {type}"
         );
     }
-
-    public DbOptions WithDbConnector(IDbConnector connector) =>
-        new(DbAdapter, ObjectReaderProvider, connector, converters);
 }

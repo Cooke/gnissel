@@ -3,9 +3,7 @@ using System.Data.Common;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
-using Cooke.Gnissel.Utils;
 using Npgsql;
 
 namespace Cooke.Gnissel.Test;
@@ -105,7 +103,7 @@ public class ConverterTests
 
     private class NameEnumDbConverter : ConcreteDbConverter<NameEnum>
     {
-        public override DbValue ToDbValue(NameEnum value) =>
+        public override DbValue ToValue(NameEnum value) =>
             new DbValue<string>(value.ToString(), null);
 
         public override NameEnum FromReader(DbDataReader reader, int ordinal) =>

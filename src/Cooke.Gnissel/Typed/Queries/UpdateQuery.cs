@@ -113,5 +113,5 @@ public class UpdateQuery<T>(
         new NonQuery(options.DbConnector, RenderedSql).ExecuteAsync(cancellationToken);
 
     public RenderedSql RenderedSql =>
-        options.RenderSql(options.TypedSqlGenerator.Generate(this, options));
+        options.RenderSql(options.DbAdapter.TypedSqlGenerator.Generate(this, options));
 }

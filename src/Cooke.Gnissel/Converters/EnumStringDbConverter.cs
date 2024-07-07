@@ -1,5 +1,4 @@
 ﻿using System.Data.Common;
-using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Converters;
 
@@ -18,7 +17,7 @@ public class EnumStringDbConverter : ConcreteDbConverterFactory
 public class EnumStringDbConverter<TEnum> : ConcreteDbConverter<TEnum>
     where TEnum : struct, Enum
 {
-    public override DbValue ToDbValue(TEnum value) => new DbValue<string>(value.ToString(), null);
+    public override DbValue ToValue(TEnum value) => new DbValue<string>(value.ToString(), null);
 
     public override TEnum FromReader(DbDataReader reader, int ordinal) =>
         Enum.TryParse(reader.GetString(ordinal), false, out TEnum value)
