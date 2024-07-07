@@ -1,3 +1,0 @@
-* Warn or error on over fetching
-* Drop table options - feel more natural to put name directly on table
-* 
