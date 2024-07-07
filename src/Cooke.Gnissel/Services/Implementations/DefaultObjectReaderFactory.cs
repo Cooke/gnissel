@@ -1,6 +1,5 @@
 #region
 
-using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.Common;
 using System.Linq.Expressions;
@@ -11,17 +10,14 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
+public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFactory
 {
-    private readonly ConcurrentDictionary<Type, object> _readers = new();
-
-    public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions)
+    public ObjectReader<TOut> Create<TOut>(DbOptions dbOptions)
     {
         return (ObjectReader<TOut>)GetReader(typeof(TOut), dbOptions);
     }
 
-    private object GetReader(Type type, DbOptions dbOptions) =>
-        _readers.GetOrAdd(type, _ => CreateReader(type, dbOptions));
+    private object GetReader(Type type, DbOptions dbOptions) => CreateReader(type, dbOptions);
 
     private object CreateReader(Type type, DbOptions dbOptions)
     {
@@ -334,7 +330,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         }
 
         var getOrdinalInMethod =
-            typeof(DefaultObjectReaderProvider).GetMethod(
+            typeof(DefaultObjectReaderFactory).GetMethod(
                 nameof(GetOrdinalAfter),
                 BindingFlags.Static | BindingFlags.NonPublic
             )

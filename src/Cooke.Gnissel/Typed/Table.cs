@@ -117,11 +117,13 @@ public class Table<T> : ITable, IQuery<T>
         Name = options.Name ?? dbOptions.DbAdapter.ToTableName(typeof(T));
         this.options = dbOptions;
         insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
+        var objectReader = dbOptions.GetReader<T>();
+
         _query = new Query<T>(
             dbOptions.RenderSql(
                 dbOptions.DbAdapter.TypedSqlGenerator.Generate(CreateExpressionQuery(), dbOptions)
             ),
-            dbOptions.ObjectReaderProvider.GetReaderFunc<T>(dbOptions),
+            (reader, cancellationToken) => reader.ReadRows(objectReader, cancellationToken),
             dbOptions.DbConnector
         );
     }

@@ -14,12 +14,11 @@ public class DbContext(DbOptions dbOptions)
 {
     private readonly IDbAdapter _dbAdapter = dbOptions.DbAdapter;
     private readonly IDbConnector _dbConnector = dbOptions.DbConnector;
-    private readonly IObjectReaderProvider _objectReaderProvider = dbOptions.ObjectReaderProvider;
 
     [Pure]
     public Query<TOut> Query<TOut>(Sql sql) =>
-        _objectReaderProvider
-            .Get<TOut>(dbOptions)
+        dbOptions
+            .GetReader<TOut>()
             .Let(objectReader => new Query<TOut>(
                 dbOptions.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
@@ -32,8 +31,8 @@ public class DbContext(DbOptions dbOptions)
 
     [Pure]
     public SingleQuery<TOut> QuerySingle<TOut>(Sql sql) =>
-        _objectReaderProvider
-            .Get<TOut>(dbOptions)
+        dbOptions
+            .GetReader<TOut>()
             .Let(objectReader => new SingleQuery<TOut>(
                 dbOptions.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
@@ -46,8 +45,8 @@ public class DbContext(DbOptions dbOptions)
 
     [Pure]
     public SingleOrDefaultQuery<TOut> QuerySingleOrDefault<TOut>(Sql sql) =>
-        _objectReaderProvider
-            .Get<TOut>(dbOptions)
+        dbOptions
+            .GetReader<TOut>()
             .Let(objectReader => new SingleOrDefaultQuery<TOut>(
                 dbOptions.RenderSql(sql),
                 (reader, ct) => reader.ReadRows(objectReader, ct),
