@@ -61,10 +61,10 @@ public class Sql
         public abstract DbParameter CreateParameter(DbOptions options);
     }
 
-    public record Parameter<T>(T TypedValue, string? Format) : Parameter
+    public record Parameter<T>(T Value, string? Format) : Parameter
     {
         public override DbParameter CreateParameter(DbOptions options) =>
-            options.CreateParameter(TypedValue, Format);
+            options.CreateParameter(Value, Format);
     }
 
     public record LiteralValue(object? Value) : Fragment;

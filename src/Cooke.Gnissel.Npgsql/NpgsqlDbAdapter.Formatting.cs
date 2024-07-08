@@ -13,8 +13,9 @@ public partial class NpgsqlDbAdapter
                 x switch
                 {
                     Sql.Literal { Value: var s } => s.Length,
-                    Sql.Parameter => 3,
+                    Sql.Parameter => 4,
                     Sql.Identifier { Value: var s } => s.Length + 2,
+                    Sql.LiteralValue => 20,
                     _ => 0
                 }
             )
