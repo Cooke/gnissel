@@ -34,20 +34,20 @@ public record ColumnOptions(IReadOnlyCollection<MemberInfo> MemberChain)
 
 public class TableOptionsBuilder<T>(DbOptions dbOptions)
 {
-    private string? name;
+    private string? _name;
     private readonly List<ColumnOptions> _columns = new();
     private readonly List<IReadOnlyCollection<MemberInfo>> _ignores = new();
 
     public TableOptionsBuilder<T> Name(string name)
     {
-        this.name = name;
+        this._name = name;
         return this;
     }
 
     public TableOptions Build() =>
         new(dbOptions)
         {
-            Name = name,
+            Name = _name,
             Columns = _columns.ToArray(),
             Ignores = _ignores,
         };
@@ -94,8 +94,8 @@ public class ColumnOptionsBuilder(IReadOnlyCollection<MemberInfo> memberChain)
 
 public class Table<T> : ITable, IQuery<T>
 {
-    private readonly DbOptions options;
-    private readonly Column<T>[] insertColumns;
+    private readonly DbOptions _options;
+    private readonly Column<T>[] _insertColumns;
     private readonly Query<T> _query;
 
     public Table(Table<T> copy, DbOptions options)
@@ -103,8 +103,8 @@ public class Table<T> : ITable, IQuery<T>
     {
         Columns = copy.Columns;
         Name = copy.Name;
-        this.options = options;
-        insertColumns = copy.insertColumns;
+        this._options = options;
+        _insertColumns = copy._insertColumns;
     }
 
     public Table(DbOptions options)
@@ -115,8 +115,8 @@ public class Table<T> : ITable, IQuery<T>
         var dbOptions = options.DbOptions;
         Columns = ColumnBuilder.CreateColumns<T>(options);
         Name = options.Name ?? dbOptions.DbAdapter.ToTableName(typeof(T));
-        this.options = dbOptions;
-        insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
+        this._options = dbOptions;
+        _insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
         var objectReader = dbOptions.GetReader<T>();
 
         _query = new Query<T>(
@@ -135,25 +135,25 @@ public class Table<T> : ITable, IQuery<T>
     public Type Type => typeof(T);
 
     public InsertQuery<T> Insert(T instance) =>
-        new(this, insertColumns, options, [CreateRowParameters(instance)]);
+        new(this, _insertColumns, _options, [CreateRowParameters(instance)]);
 
     public InsertQuery<T> Insert(params T[] instances) =>
-        new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
+        new(this, _insertColumns, _options, instances.Select(CreateRowParameters).ToArray());
 
     public InsertQuery<T> Insert(IEnumerable<T> instances) =>
-        new(this, insertColumns, options, instances.Select(CreateRowParameters).ToArray());
+        new(this, _insertColumns, _options, instances.Select(CreateRowParameters).ToArray());
 
-    public DeleteQueryWithoutWhere<T> Delete() => new(this, options);
+    public DeleteQueryWithoutWhere<T> Delete() => new(this, _options);
 
     public UpdateQueryWithoutWhere<T> Set<TProperty>(
         Expression<Func<T, TProperty>> propertySelector,
         TProperty value
-    ) => new(this, options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
+    ) => new(this, _options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
 
     public UpdateQueryWithoutWhere<T> Set<TProperty>(
         Expression<Func<T, TProperty>> propertySelector,
         Expression<Func<T, TProperty>> value
-    ) => new(this, options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
+    ) => new(this, _options, [SetterFactory.CreateSetter(this, propertySelector, value)]);
 
     public SelectQuery<TSelect> Select<TSelect>(Expression<Func<T, TSelect>> selector) =>
         new(CreateExpressionQuery().Select(selector));
@@ -206,7 +206,7 @@ public class Table<T> : ITable, IQuery<T>
     public TypedQuery<T> Limit(int limit) => new(CreateExpressionQuery() with { Limit = limit });
 
     private ExpressionQuery CreateExpressionQuery() =>
-        new(options, new TableSource(this), null, [], [], [], []);
+        new(_options, new TableSource(this), null, [], [], [], []);
 
     private RowParameters CreateRowParameters(T instance) =>
         new(
