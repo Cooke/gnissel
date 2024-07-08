@@ -22,11 +22,7 @@ internal static class ColumnBuilder
         if (options.Ignores.Any(x => x.SequenceEqual(memberChain)))
             yield break;
 
-        if (options.DbOptions.GetConverter(memberType) != null)
-        {
-            yield return CreateColumn<T>(options, memberChain);
-        }
-        else if (options.DbOptions.DbAdapter.IsDbMapped(memberType))
+        if (options.DbOptions.IsDbMapped(memberType))
         {
             yield return CreateColumn<T>(options, memberChain);
         }

@@ -103,7 +103,9 @@ public class DbOptions
     public ObjectReader<T> GetReader<T>() =>
         (ObjectReader<T>)_readers.GetOrAdd(typeof(T), _ => _objectReaderFactory.Create<T>(this));
 
-    public ConcreteDbConverter<T>? GetConverter<T>()
+    public bool IsDbMapped(Type type) => GetConverter(type) != null || DbAdapter.IsDbMapped(type);
+
+    private ConcreteDbConverter<T>? GetConverter<T>()
     {
         return (ConcreteDbConverter<T>?)GetConverter(typeof(T));
     }
