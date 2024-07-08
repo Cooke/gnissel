@@ -146,7 +146,7 @@ public class LongRunningTransactionTests
             await connection.OpenAsync(cancellationToken);
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
             var transactionCommandFactory = new FixedConnectionDbConnector(connection, dbAdapter);
-            var transactionDbOptions = _options.WithDbConnector(transactionCommandFactory);
+            var transactionDbOptions = _options.WithConnector(transactionCommandFactory);
             await action(new TestDbContext(this, transactionDbOptions));
             await transaction.CommitAsync(cancellationToken);
         }

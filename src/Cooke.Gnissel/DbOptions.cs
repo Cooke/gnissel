@@ -11,33 +11,24 @@ using Cooke.Gnissel.Services.Implementations;
 
 namespace Cooke.Gnissel;
 
-public class DbOptions(
-    IDbAdapter adapter,
-    IObjectReaderFactory objectReaderFactory,
-    IDbConnector connector,
-    IImmutableList<DbConverter> converters
-)
+public class DbOptions
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
-
-    private readonly ConcurrentDictionary<Type, ConcreteDbConverter> _concreteConverters =
-        new(
-            converters
-                .OfType<ConcreteDbConverter>()
-                .Select(x => (forType: GetTypeToConvertFor(x.GetType()), converter: x))
-                .Where(x => x.forType != null)
-                .Select(x => new KeyValuePair<Type, ConcreteDbConverter>(x.forType!, x.converter))
-        );
-
-    private readonly ImmutableList<ConcreteDbConverterFactory> _converterFactories = converters
-        .OfType<ConcreteDbConverterFactory>()
-        .ToImmutableList();
+    private readonly ConcurrentDictionary<Type, ConcreteDbConverter> _concreteConverters;
+    private readonly ImmutableList<ConcreteDbConverterFactory> _converterFactories;
+    private readonly IDbAdapter _adapter;
+    private readonly IObjectReaderFactory _objectReaderFactory;
+    private readonly IDbConnector _connector;
+    private readonly IImmutableList<DbConverter> _converters;
 
     public DbOptions(IDbAdapter adapter)
         : this(adapter, new DefaultObjectReaderFactory(adapter)) { }
 
     public DbOptions(IDbAdapter adapter, IObjectReaderFactory objectReaderFactory)
         : this(adapter, objectReaderFactory, adapter.CreateConnector(), []) { }
+
+    public DbOptions(IDbAdapter adapter, IDbConnector connector)
+        : this(adapter, new DefaultObjectReaderFactory(adapter), connector, []) { }
 
     public DbOptions(IDbAdapter adapter, IImmutableList<DbConverter> converters)
         : this(
@@ -47,17 +38,57 @@ public class DbOptions(
             converters
         ) { }
 
-    public DbOptions(IDbAdapter adapter, IDbConnector connector)
-        : this(adapter, new DefaultObjectReaderFactory(adapter), connector, []) { }
+    public DbOptions(
+        IDbAdapter adapter,
+        IObjectReaderFactory objectReaderFactory,
+        IDbConnector connector,
+        IImmutableList<DbConverter> converters
+    )
+    {
+        _adapter = adapter;
+        _objectReaderFactory = objectReaderFactory;
+        _connector = connector;
+        _converters = converters;
+        _concreteConverters = new(
+            converters
+                .OfType<ConcreteDbConverter>()
+                .Select(x => (forType: GetTypeToConvertFor(x.GetType()), converter: x))
+                .Where(x => x.forType != null)
+                .Select(x => new KeyValuePair<Type, ConcreteDbConverter>(x.forType!, x.converter))
+        );
+        _converterFactories = converters.OfType<ConcreteDbConverterFactory>().ToImmutableList();
+    }
 
-    public IDbAdapter DbAdapter => adapter;
+    private DbOptions(
+        ConcurrentDictionary<Type, ConcreteDbConverter> concreteConverters,
+        ImmutableList<ConcreteDbConverterFactory> converterFactories,
+        IDbAdapter adapter,
+        IObjectReaderFactory objectReaderFactory,
+        IDbConnector connector,
+        IImmutableList<DbConverter> converters
+    )
+    {
+        _concreteConverters = concreteConverters;
+        _converterFactories = converterFactories;
+        _adapter = adapter;
+        _objectReaderFactory = objectReaderFactory;
+        _converters = converters;
+        _connector = connector;
+    }
 
-    public IObjectReaderFactory ObjectReaderFactory => objectReaderFactory;
+    public DbOptions WithConnector(IDbConnector newConnector) =>
+        new(
+            _concreteConverters,
+            _converterFactories,
+            DbAdapter,
+            _objectReaderFactory,
+            newConnector,
+            _converters
+        );
 
-    public IDbConnector DbConnector => connector;
+    public IDbAdapter DbAdapter => _adapter;
 
-    public DbOptions WithDbConnector(IDbConnector newConnector) =>
-        new(DbAdapter, ObjectReaderFactory, newConnector, converters);
+    public IDbConnector DbConnector => _connector;
 
     public DbParameter CreateParameter<T>(T value, string? dbType)
     {
@@ -70,7 +101,7 @@ public class DbOptions(
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
 
     public ObjectReader<T> GetReader<T>() =>
-        (ObjectReader<T>)_readers.GetOrAdd(typeof(T), _ => ObjectReaderFactory.Create<T>(this));
+        (ObjectReader<T>)_readers.GetOrAdd(typeof(T), _ => _objectReaderFactory.Create<T>(this));
 
     public ConcreteDbConverter<T>? GetConverter<T>()
     {
