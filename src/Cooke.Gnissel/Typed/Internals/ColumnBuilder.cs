@@ -58,7 +58,7 @@ internal static class ColumnBuilder
             columnOptions?.Name
                 ?? property.GetDbName()
                 ?? options.DbOptions.DbAdapter.ToColumnName(
-                    memberChain.Select(x => new PropertyPathPart(x))
+                    memberChain.Select(x => new PropertyPathSegment(x))
                 ),
             memberChain,
             CreateParameterFactory<T>(memberChain),

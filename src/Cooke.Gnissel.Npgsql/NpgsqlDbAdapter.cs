@@ -34,8 +34,7 @@ public sealed partial class NpgsqlDbAdapter(
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
         : this(dataSource, NullLogger.Instance) { }
 
-    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
-        _nameProvider.ToColumnName(path);
+    public string ToColumnName(IEnumerable<PathSegment> path) => _nameProvider.ToColumnName(path);
 
     public string ToTableName(Type type) => _nameProvider.ToTableName(type);
 

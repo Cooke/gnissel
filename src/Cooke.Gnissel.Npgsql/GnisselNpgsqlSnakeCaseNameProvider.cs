@@ -12,14 +12,14 @@ public class GnisselNpgsqlSnakeCaseNameProvider : IGnisselNpgsqlNameProvider
 
     private string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
 
-    public string ToColumnName(IEnumerable<ObjectPathPart> path) =>
+    public string ToColumnName(IEnumerable<PathSegment> path) =>
         string.Join(
             "_",
             path.Select(part =>
                 part switch
                 {
-                    ParameterPathPart parameterPart => ToColumnName(parameterPart.ParameterInfo),
-                    PropertyPathPart propertyPart => ToColumnName(propertyPart.PropertyInfo),
+                    ParameterPathSegment parameterPart => ToColumnName(parameterPart.ParameterInfo),
+                    PropertyPathSegment propertyPart => ToColumnName(propertyPart.PropertyInfo),
                     _ => throw new InvalidOperationException()
                 }
             )

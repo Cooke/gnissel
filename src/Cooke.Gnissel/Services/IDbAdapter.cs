@@ -9,7 +9,7 @@ namespace Cooke.Gnissel.Services;
 
 public interface IDbAdapter
 {
-    string ToColumnName(IEnumerable<ObjectPathPart> path);
+    string ToColumnName(IEnumerable<PathSegment> path);
 
     string ToTableName(Type type);
 

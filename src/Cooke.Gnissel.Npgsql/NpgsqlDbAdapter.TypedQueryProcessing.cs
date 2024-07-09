@@ -263,7 +263,7 @@ public partial class NpgsqlDbAdapter
         sql.AppendIdentifier(column.Name);
 
         var parameterColumnName = ToColumnName(
-            column.MemberChain.Select(x => new PropertyPathPart((PropertyInfo)x))
+            column.MemberChain.Select(x => new PropertyPathSegment((PropertyInfo)x))
         );
 
         if (column.Name != parameterColumnName)
@@ -359,7 +359,7 @@ public partial class NpgsqlDbAdapter
                     sql.AppendLiteral(
                         ToColumnName(
                             [
-                                new ParameterPathPart(
+                                new ParameterPathSegment(
                                     newExpression.Constructor!.GetParameters()[index]
                                 )
                             ]

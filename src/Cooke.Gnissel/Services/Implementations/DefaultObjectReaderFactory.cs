@@ -27,7 +27,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
             dataReader,
             ordinalOffset,
             type,
-            ImmutableList<ObjectPathPart>.Empty,
+            ImmutableList<PathSegment>.Empty,
             dbOptions
         );
         var objectReader = Expression
@@ -49,7 +49,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain,
+        IImmutableList<PathSegment> parameterChain,
         DbOptions dbOptions
     )
     {
@@ -150,7 +150,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
                 dataReader,
                 ordinalOffset,
                 type,
-                ImmutableList<ObjectPathPart>.Empty,
+                ImmutableList<PathSegment>.Empty,
                 dbOptions
             );
         }
@@ -162,7 +162,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain,
+        IImmutableList<PathSegment> parameterChain,
         DbOptions dbOptions
     )
     {
@@ -207,7 +207,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain,
+        IImmutableList<PathSegment> parameterChain,
         DbOptions dbOptions
     )
     {
@@ -218,7 +218,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
                     dataReader,
                     ordinalOffset,
                     p.ParameterType,
-                    parameterChain.Add(new ParameterPathPart(p)),
+                    parameterChain.Add(new ParameterPathSegment(p)),
                     dbOptions
                 )
             )
@@ -229,7 +229,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain,
+        IImmutableList<PathSegment> parameterChain,
         DbOptions dbOptions
     )
     {
@@ -253,7 +253,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
                             dataReader,
                             ordinalOffset,
                             p.ParameterType,
-                            parameterChain.Add(new ParameterPathPart(p)),
+                            parameterChain.Add(new ParameterPathSegment(p)),
                             dbOptions
                         );
                         width += innerWidth;
@@ -266,7 +266,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
                     dataReader,
                     ordinalOffset,
                     p.PropertyType,
-                    parameterChain.Add(new PropertyPathPart(p)),
+                    parameterChain.Add(new PropertyPathSegment(p)),
                     dbOptions
                 );
                 width += innerWidth;
@@ -281,7 +281,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<ObjectPathPart> parameterChain,
+        IImmutableList<PathSegment> parameterChain,
         DbOptions dbOptions
     )
     {
@@ -321,7 +321,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         Expression dataReader,
         Expression ordinalOffset,
         IDbAdapter dbAdapter,
-        IImmutableList<ObjectPathPart> parameterChain
+        IImmutableList<PathSegment> parameterChain
     )
     {
         if (parameterChain.Count == 0)
