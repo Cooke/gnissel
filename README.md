@@ -9,7 +9,7 @@ An alternative database mapper for .NET, instead of Dapper or Entity Framework.
 - Utilizes the DataSource API introduced in .NET 7
 - No change tracking
 - No navigation properties
-- Typed query support avaiable in [Typed namespace](#typed-namespace)
+- Strongly typed queries via [Typed namespace](#typed-namespace)
 
 ## Limitations
 
@@ -64,7 +64,7 @@ await dbContext.NonQuery($"INSERT INTO users(name) VALUES('Foo')");
 
 ```csharp
 var userId = 1;
-var userById = await dbContext.Query<User>($"SELECT * FROM users WHERE id={userId}").SingleAsync();
+var userById = await dbContext.QuerySingle<User>($"SELECT * FROM users WHERE id={userId}");
 ```
 
 #### Query multiple types
@@ -149,6 +149,54 @@ usersWithDevices // Type: IAsyncEnumerable<(User user, Device device)>
     ); 
 
 ```
+
+#### Converters (API is experimental)
+Converters can be used for custom data mapping of single values. 
+
+Create a subclass of `ConcreteDbConverter<T>` to create a converter for the specific type `T` and override the abstract methods. 
+
+Create a subclass of `ConcreteDbConverterFactory` to create a factory for concrete db converters that can be produces during runtime.
+
+Converters (including converter factories) are enabled either via the DbOptions instace passed into the DbContext constructor or by applying the `DbConverterAttribute` to a type.
+
+##### Optional built in converters
+The following converters are included in the library and can be enabled:
+
+* EnumStringDbConverter - converts enum to/from strings  
+* NestedValueDbConverter -  converts wrapper objects to the inner wrapped value. Example:
+  ```
+  [DbConverter(typeof(NestedValueDbConverter))]
+  public record DeviceId(string Value);
+  ```
+  
+
+#### Database migration
+```csharp
+public class InitialMigration : Migration {
+    public override string Id => "Initial migration";
+
+    public override ValueTask Migrate(DbContext db, CancellationToken cancellationToken) =>
+         db.NonQuery($"create table users(id integer)");                    
+}
+
+var migrations = new List<Migration>()
+{
+    new InitialMigration(),
+    new FuncMigration(
+        "drop users table",
+        (db, ct) => db.NonQuery($"drop table users")
+    )
+};
+await _db.Migrate(migrations);
+```
+
+
+#### Cancellation support
+```csharp
+await dbContext.Query<User>($"SELECT * FROM users").ToArrayAsync(cancellationToken);
+await dbContext.NonQuery($"INSERT INTO users(name) VALUES('Foo')").ExecuteAsync(cancellationToken);
+```
+
 
 # Typed namespace
 
