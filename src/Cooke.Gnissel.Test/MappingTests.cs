@@ -67,6 +67,14 @@ public class MappingTests
     }
 
     [Test]
+    public async Task SelectSinglePrimitiveField()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+        var results = await _db.Query<int>($"SELECT id FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { 1 }, results);
+    }
+
+    [Test]
     public async Task CustomMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));

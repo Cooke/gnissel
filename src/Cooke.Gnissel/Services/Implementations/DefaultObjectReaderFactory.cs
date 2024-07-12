@@ -274,6 +274,11 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         IImmutableList<PathSegment> path
     )
     {
+        if (path.Count == 0)
+        {
+            return ordinalOffset;
+        }
+
         var getOrdinalByNameMethod =
             typeof(DefaultObjectReaderFactory).GetMethod(
                 nameof(GetOrdinalByName),
