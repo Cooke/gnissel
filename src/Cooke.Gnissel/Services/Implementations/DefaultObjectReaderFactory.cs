@@ -77,19 +77,28 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         if (converter != null)
         {
             var ordinal = CreateGetOrdinalByName(dataReader, ordinalOffset, dbAdapter, path);
-            return (
-                Expression.Call(
-                    Expression.Constant(
-                        converter,
-                        typeof(ConcreteDbConverter<>).MakeGenericType(type)
-                    ),
-                    nameof(ConcreteDbConverter<object>.FromReader),
-                    [],
-                    dataReader,
-                    ordinal
-                ),
-                1
+            var actualConvertReader = Expression.Call(
+                Expression.Constant(converter, typeof(ConcreteDbConverter<>).MakeGenericType(type)),
+                nameof(ConcreteDbConverter<object>.FromReader),
+                [],
+                dataReader,
+                ordinal
             );
+
+            // Classes are nullable
+            if (type.IsClass)
+            {
+                return (
+                    Expression.Condition(
+                        CreateIsNullReader(dataReader, ordinal, type, path, options),
+                        Expression.Constant(null, type),
+                        actualConvertReader
+                    ),
+                    1
+                );
+            }
+
+            return (actualConvertReader, 1);
         }
 
         if (dbAdapter.IsDbMapped(type))

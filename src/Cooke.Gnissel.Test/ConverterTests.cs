@@ -55,6 +55,17 @@ public class ConverterTests
     }
 
     [Test]
+    public async Task NullableNestedValueConverter()
+    {
+        var db = CreateDb([]);
+        await db.NonQuery(
+            $"INSERT INTO users (name, age) VALUES ({new Name("Bob")}, {new Age(25)})"
+        );
+        var results = await db.Query<Name?>($"SELECT NULL").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { (Name?)null }, results);
+    }
+
+    [Test]
     public async Task NestedValueMemberConverting()
     {
         var db = CreateDb([]);
@@ -98,7 +109,7 @@ public class ConverterTests
 
     private enum NameEnum
     {
-        Bob
+        Bob,
     }
 
     private class NameEnumDbConverter : ConcreteDbConverter<NameEnum>
