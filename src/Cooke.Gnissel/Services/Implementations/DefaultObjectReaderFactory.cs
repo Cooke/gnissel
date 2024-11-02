@@ -104,7 +104,22 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
         if (dbAdapter.IsDbMapped(type))
         {
             var ordinal = CreateGetOrdinalByName(dataReader, ordinalOffset, dbAdapter, path);
-            return (CreateValueReader(dataReader, ordinal, type), 1);
+            var actualReader = CreateValueReader(dataReader, ordinal, type);
+
+            // Nullable
+            if (type.IsClass)
+            {
+                return (
+                    Expression.Condition(
+                        CreateIsNullReader(dataReader, ordinal, type, path, options),
+                        Expression.Constant(null, type),
+                        actualReader
+                    ),
+                    1
+                );
+            }
+
+            return (actualReader, 1);
         }
 
         if (type.IsAssignableTo(typeof(ITuple)))

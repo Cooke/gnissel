@@ -29,8 +29,9 @@ public class MappingTests
                     create table users
                     (
                         id   integer primary key generated always as identity,
-                        name text,
-                        age  integer
+                        name text NOT NULL,
+                        age  integer,
+                        description text
                     );
 
                     create table devices
@@ -148,7 +149,9 @@ public class MappingTests
     [Test]
     public async Task NullComplexType()
     {
-        var results = await _db.Query<User>($"SELECT null as id, null as name, null as age")
+        var results = await _db.Query<User>(
+                $"SELECT null as id, null as name, null as age, null as description"
+            )
             .ToArrayAsync();
         CollectionAssert.AreEqual(new User?[] { null }, results);
     }
@@ -164,7 +167,7 @@ public class MappingTests
     public async Task NullComplexInPositionalType()
     {
         var results = await _db.Query<(User, User, User?)>(
-                $"SELECT 1 as id, 'Bob' as name, 30 as age, 2 as id, 'Sara' as name, 25 as age, null as id, null as name, null as age"
+                $"SELECT 1 as id, 'Bob' as name, 30 as age, NULL as description, 2 as id, 'Sara' as name, 25 as age, NULL as description, null as id, null as name, null as age, null as description"
             )
             .ToArrayAsync();
         CollectionAssert.AreEqual(
@@ -210,7 +213,7 @@ public class MappingTests
     [DbConverter(typeof(EnumStringDbConverter))]
     private enum UserName
     {
-        Bob
+        Bob,
     }
 
     private class TestDbContext(DbOptions options) : DbContext(options)
@@ -221,7 +224,8 @@ public class MappingTests
     private record User(
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
-        int Age
+        int Age,
+        string? Description = null
     );
 
     private record UserWithParametersInDifferentOrder(
