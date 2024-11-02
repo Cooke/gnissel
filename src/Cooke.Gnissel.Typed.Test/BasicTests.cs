@@ -26,8 +26,9 @@ public class BasicTests : IDisposable
                     create table users
                     (
                         id   integer primary key,
-                        name text,
-                        age  integer
+                        name text NOT NULL,
+                        age  integer NOT NULL,
+                        optional_weight integer
                     )
                 """
             )
@@ -43,12 +44,14 @@ public class BasicTests : IDisposable
     [Fact]
     public async Task Insert()
     {
-        await db.Users.Insert(new User(1, "Bob", 25));
-        await db.Users.Insert(new User(2, "Sara", 25));
+        var bob = new User(1, "Bob", 25);
+        await db.Users.Insert(bob);
+        var sara = new User(2, "Sara", 25) { OptionalWeight = 32 };
+        await db.Users.Insert(sara);
 
         var users = await db.Query<User>($"SELECT * FROM users").ToArrayAsync();
 
-        Assert.Equal(new[] { (1, "Bob"), (2, "Sara") }, users.Select(x => (x.Id, x.Name)));
+        Assert.Equal([bob, sara], users);
     }
 
     [Fact]
@@ -191,9 +194,9 @@ public class BasicTests : IDisposable
         await db.Users.Insert(new User(1, "Bob", 25));
         await db.Users.Insert(new User(2, "Sara", 25));
 
-        var users = await db.Users.Select(x => new User(x.Id, x.Name, x.Age)).ToArrayAsync();
+        var users = await db.Users.Select(x => new PartialUser(x.Id, x.Name, x.Age)).ToArrayAsync();
 
-        Assert.Equal([new User(1, "Bob", 25), new User(2, "Sara", 25)], users);
+        Assert.Equal([new PartialUser(1, "Bob", 25), new PartialUser(2, "Sara", 25)], users);
     }
 
     [Fact]
@@ -470,5 +473,7 @@ public class BasicTests : IDisposable
         public Table<User> Users { get; } = new(options);
     }
 
-    private record User(int Id, string Name, int Age);
+    private record User(int Id, string Name, int Age, int? OptionalWeight = null);
+
+    private record PartialUser(int Id, string Name, int Age);
 }

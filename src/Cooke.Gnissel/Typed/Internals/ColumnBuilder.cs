@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Internals;
-using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Typed.Internals;
 
@@ -38,6 +37,10 @@ internal static class ColumnBuilder
             {
                 yield return column;
             }
+        }
+        else if (memberType.IsValueType && Nullable.GetUnderlyingType(memberType) != null)
+        {
+            yield return CreateColumn<T>(options, memberChain);
         }
         else
         {

@@ -181,6 +181,17 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
                 .Aggregate((Expression)Expression.Constant(true), Expression.And);
         }
 
+        if (IsNullableValueType(type))
+        {
+            return CreateIsNullReader(
+                dataReader,
+                ordinalOffset,
+                Nullable.GetUnderlyingType(type)!,
+                path,
+                options
+            );
+        }
+
         throw new NotSupportedException($"Cannot create is null reader for type {type}");
     }
 
