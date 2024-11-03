@@ -23,6 +23,29 @@ public class TypedQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IQuery<(T
     public TypedQuery<T1, T2, T3> Where(Expression<Func<T1, T2, T3, bool>> predicate) =>
         new(expressionQuery.Where(predicate));
 
+    public TypedQuery<T1, T2, T3, T4> Join<T4>(
+        Table<T4> joinTable,
+        Expression<Func<T1, T2, T3, T4, bool>> predicate
+    ) => new(expressionQuery.Join(joinTable, predicate));
+
+    public TypedQuery<T1, T2, T3, T4?> LeftJoin<T4>(
+        Table<T4> joinTable,
+        Expression<Func<T1, T2, T3, T4, bool>> predicate
+    ) => new(expressionQuery.LeftJoin(joinTable, predicate));
+
+    public TypedQuery<T1?, T2?, T3?, T4> RightJoin<T4>(
+        Table<T4> joinTable,
+        Expression<Func<T1, T2, T3, T4, bool>> predicate
+    ) => new(expressionQuery.RightJoin(joinTable, predicate));
+
+    public TypedQuery<T1?, T2?, T3?, T4?> FullJoin<T4>(
+        Table<T4> joinTable,
+        Expression<Func<T1, T2, T3, T4, bool>> predicate
+    ) => new(expressionQuery.FullJoin(joinTable, predicate));
+
+    public TypedQuery<T1, T2, T3, T4> CrossJoin<T4>(Table<T4> joinTable) =>
+        new(expressionQuery.CrossJoin(joinTable));
+
     public OrderByQuery<T1, T2, T3> OrderBy<TProp>(
         Expression<Func<T1, T2, T3, TProp>> propSelector
     ) => new(expressionQuery.OrderBy(propSelector));

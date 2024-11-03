@@ -200,6 +200,17 @@ public class BasicTests : IDisposable
     }
 
     [Fact]
+    public async Task SelectImplicitConversion()
+    {
+        await db.Users.Insert(new User(1, "Bob", 25));
+        await db.Users.Insert(new User(2, "Sara", 25));
+
+        var usersIds = await db.Users.Select<int?>(x => x.Id).ToArrayAsync();
+
+        Assert.Equal([1, 2], usersIds);
+    }
+
+    [Fact]
     public async Task WhereConstant()
     {
         await db.Users.Insert(new User(1, "Bob", 25));

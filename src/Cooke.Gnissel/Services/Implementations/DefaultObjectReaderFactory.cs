@@ -182,7 +182,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
 
         if (type.IsAssignableTo(typeof(ITuple)) || type.IsClass)
         {
-            var ctor = type.GetConstructors().First();
+            var ctor = GetReaderConstructor(type);
             return ctor.GetParameters()
                 .Select(p =>
                     CreateIsNullReader(
@@ -219,10 +219,10 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
     )
     {
         var width = 0;
-        var ctor = type.GetConstructors().First();
+        var ctor = GetReaderConstructor(type);
         var props = type.GetProperties(BindingFlags.Public | BindingFlags.Instance)
             .Where(prop =>
-                prop.CanWrite
+                prop.SetMethod?.IsPublic == true
                 && !ctor.GetParameters()
                     .Select(x => x.Name)
                     .Contains(prop.Name, StringComparer.InvariantCultureIgnoreCase)
@@ -261,6 +261,10 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFac
 
         return (body, width);
     }
+
+    public static ConstructorInfo GetReaderConstructor(Type type) =>
+        type.GetConstructors().OrderByDescending(x => x.GetParameters().Length).FirstOrDefault()
+        ?? throw new ArgumentException($"No valid constructor found for type {type}");
 
     private (Expression Body, int Width) CreatePositionalReader(
         Expression dataReader,

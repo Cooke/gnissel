@@ -226,7 +226,15 @@ public class MappingTests
         string Name,
         int Age,
         string? Description = null
-    );
+    )
+    {
+        // This constructor should be ignored when mapping, longest constructor is used
+        public User(int id)
+            : this(id, "Default", 12) { }
+
+        // Should be ignored when mapping since private setter
+        public string DescriptionOrName { get; private init; } = Description ?? Name;
+    };
 
     private record UserWithParametersInDifferentOrder(
         int Age,

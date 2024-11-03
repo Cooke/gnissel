@@ -1,6 +1,5 @@
 using System.Linq.Expressions;
 using System.Reflection;
-using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Queries;
@@ -121,7 +120,7 @@ public partial class NpgsqlDbAdapter
         var tableSource = query.TableSource;
         var joins = query.Joins;
         var selector = query.Selector;
-        var options = new RenderOptions() { QualifyColumns = query.Joins.Any(), };
+        var options = new RenderOptions() { QualifyColumns = query.Joins.Any() };
 
         var sql = new Sql(100, 2);
 
@@ -171,7 +170,7 @@ public partial class NpgsqlDbAdapter
                         JoinType.Right => " RIGHT JOIN ",
                         JoinType.Full => " FULL JOIN ",
                         JoinType.Cross => " CROSS JOIN ",
-                        _ => throw new NotSupportedException("Join type not supported")
+                        _ => throw new NotSupportedException("Join type not supported"),
                     }
                 );
                 AppendTableSource(join.TableSource);
@@ -361,7 +360,7 @@ public partial class NpgsqlDbAdapter
                             [
                                 new ParameterPathSegment(
                                     newExpression.Constructor!.GetParameters()[index]
-                                )
+                                ),
                             ]
                         )
                     );
@@ -389,8 +388,12 @@ public partial class NpgsqlDbAdapter
             {
                 NodeType: ExpressionType.Convert,
                 Operand.Type.IsEnum: true
-            } unaryExpression:
-                RenderExpression(unaryExpression.Operand, sql, options);
+            } convertEnumExpression:
+                RenderExpression(convertEnumExpression.Operand, sql, options);
+                return;
+
+            case UnaryExpression { NodeType: ExpressionType.Convert } convertExpression:
+                RenderExpression(convertExpression.Operand, sql, options);
                 return;
 
             default:
@@ -464,6 +467,10 @@ public partial class NpgsqlDbAdapter
             ExpressionType.Add => "+",
             ExpressionType.And => "AND",
             ExpressionType.AndAlso => "AND",
-            _ => throw new ArgumentOutOfRangeException(nameof(expressionType), expressionType, null)
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(expressionType),
+                expressionType,
+                null
+            ),
         };
 }

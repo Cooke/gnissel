@@ -3,13 +3,28 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Internals;
+using Cooke.Gnissel.Services.Implementations;
 
 namespace Cooke.Gnissel.Typed.Internals;
 
 internal static class ColumnBuilder
 {
     public static ImmutableArray<Column<T>> CreateColumns<T>(TableOptions options) =>
-        [.. typeof(T).GetProperties().SelectMany(p => CreateColumns<T>(options, [p]))];
+        [
+            .. typeof(T)
+                .GetProperties()
+                .Where(x =>
+                    // Only pick public properties or properties that can be read back via the DefaultObjectReader.
+                    // TODO share logic with DefaultObjectReader
+                    x.SetMethod?.IsPublic == true
+                    || DefaultObjectReaderFactory
+                        .GetReaderConstructor(typeof(T))
+                        .GetParameters()
+                        .Select(p => p.Name)
+                        .Contains(x.Name, StringComparer.InvariantCultureIgnoreCase)
+                )
+                .SelectMany(p => CreateColumns<T>(options, [p])),
+        ];
 
     private static IEnumerable<Column<T>> CreateColumns<T>(
         TableOptions options,
