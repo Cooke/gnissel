@@ -10,8 +10,9 @@
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
         <PackageLicenseUrl>https://github.com/Cooke/gnissel?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
         <Company>Cooke Software Solutions AB</Company>
-        <Version>0.8.0</Version>
+        <Version>0.9.0</Version>
         <LangVersion>latestmajor</LangVersion>
+        <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     </PropertyGroup>
 
     <ItemGroup>
