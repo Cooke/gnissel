@@ -1,3 +1,9 @@
+using System.Collections.Immutable;
+
 namespace Cooke.Gnissel;
 
-public readonly record struct ObjectReader<TOut>(ObjectReaderFunc<TOut> Read, int Width);
+public class ObjectReader<TOut>(ObjectReaderFunc<TOut> read, ImmutableArray<string> columnNames)
+{
+    public ObjectReaderFunc<TOut> Read { get; } = read;
+    public ImmutableArray<string> ColumnNames { get; } = columnNames;
+}

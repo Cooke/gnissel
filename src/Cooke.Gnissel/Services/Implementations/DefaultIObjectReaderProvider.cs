@@ -1,5 +1,6 @@
 #region
 
+using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.Common;
 using System.Linq.Expressions;
@@ -10,14 +11,18 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderFactory
+public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderProvider
 {
-    public ObjectReader<TOut> Create<TOut>(DbOptions options)
-    {
-        return (ObjectReader<TOut>)GetReader(typeof(TOut), options);
-    }
+    private readonly ConcurrentDictionary<Type, object> _readers = new();
 
-    private object GetReader(Type type, DbOptions options) => CreateReader(type, options);
+    public ObjectReader<TOut> Get<TOut>(DbOptions options)
+    {
+        return (ObjectReader<TOut>)
+            _readers.GetOrAdd(
+                typeof(TOut),
+                () => (ObjectReader<TOut>)CreateReader(typeof(TOut), options)
+            );
+    }
 
     private object CreateReader(Type type, DbOptions options)
     {

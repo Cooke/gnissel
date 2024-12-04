@@ -1,11 +1,10 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
-        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Henrik Cooke</Authors>
-        <Version>0.9.0</Version>
+        <Version>0.11.0</Version>
         <Description>An alternative database mapper for .NET, instead of Dapper or Entity Framework.</Description>
         <Copyright>Cooke Software Solutions AB</Copyright>
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
@@ -14,6 +13,8 @@
         <Company>Cooke Software Solutions AB</Company>
         <LangVersion>latestmajor</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <TargetFramework>net9.0</TargetFramework>
+        <IsPackable>true</IsPackable>
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,4 +22,12 @@
             <_Parameter1>Cooke.Gnissel.Typed</_Parameter1>
         </AssemblyAttribute>
     </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\Cooke.Gnissel.SourceGeneration\Cooke.Gnissel.SourceGeneration.csproj" ReferenceOutputAssembly="false" />
+      <None Include="..\Cooke.Gnissel.SourceGeneration\bin\Release\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="'$(Configuration)' == 'Release'" />
+      <None Include="..\Cooke.Gnissel.SourceGeneration\bin\Debug\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="'$(Configuration)' == 'Debug'" />
+    </ItemGroup>
+
+    
 </Project>

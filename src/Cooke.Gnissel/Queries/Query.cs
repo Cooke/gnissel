@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 using Cooke.Gnissel.Services;
 
@@ -8,7 +9,9 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Queries;
 
-public class Query<TOut>(
+public class Query<
+    [DynamicallyAccessedMembers(DynamicallyAccessedMemberTypes.PublicConstructors)] TOut
+>(
     RenderedSql renderedSql,
     Func<DbDataReader, CancellationToken, IAsyncEnumerable<TOut>> rowReader,
     IDbConnector dbConnector
