@@ -20,7 +20,6 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Cooke.Gnissel.SourceGeneration\Cooke.Gnissel.SourceGeneration.csproj" ReferenceOutputAssembly="false" OutputItemType="Analyzer" />
-      <ProjectReference Include="..\Cooke.Gnissel\Cooke.Gnissel.csproj" />
     </ItemGroup>
 
 </Project>

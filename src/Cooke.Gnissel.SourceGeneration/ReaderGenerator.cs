@@ -10,40 +10,46 @@ public class ReaderGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
-        initContext.RegisterPostInitializationOutput(ctx =>
-            ctx.AddSource(
-                "Test.cs",
-                SourceText.From("namespace Test { public class Test { } }", Encoding.UTF8)
-            )
+        // initContext.RegisterPostInitializationOutput(ctx =>
+        //     ctx.AddSource(
+        //         "Test.cs",
+        //         SourceText.From("namespace Test { public class Test { } }", Encoding.UTF8)
+        //     )
+        // );
+
+        var pipeline = initContext.SyntaxProvider.CreateSyntaxProvider(
+            (node, _) =>
+                node
+                    is InvocationExpressionSyntax
+                    {
+                        Expression: MemberAccessExpressionSyntax
+                        {
+                            Name: { Identifier: { ValueText: "Query" } }
+                        }
+                    },
+            (context, ct) => context.SemanticModel.GetTypeInfo(context.Node, ct)
         );
 
-        var pipeline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
-            "Cooke.Gnissel.DbReadAttribute",
-            (node, _) => node is TypeDeclarationSyntax,
-            (context, _) =>
-                context.TargetSymbol as ITypeSymbol ?? throw new Exception("Expected a type symbol")
-        );
+        initContext.RegisterSourceOutput(
+            pipeline,
+            (context, type) =>
+            {
+                var sourceText = SourceText.From(
+                    $$"""
+                    namespace Test;
+                    partial class GeneratedDbReader
+                    {
+                        partial {{type.Type?}} Read{{type.Type?.Name}}()
+                        {
+                            return new {{type.Type?.Name}}();
+                        }
+                    }
+                    """,
+                    Encoding.UTF8
+                );
 
-        //         initContext.RegisterSourceOutput(
-        //             pipeline,
-        //             (context, type) =>
-        //             {
-        //                 var sourceText = SourceText.From(
-        //                     $$"""
-        //                     namespace Test;
-        //                     partial class GeneratedDbReader
-        //                     {
-        //                         partial {{type.Name}} Read{{type.Name}}()
-        //                         {
-        //                             return new {{type.Name}}();
-        //                         }
-        //                     }
-        //                     """,
-        //                     Encoding.UTF8
-        //                 );
-        //
-        //                 context.AddSource($"GeneratedDbReader_{type.Name}.cs", sourceText);
-        //             }
-        //         );
+                context.AddSource($"GeneratedDbReader_{type.Type?.Name}.cs", sourceText);
+            }
+        );
     }
 }
