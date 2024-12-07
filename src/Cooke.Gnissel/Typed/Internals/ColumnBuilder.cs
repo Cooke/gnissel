@@ -3,6 +3,7 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Internals;
+using Cooke.Gnissel.Services.Implementations;
 
 namespace Cooke.Gnissel.Typed.Internals;
 
@@ -16,7 +17,7 @@ internal static class ColumnBuilder
                     // Only pick public properties or properties that can be read back via the DefaultObjectReader.
                     // TODO share logic with DefaultObjectReader
                     x.SetMethod?.IsPublic == true
-                    || DefaultIObjectReaderProvider
+                    || DefaultObjectReaderProvider
                         .GetReaderConstructor(typeof(T))
                         .GetParameters()
                         .Select(p => p.Name)
@@ -75,7 +76,10 @@ internal static class ColumnBuilder
             columnOptions?.Name
                 ?? property.GetDbName()
                 ?? options.DbOptions.DbAdapter.ToColumnName(
-                    memberChain.Select(x => new PropertyPathSegment(x))
+                    memberChain.Aggregate(
+                        (PathSegment?)null,
+                        (l, r) => PathSegment.Combine(l, new PropertyPathSegment(r.Name))
+                    )!
                 ),
             memberChain,
             CreateParameterFactory<T>(memberChain),

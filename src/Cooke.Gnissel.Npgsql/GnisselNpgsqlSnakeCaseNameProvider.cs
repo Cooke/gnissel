@@ -7,23 +7,18 @@ namespace Cooke.Gnissel.Npgsql;
 
 public class GnisselNpgsqlSnakeCaseNameProvider : IGnisselNpgsqlNameProvider
 {
-    private string ToColumnName(ParameterInfo parameterInfo) =>
-        ConvertToSnakeCase(parameterInfo.Name);
-
-    private string ToColumnName(PropertyInfo propertyInfo) => ConvertToSnakeCase(propertyInfo.Name);
-
-    public string ToColumnName(IEnumerable<PathSegment> path) =>
-        string.Join(
-            "_",
-            path.Select(part =>
-                part switch
-                {
-                    ParameterPathSegment parameterPart => ToColumnName(parameterPart.ParameterInfo),
-                    PropertyPathSegment propertyPart => ToColumnName(propertyPart.PropertyInfo),
-                    _ => throw new InvalidOperationException()
-                }
-            )
-        );
+    public string ToColumnName(PathSegment part)
+    {
+        return part switch
+        {
+            ParameterPathSegment parameterPart => ConvertToSnakeCase(parameterPart.Name),
+            PropertyPathSegment propertyPart => ConvertToSnakeCase(propertyPart.Name),
+            NestedPathSegment nestedPart => ToColumnName(nestedPart.Parent)
+                + "_"
+                + ToColumnName(nestedPart.Child),
+            _ => throw new InvalidOperationException(),
+        };
+    }
 
     public string ToTableName(Type type) => ConvertToSnakeCase(type.Name) + "s";
 

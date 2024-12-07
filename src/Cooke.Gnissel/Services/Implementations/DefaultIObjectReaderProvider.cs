@@ -11,7 +11,7 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderProvider
+public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
 
@@ -28,13 +28,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
     {
         var dataReader = Expression.Parameter(typeof(DbDataReader));
         var ordinalOffset = Expression.Parameter(typeof(int));
-        var (body, width) = CreateReader(
-            dataReader,
-            ordinalOffset,
-            type,
-            ImmutableList<PathSegment>.Empty,
-            options
-        );
+        var (body, width) = CreateReader(dataReader, ordinalOffset, type, null, options);
         var objectReader = Expression
             .Lambda(
                 typeof(ObjectReaderFunc<>).MakeGenericType(type),
@@ -54,7 +48,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<PathSegment> path,
+        PathSegment? path,
         DbOptions options
     )
     {
@@ -163,7 +157,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<PathSegment> path,
+        PathSegment? path,
         DbOptions options
     )
     {
@@ -194,7 +188,12 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
                         dataReader,
                         ordinalOffset,
                         p.ParameterType,
-                        path.Add(new ParameterPathSegment(p)),
+                        PathSegment.Combine(
+                            path,
+                            new ParameterPathSegment(
+                                p.Name ?? throw new InvalidOperationException()
+                            )
+                        ),
                         options
                     )
                 )
@@ -219,7 +218,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<PathSegment> parameterChain,
+        PathSegment? path,
         DbOptions options
     )
     {
@@ -243,7 +242,12 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
                             dataReader,
                             ordinalOffset,
                             p.ParameterType,
-                            parameterChain.Add(new ParameterPathSegment(p)),
+                            PathSegment.Combine(
+                                path,
+                                new ParameterPathSegment(
+                                    p.Name ?? throw new InvalidOperationException()
+                                )
+                            ),
                             options
                         );
                         width += innerWidth;
@@ -256,7 +260,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
                     dataReader,
                     ordinalOffset,
                     p.PropertyType,
-                    parameterChain.Add(new PropertyPathSegment(p)),
+                    PathSegment.Combine(path, new PropertyPathSegment(p.Name)),
                     options
                 );
                 width += innerWidth;
@@ -275,7 +279,7 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
         Expression dataReader,
         Expression ordinalOffset,
         Type type,
-        IImmutableList<PathSegment> path,
+        PathSegment path,
         DbOptions options
     )
     {
@@ -315,16 +319,16 @@ public class DefaultObjectReaderFactory(IDbAdapter dbAdapter) : IObjectReaderPro
         Expression dataReader,
         Expression ordinalOffset,
         IDbAdapter dbAdapter,
-        IImmutableList<PathSegment> path
+        PathSegment? path
     )
     {
-        if (path.Count == 0)
+        if (path == null)
         {
             return ordinalOffset;
         }
 
         var getOrdinalByNameMethod =
-            typeof(DefaultObjectReaderFactory).GetMethod(
+            typeof(DefaultObjectReaderProvider).GetMethod(
                 nameof(GetOrdinalByName),
                 BindingFlags.Static | BindingFlags.NonPublic
             ) ?? throw new ArgumentNullException();

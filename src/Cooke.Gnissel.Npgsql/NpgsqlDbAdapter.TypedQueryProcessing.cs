@@ -261,9 +261,7 @@ public partial class NpgsqlDbAdapter
         sql.AppendLiteral(".");
         sql.AppendIdentifier(column.Name);
 
-        var parameterColumnName = ToColumnName(
-            column.MemberChain.Select(x => new PropertyPathSegment((PropertyInfo)x))
-        );
+        var parameterColumnName = column.Name;
 
         if (column.Name != parameterColumnName)
         {
@@ -357,11 +355,10 @@ public partial class NpgsqlDbAdapter
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
                         ToColumnName(
-                            [
-                                new ParameterPathSegment(
-                                    newExpression.Constructor!.GetParameters()[index]
-                                ),
-                            ]
+                            new ParameterPathSegment(
+                                newExpression.Constructor!.GetParameters()[index].Name
+                                    ?? throw new InvalidOperationException()
+                            )
                         )
                     );
                 }

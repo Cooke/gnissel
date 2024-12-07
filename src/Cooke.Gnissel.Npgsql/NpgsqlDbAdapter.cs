@@ -24,7 +24,7 @@ public sealed partial class NpgsqlDbAdapter(
         typeof(DateTimeOffset),
         typeof(TimeSpan),
         typeof(Guid),
-        typeof(byte[])
+        typeof(byte[]),
     ];
 
     private readonly ILogger? _logger = logger ?? new NullLogger<NpgsqlDbAdapter>();
@@ -34,7 +34,7 @@ public sealed partial class NpgsqlDbAdapter(
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
         : this(dataSource, NullLogger.Instance) { }
 
-    public string ToColumnName(IEnumerable<PathSegment> path) => _nameProvider.ToColumnName(path);
+    public string ToColumnName(PathSegment path) => _nameProvider.ToColumnName(path);
 
     public string ToTableName(Type type) => _nameProvider.ToTableName(type);
 

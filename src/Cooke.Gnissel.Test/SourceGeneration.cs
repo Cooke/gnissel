@@ -62,6 +62,9 @@ public class SourceGeneration
     [DbRead]
     private record Device(string Name);
 
+    // public class MyDbContext(DbOptions dbOptions)
+    //     : DbContext(dbOptions, new GeneratedObjectReaderProvider(dbOptions.DbAdapter)) { }
+
     private class GeneratedObjectReaderProvider(IDbAdapter adapter) : IObjectReaderProvider
     {
         public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions)
@@ -77,11 +80,15 @@ public class SourceGeneration
             return (ObjectReader<TOut>)(object)objectReader;
         }
 
-        private readonly ObjectReader<User> _userReader =
-            new(ReadUser, [.. ReadUserPaths.Select(adapter.ToColumnName)]);
+        private readonly ObjectReader<User> _userReader = new(
+            ReadUser,
+            [.. ReadUserPaths.Select(adapter.ToColumnName)]
+        );
 
-        private readonly ObjectReader<User> _deviceReader =
-            new(ReadUser, [.. ReadDevicePaths.Select(adapter.ToColumnName)]);
+        private readonly ObjectReader<User> _deviceReader = new(
+            ReadUser,
+            [.. ReadDevicePaths.Select(adapter.ToColumnName)]
+        );
 
         private static readonly ImmutableArray<PathSegment> ReadUserPaths =
         [
