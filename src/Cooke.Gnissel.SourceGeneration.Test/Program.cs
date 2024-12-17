@@ -9,7 +9,9 @@ public class Program
         var dbContext = new AppDbContext();
         var query = dbContext.Query<User>("SELECT * FROM Users");
 
-        dbContext.Query<(User, Device)>("SELECT * FROM Users");
+        dbContext.Query<(User, Device)>("SELECT * FROM Users, Devices");
+
+        dbContext.Query<int>("SELECT COUNT(*) FROM Users");
     }
 
     public class User;

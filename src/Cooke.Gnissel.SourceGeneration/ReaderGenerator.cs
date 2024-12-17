@@ -93,17 +93,43 @@ public class ReaderGenerator : IIncrementalGenerator
             queryPipline,
             (context, input) =>
             {
+                var stringWriter = new StringWriter();
+                var sourceWriter = new IndentedTextWriter(stringWriter);
+
+                if (IsPrimitive(input.ReadType.Type))
+                {
+                    if (input.ReadType.Nullability.Annotation == NullableAnnotation.Annotated)
+                    {
+                        sourceWriter.Indent += 2;
+                        sourceWriter.WriteLine($$"""if (reader.IsDBNull(columnOrdinals[0])) {""");
+                        sourceWriter.Indent++;
+                        sourceWriter.WriteLine("return default;");
+                        sourceWriter.Indent--;
+                        sourceWriter.WriteLine("}");
+                    }
+
+                    sourceWriter.WriteLine(
+                        $"return reader.Get{GetReaderGetSuffix(input.ReadType.Type)}(columnOrdinals[0]);"
+                    );
+                }
+                else { }
+
                 var sourceText = SourceText.From(
+                    // csharpier-ignore-start
                     $$"""
                     namespace {{input.DbContextType.Namespace}};
+
+                    using System.Data.Common;
+
                     public partial class {{input.DbContextType.Name}}ObjectReaderProvider
                     {
-                        public {{input.ReadType.Type.Name}} Read{{input.ReadType.Type.Name}}()
+                        public {{input.ReadType.Type.ToDisplayString()}} Read{{input.ReadType.Type.Name}}(DbDataReader reader, IReadOnlyList<int> columnOrdinals)
                         {
-                            return null;
+                            {{stringWriter.ToString()}}
                         }
                     }
                     """,
+                    // csharpier-ignore-end
                     Encoding.UTF8
                 );
 
@@ -114,6 +140,12 @@ public class ReaderGenerator : IIncrementalGenerator
             }
         );
     }
+
+    private string GetReaderGetSuffix(ITypeSymbol type) =>
+        type.Name switch
+        {
+            _ => type.Name,
+        };
 
     private class QueryInvocation(DbContextTypeInfo dbContextType, TypeInfo readType)
     {
