@@ -4,7 +4,6 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.Common;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.Services.Implementations;
 
 #endregion
 
@@ -19,22 +18,22 @@ public partial class DbOptions
     private readonly IDbConnector _connector;
     private readonly IImmutableList<DbConverter> _converters;
 
-    public DbOptions(IDbAdapter adapter)
-        : this(adapter, new DefaultObjectReaderProvider(adapter)) { }
-
     public DbOptions(IDbAdapter adapter, IObjectReaderProvider objectReaderProvider)
         : this(adapter, objectReaderProvider, adapter.CreateConnector(), []) { }
 
-    public DbOptions(IDbAdapter adapter, IDbConnector connector)
-        : this(adapter, new DefaultObjectReaderProvider(adapter), connector, []) { }
+    public DbOptions(
+        IDbAdapter adapter,
+        IObjectReaderProvider objectReaderProvider,
+        IDbConnector connector
+    )
+        : this(adapter, objectReaderProvider, connector, []) { }
 
-    public DbOptions(IDbAdapter adapter, IImmutableList<DbConverter> converters)
-        : this(
-            adapter,
-            new DefaultObjectReaderProvider(adapter),
-            adapter.CreateConnector(),
-            converters
-        ) { }
+    public DbOptions(
+        IDbAdapter adapter,
+        IObjectReaderProvider objectReaderProvider,
+        IImmutableList<DbConverter> converters
+    )
+        : this(adapter, objectReaderProvider, adapter.CreateConnector(), converters) { }
 
     public DbOptions(
         IDbAdapter adapter,

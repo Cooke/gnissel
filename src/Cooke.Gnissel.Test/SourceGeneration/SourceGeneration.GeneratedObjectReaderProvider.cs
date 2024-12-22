@@ -9,10 +9,17 @@ public partial class SourceGeneration
     {
         public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions)
         {
-            object objectReader = typeof(TOut).Name switch
+            object objectReader = typeof(TOut) switch
             {
-                "User" => _userReader,
-                "Device" => _deviceReader,
+                { Name: "User" } => _userReader,
+                { Name: "Device" } => _deviceReader,
+                { Name: "Int32" } => _int32Reader,
+                { Name: "Nullable", GenericTypeArguments: [{ Name: "Int32" }] } =>
+                    _nullableInt32Reader,
+                { Name: "Tuple", GenericTypeArguments: [{ Name: "User" }, { Name: "Device" }] } =>
+                    _tupleUserDeviceReader,
+                { IsConstructedGenericType: true, GenericTypeArguments: [{ Name: "Int32" }] } =>
+                    throw new Exception(),
                 _ => throw new NotSupportedException(
                     "No reader found for type " + typeof(TOut).Name
                 ),

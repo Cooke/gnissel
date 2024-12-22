@@ -11,7 +11,9 @@ public class Program
 
         dbContext.Query<(User, Device)>("SELECT * FROM Users, Devices");
 
-        dbContext.Query<int>("SELECT COUNT(*) FROM Users");
+        // dbContext.Query<int>("SELECT COUNT(*) FROM Users");
+
+        dbContext.Query<int?>("SELECT COUNT(*) FROM Users");
     }
 
     public class User;

@@ -59,7 +59,11 @@ public class ReaderGenerator : IIncrementalGenerator
                         {
                             Expression: MemberAccessExpressionSyntax
                             {
-                                Name: GenericNameSyntax { Identifier.ValueText: "Query" }
+                                Name: GenericNameSyntax
+                                {
+                                    Identifier.ValueText: "Query",
+                                    TypeArgumentList: { Arguments: { Count: 1 } }
+                                }
                             }
                         },
                 (context, ct) =>
@@ -70,7 +74,7 @@ public class ReaderGenerator : IIncrementalGenerator
                         memberAccess.Expression,
                         ct
                     );
-                    if (dbContextTypeInfo.Type?.BaseType?.Name != "DbContext")
+                    if (!IsDbContext(dbContextTypeInfo))
                     {
                         return null;
                     }
@@ -79,7 +83,7 @@ public class ReaderGenerator : IIncrementalGenerator
                     var typeArg = genericName.TypeArgumentList.Arguments[0];
                     return new QueryInvocation(
                         new DbContextTypeInfo(
-                            dbContextTypeInfo.Type.ContainingNamespace.ToDisplayString(),
+                            dbContextTypeInfo.Type!.ContainingNamespace.ToDisplayString(),
                             dbContextTypeInfo.Type.Name
                         ),
                         context.SemanticModel.GetTypeInfo(typeArg)
@@ -96,9 +100,11 @@ public class ReaderGenerator : IIncrementalGenerator
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
 
-                if (IsPrimitive(input.ReadType.Type))
+                var type = input.ReadType.Type!;
+
+                if (IsPrimitive(type))
                 {
-                    if (input.ReadType.Nullability.Annotation == NullableAnnotation.Annotated)
+                    if (IsNullable(type))
                     {
                         sourceWriter.Indent += 2;
                         sourceWriter.WriteLine($$"""if (reader.IsDBNull(columnOrdinals[0])) {""");
@@ -109,21 +115,30 @@ public class ReaderGenerator : IIncrementalGenerator
                     }
 
                     sourceWriter.WriteLine(
-                        $"return reader.Get{GetReaderGetSuffix(input.ReadType.Type)}(columnOrdinals[0]);"
+                        $"return reader.Get{GetReaderGetSuffix(type)}(columnOrdinals[0]);"
                     );
                 }
-                else { }
+
+                var nullablePrefix = IsNullable(type) ? "Nullable" : "";
+                var typeDisplayName =
+                    nullablePrefix
+                    + string.Join(
+                        "",
+                        type.ToDisplayParts(SymbolDisplayFormat.MinimallyQualifiedFormat)
+                            .Select(x => x.Symbol?.Name)
+                            .Where(x => !string.IsNullOrEmpty(x))
+                    );
 
                 var sourceText = SourceText.From(
                     // csharpier-ignore-start
                     $$"""
-                    namespace {{input.DbContextType.Namespace}};
+                    namespace Gnissel.SourceGeneration;
 
                     using System.Data.Common;
 
-                    public partial class {{input.DbContextType.Name}}ObjectReaderProvider
+                    public partial class GeneratedObjectReaderProvider
                     {
-                        public {{input.ReadType.Type.ToDisplayString()}} Read{{input.ReadType.Type.Name}}(DbDataReader reader, IReadOnlyList<int> columnOrdinals)
+                        public {{type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)}} Read{{typeDisplayName}}(DbDataReader reader, IReadOnlyList<int> columnOrdinals)
                         {
                             {{stringWriter.ToString()}}
                         }
@@ -134,22 +149,42 @@ public class ReaderGenerator : IIncrementalGenerator
                 );
 
                 context.AddSource(
-                    $"{input.DbContextType.Name}ObjectReaderProvider.{input.ReadType.Type.Name}.cs",
+                    $"GeneratedObjectReaderProvider.{typeDisplayName}.cs",
                     sourceText
                 );
             }
         );
     }
 
-    private string GetReaderGetSuffix(ITypeSymbol type) =>
-        type.Name switch
+    private bool IsNullable(ITypeSymbol type) => type is { Name: "Nullable" };
+
+    private bool IsPrimitive(ITypeSymbol readTypeType) =>
+        readTypeType.Name switch
         {
+            "Int32" or "String" => true,
+            "Nullable" => true,
+            _ => false,
+        };
+
+    private static bool IsDbContext(TypeInfo dbContextTypeInfo)
+    {
+        return dbContextTypeInfo.Type?.BaseType?.Name == "DbContext"
+            || dbContextTypeInfo.Type?.Name == "DbContext";
+    }
+
+    private string GetReaderGetSuffix(ITypeSymbol type) =>
+        type switch
+        {
+            { Name: "Nullable" } and INamedTypeSymbol namedTypeSymbol => namedTypeSymbol
+                .TypeArguments[0]
+                .Name,
             _ => type.Name,
         };
 
     private class QueryInvocation(DbContextTypeInfo dbContextType, TypeInfo readType)
     {
         public DbContextTypeInfo DbContextType { get; } = dbContextType;
+
         public TypeInfo ReadType { get; } = readType;
 
         protected bool Equals(QueryInvocation other)

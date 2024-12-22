@@ -1,7 +1,6 @@
 #region
 
 using System.Collections.Concurrent;
-using System.Collections.Immutable;
 using System.Data.Common;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -11,7 +10,7 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
+public class RuntimeGeneratedObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
 
@@ -328,7 +327,7 @@ public class DefaultObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderPr
         }
 
         var getOrdinalByNameMethod =
-            typeof(DefaultObjectReaderProvider).GetMethod(
+            typeof(RuntimeGeneratedObjectReaderProvider).GetMethod(
                 nameof(GetOrdinalByName),
                 BindingFlags.Static | BindingFlags.NonPublic
             ) ?? throw new ArgumentNullException();

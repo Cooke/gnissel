@@ -58,7 +58,4 @@ public partial class SourceGeneration
 
     [DbRead]
     private record Device(string Name);
-
-    //
-    public partial class MyDbContext { }
 }
