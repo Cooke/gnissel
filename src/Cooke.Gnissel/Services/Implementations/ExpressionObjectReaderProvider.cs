@@ -10,7 +10,7 @@ using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel.Services.Implementations;
 
-public class RuntimeGeneratedObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
+public class ExpressionObjectReaderProvider(IDbAdapter dbAdapter) : IObjectReaderProvider
 {
     private readonly ConcurrentDictionary<Type, object> _readers = new();
 
@@ -327,7 +327,7 @@ public class RuntimeGeneratedObjectReaderProvider(IDbAdapter dbAdapter) : IObjec
         }
 
         var getOrdinalByNameMethod =
-            typeof(RuntimeGeneratedObjectReaderProvider).GetMethod(
+            typeof(ExpressionObjectReaderProvider).GetMethod(
                 nameof(GetOrdinalByName),
                 BindingFlags.Static | BindingFlags.NonPublic
             ) ?? throw new ArgumentNullException();
