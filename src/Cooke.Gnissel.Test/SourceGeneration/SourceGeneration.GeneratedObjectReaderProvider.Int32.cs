@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Data.Common;
+﻿using System.Data.Common;
 
 namespace Cooke.Gnissel.Test;
 
@@ -13,11 +12,11 @@ public partial class SourceGeneration
             ReadInt32Paths
         );
 
-        private static readonly ImmutableArray<PathSegment> ReadInt32Paths = [];
+        private static readonly ReaderDescriptor ReadInt32Paths = new PositionReaderDescriptor(0);
 
-        private static Int32 ReadInt32(DbDataReader reader, IReadOnlyList<int> columnOrdinals)
+        private static Int32 ReadInt32(DbDataReader reader, Ordinals ordinals)
         {
-            return reader.GetInt32(columnOrdinals[0]);
+            return reader.GetInt32(ordinals[0]);
         }
     }
 }

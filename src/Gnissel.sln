@@ -17,6 +17,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.SourceGenerat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.SourceGeneration.Test", "Cooke.Gnissel.SourceGeneration.Test\Cooke.Gnissel.SourceGeneration.Test.csproj", "{50E841AE-B7DA-4E50-B991-98D3B7916C36}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab", "Lab\Lab.csproj", "{BDCB0B94-5F61-4343-B442-DEBF57728545}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.SourceGeneration.AutoTests", "Cooke.Gnissel.SourceGeneration.AutoTests\Cooke.Gnissel.SourceGeneration.AutoTests.csproj", "{31D99E7C-2C94-4FC9-9909-74AEB516A106}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -47,5 +51,13 @@ Global
 		{50E841AE-B7DA-4E50-B991-98D3B7916C36}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{50E841AE-B7DA-4E50-B991-98D3B7916C36}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{50E841AE-B7DA-4E50-B991-98D3B7916C36}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BDCB0B94-5F61-4343-B442-DEBF57728545}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BDCB0B94-5F61-4343-B442-DEBF57728545}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BDCB0B94-5F61-4343-B442-DEBF57728545}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BDCB0B94-5F61-4343-B442-DEBF57728545}.Release|Any CPU.Build.0 = Release|Any CPU
+		{31D99E7C-2C94-4FC9-9909-74AEB516A106}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{31D99E7C-2C94-4FC9-9909-74AEB516A106}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{31D99E7C-2C94-4FC9-9909-74AEB516A106}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{31D99E7C-2C94-4FC9-9909-74AEB516A106}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

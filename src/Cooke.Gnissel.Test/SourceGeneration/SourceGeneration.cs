@@ -53,9 +53,11 @@ public partial class SourceGeneration
         Assert.AreEqual(new User("Bob", 25), result);
     }
 
-    [DbRead]
-    private record User(string Name, int Age);
+    private record User(UserId Id, string Name, int Age, Address Address);
 
-    [DbRead]
+    private record Address(string Street, string City, string State, string Zip);
+
+    private record UserId(int Value);
+
     private record Device(string Name);
 }

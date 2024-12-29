@@ -12,7 +12,7 @@ internal static class DbReaderUtils
         [EnumeratorCancellation] CancellationToken innerCancellationToken
     )
     {
-        var ordinalsByReadIndex = ArrayPool<int>.Shared.Rent(objectReader.ColumnNames.Length);
+        var ordinalsByReadIndex = ArrayPool<int>.Shared.Rent(objectReader.ReadDescriptors.Length);
 
         try
         {
@@ -48,31 +48,42 @@ internal static class DbReaderUtils
     )
     {
         Span<bool> consumedOrdinals = stackalloc bool[reader.FieldCount];
-        for (var readIndex = 0; readIndex < objectReader.ColumnNames.Length; readIndex++)
+        for (var readIndex = 0; readIndex < objectReader.ReadDescriptors.Length; readIndex++)
         {
-            var columnName = objectReader.ColumnNames[readIndex];
-            var foundOrdinal = false;
-            for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
+            var readDescriptor = objectReader.ReadDescriptors[readIndex];
+            if (readDescriptor is NameReadDescriptor { Name: var ordinalName })
             {
-                if (
-                    !consumedOrdinals[ordinal]
-                    && reader
-                        .GetName(ordinal)
-                        .Equals(columnName, StringComparison.OrdinalIgnoreCase)
-                )
+                var foundOrdinal = false;
+                for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                 {
-                    ordinalsByReadIndex[readIndex] = ordinal;
-                    consumedOrdinals[ordinal] = true;
-                    foundOrdinal = true;
-                    break;
+                    if (
+                        !consumedOrdinals[ordinal]
+                        && reader
+                            .GetName(ordinal)
+                            .Equals(ordinalName, StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        ordinalsByReadIndex[readIndex] = ordinal;
+                        consumedOrdinals[ordinal] = true;
+                        foundOrdinal = true;
+                        break;
+                    }
+                }
+
+                if (!foundOrdinal)
+                {
+                    throw new InvalidOperationException(
+                        "Column not found or already mapped: " + ordinalName
+                    );
                 }
             }
-
-            if (!foundOrdinal)
+            else if (readDescriptor is PositionReadDescriptor { Position: var ordinal })
             {
-                throw new InvalidOperationException(
-                    "Column not found or already mapped: " + columnName
-                );
+                ordinalsByReadIndex[readIndex] = ordinal;
+            }
+            else
+            {
+                throw new InvalidOperationException("Unknown read descriptor type");
             }
         }
     }

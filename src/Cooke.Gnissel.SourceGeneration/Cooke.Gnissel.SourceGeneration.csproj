@@ -10,6 +10,7 @@
         <AnalyzerRoslynVersion>4.4</AnalyzerRoslynVersion>
         <AnalyzerLanguage>cs</AnalyzerLanguage>
         <CLSCompliant>false</CLSCompliant>
+        <IsTrimmable>true</IsTrimmable>
     </PropertyGroup>
 
     <ItemGroup>

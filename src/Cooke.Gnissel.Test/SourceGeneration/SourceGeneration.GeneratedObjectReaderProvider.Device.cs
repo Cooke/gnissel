@@ -6,17 +6,26 @@ public partial class SourceGeneration
 {
     public partial class GeneratedObjectReaderProvider
     {
-        private readonly ObjectReader<Device> _deviceReader = CreateObjectReader<Device>(
+        private readonly ObjectReader<Device?> _deviceReader = CreateObjectReader(
             adapter,
             ReadDevice,
-            [new ParameterPathSegment("name")]
+            DevicePath
         );
 
-        private static Device ReadDevice(DbDataReader reader, IReadOnlyList<int> columnOrdinals)
+        private static readonly MultiReaderDescriptor DevicePath = new MultiReaderDescriptor(
+            [new NameReaderDescriptor("name")]
+        );
+
+        private static Device? ReadDevice(DbDataReader reader, Ordinals ordinals)
         {
+            if (IsAllDbNull(reader, ordinals))
+            {
+                return null;
+            }
+
             return new(
                 reader.GetString(
-                    columnOrdinals[0] /* name */
+                    ordinals[0] /* name */
                 )
             );
         }

@@ -1,5 +1,4 @@
-﻿using System.Collections.Immutable;
-using System.Data.Common;
+﻿using System.Data.Common;
 
 namespace Cooke.Gnissel.Test;
 
@@ -10,14 +9,20 @@ public partial class SourceGeneration
         private readonly ObjectReader<Int32?> _nullableInt32Reader = CreateObjectReader(
             adapter,
             ReadNullableInt32,
-            ReadNullablleInt32Paths
+            ReadNullableInt32Paths
         );
 
-        private static readonly ImmutableArray<PathSegment> ReadNullablleInt32Paths = [];
+        private static readonly ReaderDescriptor ReadNullableInt32Paths =
+            new PositionReaderDescriptor(0);
 
-        private static Int32? ReadNullableInt32(
-            DbDataReader reader,
-            IReadOnlyList<int> columnOrdinals
-        ) => reader.IsDBNull(0) ? null : reader.GetInt32(0);
+        private static Int32? ReadNullableInt32(DbDataReader reader, Ordinals ordinals)
+        {
+            if (IsAllDbNull(reader, ordinals))
+            {
+                return null;
+            }
+
+            return reader.GetInt32(ordinals[0]);
+        }
     }
 }
