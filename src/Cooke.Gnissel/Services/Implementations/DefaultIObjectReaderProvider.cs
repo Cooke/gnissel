@@ -335,7 +335,7 @@ public class RuntimeGeneratedObjectReaderProvider(IDbAdapter dbAdapter) : IObjec
             getOrdinalByNameMethod,
             dataReader,
             ordinalOffset,
-            Expression.Constant(dbAdapter.ToColumnName(path))
+            Expression.Constant(dbAdapter.ToColumnName(path.ToStringEnumrable()))
         );
     }
 
