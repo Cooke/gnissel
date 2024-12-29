@@ -13,6 +13,7 @@ internal static class DbReaderUtils
     )
     {
         var ordinalsByReadIndex = ArrayPool<int>.Shared.Rent(objectReader.ReadDescriptors.Length);
+        var ordinalReader = new OrdinalReader(ordinalsByReadIndex);
 
         try
         {
@@ -20,7 +21,8 @@ internal static class DbReaderUtils
 
             while (await reader.ReadAsync(innerCancellationToken))
             {
-                yield return objectReader.Read(reader, ordinalsByReadIndex);
+                yield return objectReader.Read(reader, ordinalReader);
+                ordinalReader.Reset();
             }
         }
         finally
@@ -77,9 +79,9 @@ internal static class DbReaderUtils
                     );
                 }
             }
-            else if (readDescriptor is PositionReadDescriptor { Position: var ordinal })
+            else if (readDescriptor is NextOrdinalReadDescriptor)
             {
-                ordinalsByReadIndex[readIndex] = ordinal;
+                ordinalsByReadIndex[readIndex] = readIndex;
             }
             else
             {

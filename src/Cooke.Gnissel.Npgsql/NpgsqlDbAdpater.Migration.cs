@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Cooke.Gnissel.AsyncEnumerable;
+using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Microsoft.Extensions.Logging;
 
@@ -21,7 +22,11 @@ public partial class NpgsqlDbAdapter
         {
             await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
             var dbContext = new DbContext(
-                new DbOptions(this, new FixedConnectionDbConnector(connection, this))
+                new DbOptions(
+                    this,
+                    new FieldValueObjectReaderProvider(),
+                    new FixedConnectionDbConnector(connection, this)
+                )
             );
             await dbContext
                 .NonQuery($"LOCK TABLE __migration_history")
@@ -56,7 +61,7 @@ public partial class NpgsqlDbAdapter
 
     private async Task CreateMigrationHistoryTableIfNotExist(CancellationToken cancellationToken)
     {
-        var initialOptions = new DbOptions(this);
+        var initialOptions = new DbOptions(this, new FieldValueObjectReaderProvider());
         var initialContext = new DbContext(initialOptions);
 
         await initialContext
@@ -70,5 +75,14 @@ public partial class NpgsqlDbAdapter
             "
             )
             .ExecuteAsync(cancellationToken);
+    }
+
+    private class FieldValueObjectReaderProvider : IObjectReaderProvider
+    {
+        public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions) =>
+            new(
+                (reader, ordinalReader) => reader.GetFieldValue<TOut>(ordinalReader.Read()),
+                [new NextOrdinalReadDescriptor()]
+            );
     }
 }

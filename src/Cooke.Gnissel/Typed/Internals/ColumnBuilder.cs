@@ -75,12 +75,7 @@ internal static class ColumnBuilder
         return new Column<T>(
             columnOptions?.Name
                 ?? property.GetDbName()
-                ?? options.DbOptions.DbAdapter.ToColumnName(
-                    memberChain.Aggregate(
-                        (PathSegment?)null,
-                        (l, r) => PathSegment.Combine(l, new PropertyPathSegment(r.Name))
-                    )!
-                ),
+                ?? options.DbOptions.DbAdapter.ToColumnName(memberChain.Select(x => x.Name)),
             memberChain,
             CreateParameterFactory<T>(memberChain),
             property.GetCustomAttribute<DatabaseGeneratedAttribute>() != null

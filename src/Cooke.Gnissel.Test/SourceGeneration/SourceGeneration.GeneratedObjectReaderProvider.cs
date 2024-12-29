@@ -1,24 +1,42 @@
-﻿using System.Data.Common;
+﻿using System.Collections.Immutable;
+using System.Data.Common;
 using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel.Test;
 
 public partial class SourceGeneration
 {
-    public abstract record ReaderDescriptor;
+    public abstract record ReaderMetadata;
 
-    public record NestedReaderDescriptor(string Name, ReaderDescriptor Inner) : ReaderDescriptor;
+    public record NestedReaderMetadata(string Name, ReaderMetadata Inner) : ReaderMetadata;
 
-    public record NameReaderDescriptor(string Name) : ReaderDescriptor;
+    public record NameReaderMetadata(string Name) : ReaderMetadata;
 
-    public record PositionReaderDescriptor(int Position) : ReaderDescriptor;
+    public record NextOrdinalReaderMetadata : ReaderMetadata;
 
-    public record MultiReaderDescriptor(ReaderDescriptor[] Readers) : ReaderDescriptor;
+    public record MultiReaderMetadata(ReaderMetadata[] Readers) : ReaderMetadata;
 
-    public record ThunkReaderDescriptor(Func<ReaderDescriptor> Func) : ReaderDescriptor;
-
-    public partial class GeneratedObjectReaderProvider(IDbAdapter adapter) : IObjectReaderProvider
+    public partial class GeneratedObjectReaderProvider : IObjectReaderProvider
     {
+        public GeneratedObjectReaderProvider(IDbAdapter adapter)
+        {
+            _tupleUserDeviceReader = CreateObjectReader(
+                adapter,
+                ReadTupleDeviceUser,
+                ReadTupleDeviceUserMetadata
+            );
+            _deviceReader = CreateObjectReader(adapter, ReadDevice, ReadDeviceMetadata);
+            _int32Reader = CreateObjectReader(adapter, ReadInt32, ReadInt32Paths);
+            _nullableInt32Reader = CreateObjectReader(
+                adapter,
+                ReadNullableInt32,
+                ReadNullableInt32Paths
+            );
+            _userIdReader = CreateObjectReader(adapter, ReadUserId, ReadUserIdMetadata);
+            _addressReader = CreateObjectReader(adapter, ReadAddress, ReadAddressMetadata);
+            _userReader = CreateObjectReader(adapter, ReadUser, ReadUserMetadata);
+        }
+
         public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions)
         {
             object objectReader = typeof(TOut) switch
@@ -40,73 +58,67 @@ public partial class SourceGeneration
         private static ObjectReader<T> CreateObjectReader<T>(
             IDbAdapter adapter,
             ObjectReaderFunc<T> objectReaderFunc,
-            ReaderDescriptor path
+            ReaderMetadata path
         ) =>
             adapter.IsDbMapped(typeof(T))
-                ? new ObjectReader<T>((reader, _) => reader.GetFieldValue<T>(0), [])
-                : new ObjectReader<T>(objectReaderFunc, [.. GetPathSegments(adapter, null, path)]);
+                ? new ObjectReader<T>(
+                    (reader, ordinalReader) => reader.GetFieldValue<T>(ordinalReader.Read()),
+                    []
+                )
+                : new ObjectReader<T>(objectReaderFunc, [.. GetReadDescriptors(adapter, [], path)]);
 
-        private static IEnumerable<ReadDescriptor> GetPathSegments(
+        private static IEnumerable<ReadDescriptor> GetReadDescriptors(
             IDbAdapter adapter,
-            PathSegment? parent,
-            ReaderDescriptor path
+            ImmutableArray<string> objectPath,
+            ReaderMetadata metadata
         )
         {
-            switch (path)
+            switch (metadata)
             {
-                case PositionReaderDescriptor { Position: var position }:
-                    yield return new PositionReadDescriptor(position);
+                case NextOrdinalReaderMetadata:
+                    yield return objectPath.Length > 0
+                        ? new NameReadDescriptor(adapter.ToColumnName(objectPath))
+                        : new NextOrdinalReadDescriptor();
                     break;
 
-                case NameReaderDescriptor { Name: var name }:
-                    yield return new NameReadDescriptor(
-                        adapter.ToColumnName(
-                            PathSegment.Combine(parent, new ParameterPathSegment(name))
-                        )
-                    );
+                case NameReaderMetadata { Name: var name }:
+                    yield return new NameReadDescriptor(adapter.ToColumnName(objectPath.Add(name)));
                     break;
 
-                case NestedReaderDescriptor { Name: var name, Inner: var inner }:
+                case NestedReaderMetadata { Name: var name, Inner: var inner }:
                     foreach (
-                        var segment in GetPathSegments(
-                            adapter,
-                            PathSegment.Combine(parent, new PropertyPathSegment(name)),
-                            inner
-                        )
+                        var segment in GetReadDescriptors(adapter, objectPath.Add(name), inner)
                     )
                     {
                         yield return segment;
                     }
                     break;
 
-                case MultiReaderDescriptor { Readers: var subReaders }:
+                case MultiReaderMetadata { Readers: var subReaders }:
                     foreach (var subReader in subReaders)
                     {
-                        foreach (var segment in GetPathSegments(adapter, parent, subReader))
+                        foreach (var segment in GetReadDescriptors(adapter, objectPath, subReader))
                         {
                             yield return segment;
                         }
                     }
                     break;
 
-                case ThunkReaderDescriptor { Func: var func }:
-                    foreach (var segment in GetPathSegments(adapter, parent, func()))
-                    {
-                        yield return segment;
-                    }
-
-                    break;
-
                 default:
-                    throw new ArgumentOutOfRangeException(nameof(path));
+                    throw new ArgumentOutOfRangeException(nameof(metadata));
             }
         }
 
-        private static bool IsAllDbNull(DbDataReader reader, Ordinals ordinals)
+        private static bool IsNull(
+            DbDataReader reader,
+            OrdinalReader ordinalReader,
+            IObjectReader objectReader
+        )
         {
-            for (var i = 0; i < ordinals.Length; i++)
+            var snapshot = ordinalReader.CreateSnapshot();
+            for (var i = 0; i < objectReader.ReadDescriptorsCount; i++)
             {
-                if (!reader.IsDBNull(ordinals[i]))
+                if (!reader.IsDBNull(snapshot.Read()))
                 {
                     return false;
                 }

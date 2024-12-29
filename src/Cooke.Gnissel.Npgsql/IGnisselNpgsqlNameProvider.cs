@@ -4,7 +4,7 @@ namespace Cooke.Gnissel.Npgsql;
 
 public interface IGnisselNpgsqlNameProvider
 {
-    string ToColumnName(PathSegment path);
+    string ToColumnName(IEnumerable<string> path);
 
     string ToTableName(Type type);
 }

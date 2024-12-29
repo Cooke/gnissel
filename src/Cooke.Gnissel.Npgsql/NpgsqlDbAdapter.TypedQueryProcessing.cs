@@ -1,5 +1,4 @@
 using System.Linq.Expressions;
-using System.Reflection;
 using Cooke.Gnissel.Typed;
 using Cooke.Gnissel.Typed.Internals;
 using Cooke.Gnissel.Typed.Queries;
@@ -355,10 +354,10 @@ public partial class NpgsqlDbAdapter
                     sql.AppendLiteral(" AS ");
                     sql.AppendLiteral(
                         ToColumnName(
-                            new ParameterPathSegment(
+                            [
                                 newExpression.Constructor!.GetParameters()[index].Name
-                                    ?? throw new InvalidOperationException()
-                            )
+                                    ?? throw new InvalidOperationException(),
+                            ]
                         )
                     );
                 }

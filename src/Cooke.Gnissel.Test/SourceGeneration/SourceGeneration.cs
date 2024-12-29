@@ -17,7 +17,8 @@ public partial class SourceGeneration
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new DbContext(new(new NpgsqlDbAdapter(_dataSource)));
+        var adapter = new NpgsqlDbAdapter(_dataSource);
+        _db = new DbContext(new(adapter, new GeneratedObjectReaderProvider(adapter)));
 
         await _dataSource
             .CreateCommand(

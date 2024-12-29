@@ -6,23 +6,20 @@ public partial class SourceGeneration
 {
     public partial class GeneratedObjectReaderProvider
     {
-        private readonly ObjectReader<(User?, Device?)> _tupleUserDeviceReader = CreateObjectReader(
-            adapter,
-            ReadTupleDeviceUser,
-            ReadTupleDeviceUserPaths
-        );
+        private readonly ObjectReader<(User?, Device?)> _tupleUserDeviceReader;
 
-        private static readonly ReaderDescriptor ReadTupleDeviceUserPaths =
-            new MultiReaderDescriptor(
-                [
-                    new ThunkReaderDescriptor(() => ReadUserPaths),
-                    new ThunkReaderDescriptor(() => DevicePath),
-                ]
-            );
+        private static ReaderMetadata ReadTupleDeviceUserMetadata =>
+            new MultiReaderMetadata([ReadUserMetadata, ReadDeviceMetadata]);
 
-        private static (User?, Device?) ReadTupleDeviceUser(DbDataReader reader, Ordinals ordinals)
+        private (User?, Device?) ReadTupleDeviceUser(
+            DbDataReader reader,
+            OrdinalReader ordinalReader
+        )
         {
-            return (ReadUser(reader, ordinals[..7]), ReadDevice(reader, ordinals[7..]));
+            return (
+                _userReader.Read(reader, ordinalReader),
+                _deviceReader.Read(reader, ordinalReader)
+            );
         }
     }
 }
