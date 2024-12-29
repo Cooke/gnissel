@@ -1,4 +1,5 @@
 ﻿using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -95,26 +96,21 @@ public class ReaderGenerator : IIncrementalGenerator
             .Collect()
             .SelectMany((queries, ct) => queries.Distinct());
 
-        initContext.RegisterSourceOutput(
+        initContext.RegisterImplementationSourceOutput(
             distinctQueries,
             (context, input) =>
             {
+                var type = input.ReadType.Type!;
+                var typeDisplayName = GetTypeDisplayName(type);
+
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
                 WritePartialReaderClassStart(sourceWriter);
+                WriteObjectReaderField(sourceWriter, type);
                 WriteReaderMethodStart(sourceWriter, input);
 
-                var type = input.ReadType.Type!;
-                var typeDisplayName = string.Join(
-                    "",
-                    type.ToDisplayParts(SymbolDisplayFormat.MinimallyQualifiedFormat)
-                        .Select(x => x.Symbol?.Name)
-                        .Where(x => !string.IsNullOrEmpty(x))
-                );
-
                 sourceWriter.Write("return ");
-                int readPosition = 0;
-                WriteReaderCore(type, ref readPosition, null, sourceWriter);
+                WriteReaderCore(type, ImmutableArray<string>.Empty, sourceWriter);
                 sourceWriter.WriteLine(";");
 
                 WriteReaderMethodEnd(sourceWriter);
@@ -128,10 +124,35 @@ public class ReaderGenerator : IIncrementalGenerator
         );
     }
 
+    private static string GetTypeDisplayName(ITypeSymbol type)
+    {
+        return string.Join(
+            "",
+            type.ToDisplayParts(SymbolDisplayFormat.MinimallyQualifiedFormat)
+                .Select(x => x.Symbol?.Name)
+                .Where(x => !string.IsNullOrEmpty(x))
+        );
+    }
+
+    private static void WriteObjectReaderField(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    {
+        sourceWriter.Write("private readonly ObjectReader<");
+        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.Write("> ");
+        sourceWriter.Write(GetObjectReaderFieldName(type));
+        sourceWriter.WriteLine(";");
+        sourceWriter.WriteLine();
+    }
+
+    private static string GetObjectReaderFieldName(ITypeSymbol type)
+    {
+        var typeDisplayName = GetTypeDisplayName(type);
+        return $"_{char.ToLower(typeDisplayName[0])}{typeDisplayName.Substring(1)}Reader";
+    }
+
     private void WriteReaderCore(
         ITypeSymbol type,
-        ref int readPosition,
-        PathSegment? path,
+        ImmutableArray<string> path,
         IndentedTextWriter sourceWriter
     )
     {
@@ -139,20 +160,11 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             if (IsNullable(type))
             {
-                WriteIsNullCall(readPosition, sourceWriter);
+                WriteIsNullCall(sourceWriter, GetObjectReaderFieldName(type));
                 sourceWriter.WriteLine("]) ? null : ");
             }
 
-            WriteDbReaderCall(type, readPosition, sourceWriter);
-
-            if (path is not null)
-            {
-                sourceWriter.Write(" /* ");
-                sourceWriter.Write(path.ToMinimalDisplayString());
-                sourceWriter.Write(" */");
-            }
-
-            readPosition++;
+            WriteDbReaderCall(type, sourceWriter);
         }
         else
         {
@@ -172,12 +184,7 @@ public class ReaderGenerator : IIncrementalGenerator
             for (var i = 0; i < ctor!.Parameters.Length; i++)
             {
                 var parameter = ctor.Parameters[i];
-                WriteReaderCore(
-                    parameter.Type,
-                    ref readPosition,
-                    PathSegment.Combine(path, new ParameterPathSegment(parameter.Name)),
-                    sourceWriter
-                );
+                WriteReaderCore(parameter.Type, path.Add(parameter.Name), sourceWriter);
                 if (i < ctor.Parameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
@@ -188,24 +195,19 @@ public class ReaderGenerator : IIncrementalGenerator
         }
     }
 
-    private static void WriteIsNullCall(int readPosition, IndentedTextWriter sourceWriter)
+    private static void WriteIsNullCall(IndentedTextWriter sourceWriter, string readerName)
     {
-        sourceWriter.WriteLine("reader.IsDBNull(columnOrdinals[");
-        sourceWriter.WriteLine(readPosition);
-        sourceWriter.WriteLine("])");
+        sourceWriter.WriteLine("ObjectReaderUtils.IsNull(reader, ordinalReader, ");
+        sourceWriter.WriteLine(readerName);
+        sourceWriter.WriteLine(")");
     }
 
-    private void WriteDbReaderCall(
-        ITypeSymbol type,
-        int readPosition,
-        IndentedTextWriter sourceWriter
-    )
+    private void WriteDbReaderCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
         sourceWriter.Write("reader.Get");
         sourceWriter.Write(GetReaderGetSuffix(type));
-        sourceWriter.Write("(columnOrdinals[");
-        sourceWriter.Write(readPosition);
-        sourceWriter.Write("])");
+        sourceWriter.Write("(ordinalReader.Read()");
+        sourceWriter.Write(")");
     }
 
     private static void WriteReaderMethodEnd(IndentedTextWriter sourceWriter)
@@ -225,7 +227,7 @@ public class ReaderGenerator : IIncrementalGenerator
         );
         sourceWriter.Write(" Read");
         sourceWriter.Write(input.ReadType.Type!.Name);
-        sourceWriter.WriteLine("(DbDataReader reader, IReadOnlyList<int> columnOrdinals)");
+        sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader)");
         sourceWriter.WriteLine("{");
         sourceWriter.Indent++;
     }
@@ -235,6 +237,7 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("namespace Gnissel.SourceGeneration;");
         sourceWriter.WriteLine();
         sourceWriter.WriteLine("using System.Data.Common;");
+        sourceWriter.WriteLine("using Cooke.Gnissel;");
         sourceWriter.WriteLine();
         sourceWriter.WriteLine("public partial class GeneratedObjectReaderProvider");
         sourceWriter.WriteLine("{");
@@ -332,36 +335,5 @@ public class ReaderGenerator : IIncrementalGenerator
                 return (Namespace.GetHashCode() * 397) ^ Name.GetHashCode();
             }
         }
-    }
-
-    public abstract record PathSegment
-    {
-        public static PathSegment Combine(PathSegment? parent, PathSegment child) =>
-            parent is null ? child : new NestedPathSegment(parent, child);
-
-        public abstract string ToMinimalDisplayString();
-    }
-
-    public record ParameterPathSegment(string Name) : PathSegment
-    {
-        public string Name { get; } = Name;
-
-        public override string ToMinimalDisplayString() => Name;
-    }
-
-    public record PropertyPathSegment(string Name) : PathSegment
-    {
-        public string Name { get; } = Name;
-
-        public override string ToMinimalDisplayString() => Name;
-    }
-
-    public record NestedPathSegment(PathSegment Parent, PathSegment Child) : PathSegment
-    {
-        public PathSegment Parent { get; } = Parent;
-
-        public PathSegment Child { get; } = Child;
-
-        public override string ToMinimalDisplayString() => Child.ToMinimalDisplayString();
     }
 }

@@ -1,4 +1,5 @@
 using System.Collections.Immutable;
+using System.Data.Common;
 
 namespace Cooke.Gnissel;
 
@@ -24,3 +25,24 @@ public abstract record ReadDescriptor;
 public record NextOrdinalReadDescriptor : ReadDescriptor;
 
 public record NameReadDescriptor(string Name) : ReadDescriptor;
+
+public static class ObjectReaderUtils
+{
+    public static bool IsNull(
+        DbDataReader reader,
+        OrdinalReader ordinalReader,
+        IObjectReader objectReader
+    )
+    {
+        var snapshot = ordinalReader.CreateSnapshot();
+        for (var i = 0; i < objectReader.ReadDescriptorsCount; i++)
+        {
+            if (!reader.IsDBNull(snapshot.Read()))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}

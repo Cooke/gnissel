@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using Cooke.Gnissel.SourceGeneration;
 
 namespace Cooke.Gnissel.Test;
 

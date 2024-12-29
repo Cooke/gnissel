@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using Cooke.Gnissel.SourceGeneration;
 
 namespace Cooke.Gnissel.Test;
 
@@ -12,7 +13,7 @@ public partial class SourceGeneration
 
         private UserId? ReadUserId(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (IsNull(reader, ordinalReader, _userIdReader))
+            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _userIdReader))
             {
                 return null;
             }

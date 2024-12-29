@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using Cooke.Gnissel.SourceGeneration;
 
 namespace Cooke.Gnissel.Test;
 
@@ -13,7 +14,7 @@ public partial class SourceGeneration
 
         private Int32? ReadNullableInt32(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (IsNull(reader, ordinalReader, _nullableInt32Reader))
+            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _nullableInt32Reader))
             {
                 return null;
             }

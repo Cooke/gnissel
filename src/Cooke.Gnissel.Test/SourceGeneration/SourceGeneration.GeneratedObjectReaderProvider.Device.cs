@@ -1,4 +1,5 @@
 ﻿using System.Data.Common;
+using Cooke.Gnissel.SourceGeneration;
 
 namespace Cooke.Gnissel.Test;
 
@@ -14,7 +15,7 @@ public partial class SourceGeneration
 
         private Device? ReadDevice(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (IsNull(reader, ordinalReader, _deviceReader))
+            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _deviceReader))
             {
                 return null;
             }

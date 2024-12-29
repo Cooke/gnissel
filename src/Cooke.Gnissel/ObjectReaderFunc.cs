@@ -7,25 +7,6 @@ public delegate TOut ObjectReaderFunc<out TOut>(
     OrdinalReader ordinalReader
 );
 
-// public readonly struct OrdinalReader(int[] innerOrdinals, int offset, int length)
-// {
-//     private readonly int _offset = offset;
-//
-//     public int this[int index] => innerOrdinals[_offset + index];
-//
-//     public int Length => length;
-//
-//     public OrdinalReader Slice(int offset, int slicedLength)
-//     {
-//         if (slicedLength > length - offset)
-//         {
-//             throw new ArgumentOutOfRangeException(nameof(slicedLength));
-//         }
-//
-//         return new OrdinalReader(innerOrdinals, _offset + offset, slicedLength);
-//     }
-// }
-
 public class OrdinalReader(int[] ordinals)
 {
     private int _index = 0;
