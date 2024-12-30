@@ -14,12 +14,14 @@ public partial class SourceGeneration
 
         private Int32? ReadNullableInt32(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _nullableInt32Reader))
+            var value = reader.GetInt32OrNull(ordinalReader.Read());
+
+            if (value is null)
             {
                 return null;
             }
 
-            return reader.GetInt32(ordinalReader.Read());
+            return value ?? throw new InvalidOperationException();
         }
     }
 }

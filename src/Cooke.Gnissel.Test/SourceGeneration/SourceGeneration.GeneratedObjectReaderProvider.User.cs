@@ -21,16 +21,21 @@ public partial class SourceGeneration
 
         private User? ReadUser(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _userReader))
+            var userId = _userIdReader.Read(reader, ordinalReader);
+            var name = reader.GetStringOrNull(ordinalReader.Read());
+            var age = reader.GetInt32OrNull(ordinalReader.Read());
+            var address = _addressReader.Read(reader, ordinalReader);
+
+            if (userId is null && name is null && age is null && address is null)
             {
                 return null;
             }
 
             return new User(
-                _userIdReader.Read(reader, ordinalReader) ?? throw new InvalidOperationException(),
-                reader.GetString(ordinalReader.Read()),
-                reader.GetInt32(ordinalReader.Read()),
-                _addressReader.Read(reader, ordinalReader) ?? throw new InvalidOperationException()
+                userId ?? throw new InvalidOperationException(),
+                name ?? throw new InvalidOperationException(),
+                age ?? throw new InvalidOperationException(),
+                address ?? throw new InvalidOperationException()
             );
         }
     }

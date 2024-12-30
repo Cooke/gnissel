@@ -17,7 +17,7 @@ public class Program
         dbContext.Query<int>("SELECT COUNT(*) FROM Users");
     }
 
-    public class User(string Name, int Age);
+    public class User(string Name, int Age, int? Size);
 
     public class Device;
 

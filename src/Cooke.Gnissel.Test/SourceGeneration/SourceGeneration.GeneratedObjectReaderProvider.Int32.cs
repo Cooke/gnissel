@@ -9,7 +9,7 @@ public partial class SourceGeneration
     {
         private readonly ObjectReader<Int32> _int32Reader;
 
-        private static readonly ReaderMetadata ReadInt32Paths = new NextOrdinalReaderMetadata();
+        private static readonly ReaderMetadata ReadInt32Metadata = new NextOrdinalReaderMetadata();
 
         private static Int32 ReadInt32(DbDataReader reader, OrdinalReader ordinalReader)
         {

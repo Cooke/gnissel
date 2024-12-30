@@ -21,16 +21,21 @@ public partial class SourceGeneration
 
         private Address? ReadAddress(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _addressReader))
+            var street = reader.GetStringOrNull(ordinalReader.Read());
+            var city = reader.GetStringOrNull(ordinalReader.Read());
+            var state = reader.GetStringOrNull(ordinalReader.Read());
+            var zip = reader.GetStringOrNull(ordinalReader.Read());
+
+            if (street is null && city is null && state is null && zip is null)
             {
                 return null;
             }
 
             return new(
-                reader.GetString(ordinalReader.Read()),
-                reader.GetString(ordinalReader.Read()),
-                reader.GetString(ordinalReader.Read()),
-                reader.GetString(ordinalReader.Read())
+                street ?? throw new InvalidOperationException(),
+                city ?? throw new InvalidOperationException(),
+                state ?? throw new InvalidOperationException(),
+                zip ?? throw new InvalidOperationException()
             );
         }
     }

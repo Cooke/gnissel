@@ -15,12 +15,13 @@ public partial class SourceGeneration
 
         private Device? ReadDevice(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _deviceReader))
+            var name = reader.GetStringOrNull(ordinalReader.Read());
+            if (name is null)
             {
                 return null;
             }
 
-            return new(reader.GetString(ordinalReader.Read()));
+            return new(name ?? throw new InvalidOperationException());
         }
     }
 }

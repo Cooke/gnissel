@@ -13,12 +13,13 @@ public partial class SourceGeneration
 
         private UserId? ReadUserId(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            if (ObjectReaderUtils.IsNull(reader, ordinalReader, _userIdReader))
+            var value = reader.GetInt32OrNull(ordinalReader.Read());
+            if (value is null)
             {
                 return null;
             }
 
-            return new UserId(reader.GetInt32(ordinalReader.Read()));
+            return new(value.Value);
         }
     }
 }

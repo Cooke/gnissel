@@ -20,7 +20,11 @@ public static class TestHelper
         // Create a Roslyn compilation for the syntax tree.
         CSharpCompilation compilation = CSharpCompilation.Create(
             assemblyName: "Tests",
-            syntaxTrees: new[] { syntaxTree }
+            syntaxTrees: new[] { syntaxTree },
+            options: new CSharpCompilationOptions(
+                OutputKind.ConsoleApplication,
+                nullableContextOptions: NullableContextOptions.Enable
+            )
         );
 
         // Create an instance of our EnumGenerator incremental source generator

@@ -1,5 +1,4 @@
 ﻿using System.CodeDom.Compiler;
-using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -50,7 +49,7 @@ public class ReaderGenerator : IIncrementalGenerator
         //     }
         // );
 
-        var queryPipline = initContext
+        var typesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
                     node
@@ -61,7 +60,7 @@ public class ReaderGenerator : IIncrementalGenerator
                                 Name: GenericNameSyntax
                                 {
                                     Identifier.ValueText: "Query",
-                                    TypeArgumentList: { Arguments: { Count: 1 } }
+                                    TypeArgumentList.Arguments.Count: 1
                                 }
                             }
                         },
@@ -73,6 +72,7 @@ public class ReaderGenerator : IIncrementalGenerator
                         memberAccess.Expression,
                         ct
                     );
+
                     if (!IsDbContext(dbContextTypeInfo))
                     {
                         return null;
@@ -80,51 +80,132 @@ public class ReaderGenerator : IIncrementalGenerator
 
                     var genericName = (GenericNameSyntax)memberAccess.Name;
                     var typeArg = genericName.TypeArgumentList.Arguments[0];
-                    return new QueryInvocation(
-                        new DbContextTypeInfo(
-                            dbContextTypeInfo.Type!.ContainingNamespace.ToDisplayString(),
-                            dbContextTypeInfo.Type.Name
-                        ),
-                        context.SemanticModel.GetTypeInfo(typeArg)
-                    );
+                    return context.SemanticModel.GetTypeInfo(typeArg).Type;
                 }
             )
-            .Where(input => input != null)
-            .Select((input, _) => input!);
-
-        var distinctQueries = queryPipline
+            .Where(type => type != null)
+            .Select((input, _) => input!)
+            .SelectMany(FindAllUsedTypes)
             .Collect()
-            .SelectMany((queries, ct) => queries.Distinct());
+            .SelectMany(
+                (types, _) => types.Distinct(SymbolEqualityComparer.Default).Cast<ITypeSymbol>()
+            );
 
         initContext.RegisterImplementationSourceOutput(
-            distinctQueries,
-            (context, input) =>
+            typesPipeline,
+            (context, type) =>
             {
-                var type = input.ReadType.Type!;
-                var typeDisplayName = GetTypeDisplayName(type);
-
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
                 WritePartialReaderClassStart(sourceWriter);
                 WriteObjectReaderField(sourceWriter, type);
-                WriteReaderMethodStart(sourceWriter, input);
-
-                sourceWriter.Write("return ");
-                WriteReaderCore(type, ImmutableArray<string>.Empty, sourceWriter);
-                sourceWriter.WriteLine(";");
-
+                WriteReaderMetadata(sourceWriter, type);
+                WriteReaderMethodStart(sourceWriter, type);
+                WriteReaderBody(type, sourceWriter);
                 WriteReaderMethodEnd(sourceWriter);
                 WritePartialReaderClassEnd(sourceWriter);
 
                 context.AddSource(
-                    $"GeneratedObjectReaderProvider.{typeDisplayName}.cs",
+                    $"GeneratedObjectReaderProvider.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
         );
     }
 
-    private static string GetTypeDisplayName(ITypeSymbol type)
+    private IEnumerable<ITypeSymbol> FindAllUsedTypes(ITypeSymbol type, CancellationToken ct)
+    {
+        yield return type;
+
+        var ctor = GetCtor(type);
+        foreach (var t in ctor.Parameters)
+        {
+            if (!IsPrimitive(t.Type))
+            {
+                foreach (var innerType in FindAllUsedTypes(t.Type, ct))
+                {
+                    yield return innerType;
+                }
+            }
+        }
+    }
+
+    private void WriteReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    {
+        if (IsPrimitive(type))
+        {
+            sourceWriter.Write("private static readonly NextOrdinalReaderMetadata ");
+            sourceWriter.Write(GetReaderMetadataName(type));
+            sourceWriter.WriteLine(" = new ();");
+        }
+        else if (type.IsTupleType)
+        {
+            sourceWriter.Write("private static MultiReaderMetadata ");
+            sourceWriter.Write(GetReaderMetadataName(type));
+            sourceWriter.WriteLine(" => new ([");
+            sourceWriter.Indent++;
+            var ctor = GetCtor(type);
+            for (var i = 0; i < ctor.Parameters.Length; i++)
+            {
+                sourceWriter.Write(GetReaderMetadataName(ctor.Parameters[i].Type));
+
+                if (i < ctor.Parameters.Length - 1)
+                {
+                    sourceWriter.WriteLine(",");
+                }
+            }
+
+            sourceWriter.Indent--;
+            sourceWriter.WriteLine("]);");
+        }
+        else
+        {
+            var ctor = GetCtor(type);
+
+            sourceWriter.Write("private static MultiReaderMetadata ");
+            sourceWriter.Write("Read");
+            sourceWriter.Write(GetTypeIdentifierName(type));
+            sourceWriter.Write("Metadata");
+            sourceWriter.WriteLine(" => new ([");
+            sourceWriter.Indent++;
+
+            for (int i = 0; i < ctor.Parameters.Length; i++)
+            {
+                var parameter = ctor.Parameters[i];
+                if (IsPrimitive(parameter.Type))
+                {
+                    sourceWriter.Write("new NameReaderMetadata(\"");
+                    sourceWriter.Write(parameter.Name);
+                    sourceWriter.Write("\")");
+                }
+                else
+                {
+                    sourceWriter.Write("new NestedReaderMetadata(\"");
+                    sourceWriter.Write(parameter.Name);
+                    sourceWriter.Write("\", ");
+                    sourceWriter.Write(GetObjectReaderFieldName(parameter.Type));
+                    sourceWriter.Write(")");
+                }
+
+                if (i < ctor.Parameters.Length - 1)
+                {
+                    sourceWriter.WriteLine(",");
+                }
+            }
+
+            sourceWriter.Indent--;
+            sourceWriter.WriteLine("]);");
+        }
+
+        sourceWriter.WriteLine();
+    }
+
+    private static string GetReaderMetadataName(ITypeSymbol type)
+    {
+        return $"Read{GetTypeIdentifierName(type)}Metadata";
+    }
+
+    private static string GetTypeIdentifierName(ITypeSymbol type)
     {
         return string.Join(
             "",
@@ -146,33 +227,67 @@ public class ReaderGenerator : IIncrementalGenerator
 
     private static string GetObjectReaderFieldName(ITypeSymbol type)
     {
-        var typeDisplayName = GetTypeDisplayName(type);
+        var typeDisplayName = GetTypeIdentifierName(type);
         return $"_{char.ToLower(typeDisplayName[0])}{typeDisplayName.Substring(1)}Reader";
     }
 
-    private void WriteReaderCore(
-        ITypeSymbol type,
-        ImmutableArray<string> path,
-        IndentedTextWriter sourceWriter
-    )
+    private void WriteReaderBody(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
         if (IsPrimitive(type))
         {
-            if (IsNullable(type))
+            sourceWriter.Write("return ");
+            WriteRead(type, sourceWriter);
+
+            if (!IsNullable(type))
             {
-                WriteIsNullCall(sourceWriter, GetObjectReaderFieldName(type));
-                sourceWriter.WriteLine("]) ? null : ");
+                sourceWriter.Write(" ?? ");
+                sourceWriter.Write(
+                    "throw new InvalidOperationException(\"Expected non-null value\")"
+                );
             }
 
-            WriteDbReaderCall(type, sourceWriter);
+            sourceWriter.WriteLine(";");
         }
         else
         {
-            var ctor = type.GetMembers(".ctor")
-                .Cast<IMethodSymbol>()
-                .OrderByDescending(x => x.Parameters.Length)
-                .FirstOrDefault();
+            var ctor = GetCtor(type);
 
+            for (var i = 0; i < ctor!.Parameters.Length; i++)
+            {
+                var parameter = ctor.Parameters[i];
+                sourceWriter.Write("var ");
+                sourceWriter.Write(parameter.Name);
+                sourceWriter.Write(" = ");
+                WriteRead(parameter.Type, sourceWriter);
+                sourceWriter.WriteLine(";");
+            }
+            sourceWriter.WriteLine();
+
+            if (IsNullable(type) && ctor.Parameters.Length > 0)
+            {
+                sourceWriter.Write("if (");
+                for (var i = 0; i < ctor.Parameters.Length; i++)
+                {
+                    var parameter = ctor.Parameters[i];
+                    sourceWriter.Write(parameter.Name);
+                    sourceWriter.Write(" is null");
+
+                    if (i < ctor.Parameters.Length - 1)
+                    {
+                        sourceWriter.Write(" && ");
+                    }
+                }
+
+                sourceWriter.WriteLine(")");
+                sourceWriter.WriteLine("{");
+                sourceWriter.Indent++;
+                sourceWriter.WriteLine("return null;");
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("}");
+                sourceWriter.WriteLine();
+            }
+
+            sourceWriter.Write("return ");
             if (!type.IsTupleType)
             {
                 sourceWriter.Write("new ");
@@ -181,25 +296,45 @@ public class ReaderGenerator : IIncrementalGenerator
 
             sourceWriter.WriteLine("(");
             sourceWriter.Indent++;
-            for (var i = 0; i < ctor!.Parameters.Length; i++)
+            for (var i = 0; i < ctor.Parameters.Length; i++)
             {
                 var parameter = ctor.Parameters[i];
-                WriteReaderCore(parameter.Type, path.Add(parameter.Name), sourceWriter);
+                sourceWriter.Write(parameter.Name);
+
+                if (parameter.Type.NullableAnnotation == NullableAnnotation.NotAnnotated)
+                {
+                    sourceWriter.Write(
+                        " ?? throw new InvalidOperationException(\"Expected non-null value\")"
+                    );
+                }
+
                 if (i < ctor.Parameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
                 }
             }
             sourceWriter.Indent--;
-            sourceWriter.Write(")");
+            sourceWriter.WriteLine(");");
         }
     }
 
-    private static void WriteIsNullCall(IndentedTextWriter sourceWriter, string readerName)
+    private static IMethodSymbol GetCtor(ITypeSymbol type) =>
+        type.GetMembers(".ctor")
+            .Cast<IMethodSymbol>()
+            .OrderByDescending(x => x.Parameters.Length)
+            .First();
+
+    private void WriteRead(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
-        sourceWriter.WriteLine("ObjectReaderUtils.IsNull(reader, ordinalReader, ");
-        sourceWriter.WriteLine(readerName);
-        sourceWriter.WriteLine(")");
+        if (IsPrimitive(type))
+        {
+            WriteDbReaderNullableCall(type, sourceWriter);
+        }
+        else
+        {
+            sourceWriter.Write(GetObjectReaderFieldName(type));
+            sourceWriter.Write(".Read(reader, ordinalReader)");
+        }
     }
 
     private void WriteDbReaderCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
@@ -210,23 +345,26 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.Write(")");
     }
 
+    private void WriteDbReaderNullableCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    {
+        sourceWriter.Write("reader.Get");
+        sourceWriter.Write(GetReaderGetSuffix(type));
+        sourceWriter.Write("OrNull(ordinalReader.Read()");
+        sourceWriter.Write(")");
+    }
+
     private static void WriteReaderMethodEnd(IndentedTextWriter sourceWriter)
     {
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
     }
 
-    private static void WriteReaderMethodStart(
-        IndentedTextWriter sourceWriter,
-        QueryInvocation input
-    )
+    private static void WriteReaderMethodStart(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
         sourceWriter.Write("public ");
-        sourceWriter.Write(
-            input.ReadType.Type!.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat)
-        );
+        sourceWriter.Write(type.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat));
         sourceWriter.Write(" Read");
-        sourceWriter.Write(input.ReadType.Type!.Name);
+        sourceWriter.Write(type.Name);
         sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader)");
         sourceWriter.WriteLine("{");
         sourceWriter.Indent++;
@@ -238,6 +376,7 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine();
         sourceWriter.WriteLine("using System.Data.Common;");
         sourceWriter.WriteLine("using Cooke.Gnissel;");
+        sourceWriter.WriteLine("using Cooke.Gnissel.SourceGeneration;");
         sourceWriter.WriteLine();
         sourceWriter.WriteLine("public partial class GeneratedObjectReaderProvider");
         sourceWriter.WriteLine("{");
@@ -251,7 +390,8 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.Flush();
     }
 
-    private bool IsNullable(ITypeSymbol type) => type is { Name: "Nullable" };
+    private bool IsNullable(ITypeSymbol type) =>
+        type is { Name: "Nullable" } || type.IsReferenceType;
 
     private bool IsPrimitive(ITypeSymbol readTypeType) =>
         readTypeType.Name switch
@@ -275,65 +415,4 @@ public class ReaderGenerator : IIncrementalGenerator
                 .Name,
             _ => type.Name,
         };
-
-    private class QueryInvocation(DbContextTypeInfo dbContextType, TypeInfo readType)
-    {
-        public DbContextTypeInfo DbContextType { get; } = dbContextType;
-
-        public TypeInfo ReadType { get; } = readType;
-
-        protected bool Equals(QueryInvocation other)
-        {
-            return DbContextType.Equals(other.DbContextType) && ReadType.Equals(other.ReadType);
-        }
-
-        public override bool Equals(object? obj)
-        {
-            if (obj is null)
-                return false;
-            if (ReferenceEquals(this, obj))
-                return true;
-            if (obj.GetType() != GetType())
-                return false;
-            return Equals((QueryInvocation)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (DbContextType.GetHashCode() * 397) ^ ReadType.GetHashCode();
-            }
-        }
-    }
-
-    private class DbContextTypeInfo(string @namespace, string name)
-    {
-        public string Namespace { get; } = @namespace;
-        public string Name { get; } = name;
-
-        protected bool Equals(DbContextTypeInfo other)
-        {
-            return Namespace == other.Namespace && Name == other.Name;
-        }
-
-        public override bool Equals(object? obj)
-        {
-            if (obj is null)
-                return false;
-            if (ReferenceEquals(this, obj))
-                return true;
-            if (obj.GetType() != GetType())
-                return false;
-            return Equals((DbContextTypeInfo)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            unchecked
-            {
-                return (Namespace.GetHashCode() * 397) ^ Name.GetHashCode();
-            }
-        }
-    }
 }
