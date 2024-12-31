@@ -2,6 +2,7 @@
 
 
 using System.Text.RegularExpressions;
+using Cooke.Gnissel;
 
 Type type = typeof((User, User?));
 
@@ -19,6 +20,9 @@ partial class Program
     public static T GetEnumValue<T>(string value)
         where T : notnull
     {
+        ObjectReader<int?> nullableInt32Reader = null!;
+        ObjectReader<int> int32Reader = Test.CreateNonNullReader(nullableInt32Reader);
+
         throw new NotImplementedException();
     }
 }

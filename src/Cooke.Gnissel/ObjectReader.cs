@@ -24,3 +24,13 @@ public abstract record ReadDescriptor;
 public record NextOrdinalReadDescriptor : ReadDescriptor;
 
 public record NameReadDescriptor(string Name) : ReadDescriptor;
+
+public class Test
+{
+    public static ObjectReader<T> CreateNonNullReader<T>(ObjectReader<T?> nullableReader)
+        where T : struct =>
+        new(
+            ((dataReader, ordinalReader) => nullableReader.Read(dataReader, ordinalReader)!.Value),
+            nullableReader.ReadDescriptors
+        );
+}
