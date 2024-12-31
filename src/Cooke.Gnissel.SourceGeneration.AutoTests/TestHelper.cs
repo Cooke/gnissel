@@ -37,6 +37,6 @@ public static class TestHelper
         driver = driver.RunGenerators(compilation);
 
         // Use verify to snapshot test the source generator output!
-        return Verifier.Verify(driver);
+        return Verifier.Verify(driver).UseDirectory("snapshots");
     }
 }

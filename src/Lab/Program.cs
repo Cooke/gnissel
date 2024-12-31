@@ -15,4 +15,10 @@ partial class Program
 {
     [GeneratedRegex("Hello, World!")]
     private static partial Regex MyRegex();
+
+    public static T GetEnumValue<T>(string value)
+        where T : notnull
+    {
+        throw new NotImplementedException();
+    }
 }

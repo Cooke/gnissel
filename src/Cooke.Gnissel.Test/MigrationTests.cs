@@ -2,6 +2,7 @@
 
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Npgsql;
 
 #endregion
@@ -16,7 +17,8 @@ public class MigrationTests
     [OneTimeSetUp]
     public void Setup()
     {
-        _db = new DbContext(new(new NpgsqlDbAdapter(_dataSource)));
+        var adapter = new NpgsqlDbAdapter(_dataSource);
+        _db = new DbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
     }
 
     [OneTimeTearDown]
@@ -42,7 +44,7 @@ public class MigrationTests
                             """
                         )
                         .ExecuteAsync(ct)
-            )
+            ),
         };
         await _db.Migrate(migrations);
         Assert.DoesNotThrowAsync(

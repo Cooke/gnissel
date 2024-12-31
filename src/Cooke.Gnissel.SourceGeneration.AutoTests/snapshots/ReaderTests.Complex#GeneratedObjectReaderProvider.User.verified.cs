@@ -4,6 +4,8 @@ namespace Gnissel.SourceGeneration;
 using System.Data.Common;
 using Cooke.Gnissel;
 using Cooke.Gnissel.SourceGeneration;
+using System.Collections.Immutable;
+using Cooke.Gnissel.Services;
 
 public partial class GeneratedObjectReaderProvider
 {

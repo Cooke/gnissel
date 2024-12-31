@@ -3,6 +3,7 @@
 using System.Data.Common;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
 using Npgsql;
 
@@ -18,7 +19,8 @@ public class TransactionTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
+        var adapter = new NpgsqlDbAdapter(_dataSource);
+        _db = new TestDbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
 
         await _dataSource
             .CreateCommand(

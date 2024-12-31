@@ -1,38 +1,42 @@
-﻿using System.Diagnostics.Contracts;
+﻿var dbContext = new DbContext();
+dbContext.Query<User>("");
+dbContext.Query<User?>("");
+dbContext.Query<(User, Device)>("");
+dbContext.Query<(User, User, User?)>("");
+dbContext.Query<(int, string, int)>("");
+dbContext.Query<(int, string?, int)>("");
+dbContext.Query<string>("");
+dbContext.Query<int>("");
+dbContext.Query<int?>("");
+dbContext.Query<DateTime>("");
+dbContext.Query<DateTime?>("");
+dbContext.Query<TimeSpan>("");
+dbContext.Query<TimeSpan?>("");
+dbContext.Query<(TimeSpan?, DateTime)>("");
 
-namespace Cooke.Gnissel.SourceGeneration.Test;
+public class User(
+    string Name,
+    int Age,
+    int? Size,
+    Role role,
+    DateTime CreatedAt,
+    DateTime? UpdatedAt,
+    TimeSpan PlayTime,
+    TimeSpan? IdleTime,
+    Address address
+);
 
-public class Program
+public class Device(string Name, string? Model);
+
+public class Address(string Street, string City, string? ZipCode);
+
+public enum Role
 {
-    public void Main()
-    {
-        var dbContext = new AppDbContext();
-        // var reader = new GeneratedObjectReaderProvider();
-        var query = dbContext.Query<User>("SELECT * FROM Users");
-
-        dbContext.Query<(User, Device)>("SELECT * FROM Users, Devices");
-
-        dbContext.Query<int>("SELECT COUNT(*) FROM Users");
-
-        dbContext.Query<int>("SELECT COUNT(*) FROM Users");
-    }
-
-    public class User(string Name, int Age, int? Size);
-
-    public class Device;
-
-    // public partial class GeneratedObjectReaderProvider
-    // {
-    //     public partial ObjectReader<(User, Device)> GetUserDeviceReader();
-    // }
+    Admin,
+    User,
 }
 
-public class Query<T> { }
-
-public abstract class DbContext
+public class DbContext
 {
-    [Pure]
-    public Query<TOut> Query<TOut>(string sql) => new Query<TOut>();
+    public void Query<TOut>(string sql) { }
 }
-
-public partial class AppDbContext : DbContext { }

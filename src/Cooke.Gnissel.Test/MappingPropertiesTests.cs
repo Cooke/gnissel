@@ -1,6 +1,7 @@
 #region
 
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Npgsql;
 
 #endregion
@@ -15,7 +16,8 @@ public class MappingProperiesTests
     [OneTimeSetUp]
     public void Setup()
     {
-        _db = new DbContext(new(new NpgsqlDbAdapter(_dataSource)));
+        var adapter = new NpgsqlDbAdapter(_dataSource);
+        _db = new DbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
     }
 
     [Test]

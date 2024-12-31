@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
 using Npgsql;
 
@@ -25,7 +26,8 @@ public class MappingJsonTests
             )
             .EnableDynamicJson()
             .Build();
-        _db = new TestDbContext(new(new NpgsqlDbAdapter(_dataSource)));
+        var adapter = new NpgsqlDbAdapter(_dataSource);
+        _db = new TestDbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
 
         await _dataSource
             .CreateCommand(
@@ -81,7 +83,7 @@ public class MappingJsonTests
         CollectionAssert.AreEqual(
             new[]
             {
-                new UserData("bob", 1, UserRole.User, TimeSpan.FromHours(1), GameClass.Healer)
+                new UserData("bob", 1, UserRole.User, TimeSpan.FromHours(1), GameClass.Healer),
             },
             results
         );
@@ -132,7 +134,7 @@ public class MappingJsonTests
             {
                 "Warrior" => GameClass.Warrior,
                 "Healer" => GameClass.Healer,
-                _ => throw new Exception("Invalid class")
+                _ => throw new Exception("Invalid class"),
             };
         }
 
@@ -149,7 +151,7 @@ public class MappingJsonTests
     internal enum UserRole
     {
         Admin,
-        User
+        User,
     }
 
     public record Device(string Id, string Name, int UserId);

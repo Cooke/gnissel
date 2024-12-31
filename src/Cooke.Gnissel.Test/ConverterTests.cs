@@ -3,6 +3,7 @@ using System.Data.Common;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
 using Npgsql;
 
@@ -28,8 +29,13 @@ public class ConverterTests
             .ExecuteNonQueryAsync();
     }
 
-    private TestDbContext CreateDb(IImmutableList<DbConverter> converters) =>
-        new(new(new NpgsqlDbAdapter(_dataSource), converters));
+    private TestDbContext CreateDb(IImmutableList<DbConverter> converters)
+    {
+        var adapter = new NpgsqlDbAdapter(_dataSource);
+        return new TestDbContext(
+            new(adapter, new ExpressionObjectReaderProvider(adapter), converters)
+        );
+    }
 
     [OneTimeTearDown]
     public void OneTimeTearDown()
