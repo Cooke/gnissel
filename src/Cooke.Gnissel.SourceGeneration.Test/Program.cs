@@ -2,7 +2,9 @@
 dbContext.Query<User>("");
 dbContext.Query<User?>("");
 dbContext.Query<(User, Device)>("");
+dbContext.Query<(User, User, User)>("");
 dbContext.Query<(User, User, User?)>("");
+dbContext.Query<Address?>("");
 dbContext.Query<(int, string, int)>("");
 dbContext.Query<(int, string?, int)>("");
 dbContext.Query<string>("");
@@ -13,6 +15,7 @@ dbContext.Query<DateTime?>("");
 dbContext.Query<TimeSpan>("");
 dbContext.Query<TimeSpan?>("");
 dbContext.Query<(TimeSpan?, DateTime)>("");
+dbContext.Query<(TimeSpan, DateTime)>("");
 
 public class User(
     string Name,

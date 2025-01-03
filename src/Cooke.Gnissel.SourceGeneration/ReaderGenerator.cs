@@ -46,35 +46,11 @@ public class ReaderGenerator : IIncrementalGenerator
             )
             .Where(type => type != null)
             .Select((input, _) => input!)
-            .Select(
-                (type, _) =>
-                {
-                    if (type.IsReferenceType)
-                    {
-                        return type.WithNullableAnnotation(NullableAnnotation.Annotated);
-                    }
-
-                    if (type is INamedTypeSymbol { IsTupleType: true } tupleType)
-                    {
-                        return tupleType.ConstructedFrom.Construct(
-                            tupleType
-                                .TypeArguments.Select(x =>
-                                    x.IsReferenceType
-                                        ? x.WithNullableAnnotation(NullableAnnotation.Annotated)
-                                        : x
-                                )
-                                .ToArray()
-                        );
-                    }
-
-                    return type;
-                }
-            )
             .SelectMany(FindAllUsedTypes)
+            .Select(AdjustNulls)
             .Collect()
             .SelectMany(
-                (types, _) =>
-                    types.Distinct(SymbolEqualityComparer.IncludeNullability).Cast<ITypeSymbol>()
+                (types, _) => types.Distinct(SymbolEqualityComparer.Default).Cast<ITypeSymbol>()
             );
 
         initContext.RegisterImplementationSourceOutput(
@@ -157,6 +133,30 @@ public class ReaderGenerator : IIncrementalGenerator
                 context.AddSource("GeneratedObjectReaderProvider.cs", stringWriter.ToString());
             }
         );
+    }
+
+    private static ITypeSymbol AdjustNulls(ITypeSymbol type, CancellationToken ct) =>
+        AdjustNulls(type);
+
+    private static ITypeSymbol AdjustNulls(ITypeSymbol type)
+    {
+        return type switch
+        {
+            INamedTypeSymbol { Name: "Nullable", TypeArguments.Length: 1 } nullable =>
+                nullable.TypeArguments[0],
+
+            INamedTypeSymbol { IsTupleType: true } tupleType => tupleType.ConstructedFrom.Construct(
+                tupleType
+                    .TupleElements.Select(x =>
+                        x.Type.IsReferenceType ? AdjustNulls(x.Type) : x.Type
+                    )
+                    .ToArray()
+            ),
+
+            { IsReferenceType: true, NullableAnnotation: NullableAnnotation.NotAnnotated } =>
+                type.WithNullableAnnotation(NullableAnnotation.Annotated),
+            _ => type,
+        };
     }
 
     private IEnumerable<ITypeSymbol> FindAllUsedTypes(ITypeSymbol type, CancellationToken ct)
@@ -258,22 +258,12 @@ public class ReaderGenerator : IIncrementalGenerator
 
     private static string GetReaderMetadataName(ITypeSymbol type)
     {
-        return $"Read{GetTypeIdentifierName(type)}Metadata";
+        return $"Read{GetTypeIdentifierName(AdjustNulls(type))}Metadata";
     }
 
     private static string GetTypeIdentifierName(ITypeSymbol type)
     {
-        if (type is INamedTypeSymbol { Name: "Nullable", TypeArguments.Length: 1 } namedTypeSymbol)
-        {
-            return "Nullable" + GetTypeIdentifierName(namedTypeSymbol.TypeArguments[0]);
-        }
-
-        var baseName = string.Join(
-            "",
-            type.ToDisplayParts(SymbolDisplayFormat.MinimallyQualifiedFormat)
-                .Select(x => x.Symbol?.Name)
-                .Where(x => !string.IsNullOrEmpty(x))
-        );
+        var baseName = GetBaseName(type);
 
         if (type.ContainingType != null)
         {
@@ -281,16 +271,47 @@ public class ReaderGenerator : IIncrementalGenerator
         }
 
         return baseName;
+
+        static string GetBaseName(ITypeSymbol type) =>
+            type switch
+            {
+                INamedTypeSymbol { Name: "Nullable" } nullableType => "Nullable"
+                    + GetBaseName(nullableType.TypeArguments[0]),
+
+                INamedTypeSymbol { IsTupleType: true } tupleType => string.Join(
+                    "",
+                    tupleType.TypeArguments.Select(GetBaseName)
+                ),
+
+                _ => string.Join(
+                    "",
+                    type.ToDisplayParts(SymbolDisplayFormat.MinimallyQualifiedFormat)
+                        .Select(x => x.Symbol?.Name)
+                        .Where(x => !string.IsNullOrEmpty(x))
+                ),
+            };
     }
 
     private static void WriteObjectReaderField(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
         sourceWriter.Write("private readonly ObjectReader<");
-        sourceWriter.Write(type.ToDisplayString());
+        WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
         sourceWriter.Write(GetObjectReaderFieldName(type));
         sourceWriter.WriteLine(";");
         sourceWriter.WriteLine();
+    }
+
+    private static void WriteTypeNameEnsureNullable(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type
+    )
+    {
+        sourceWriter.Write(type.ToDisplayString());
+        if (type.NullableAnnotation != NullableAnnotation.Annotated)
+        {
+            sourceWriter.Write("?");
+        }
     }
 
     private static string GetObjectReaderFieldName(ITypeSymbol type) =>
@@ -302,7 +323,7 @@ public class ReaderGenerator : IIncrementalGenerator
     private static void WriteReaderMethodStart(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
         sourceWriter.Write("public ");
-        sourceWriter.Write(type.ToDisplayString());
+        WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write(" Read");
         sourceWriter.Write(GetTypeIdentifierName(type));
         sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader)");
@@ -316,15 +337,6 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             sourceWriter.Write("return ");
             WriteReadCall(type, sourceWriter);
-
-            if (!IsNullable(type))
-            {
-                sourceWriter.Write(" ?? ");
-                sourceWriter.Write(
-                    "throw new InvalidOperationException(\"Expected non-null value\")"
-                );
-            }
-
             sourceWriter.WriteLine(";");
         }
         else
@@ -342,7 +354,7 @@ public class ReaderGenerator : IIncrementalGenerator
             }
             sourceWriter.WriteLine();
 
-            if (IsNullable(type) && ctor.Parameters.Length > 0)
+            if (IsNullableValueTypeOrReferenceType(type) && ctor.Parameters.Length > 0)
             {
                 sourceWriter.Write("if (");
                 for (var i = 0; i < ctor.Parameters.Length; i++)
@@ -412,12 +424,6 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             WriteDbReaderNullableCall(type, sourceWriter);
         }
-        else if (type.IsValueType)
-        {
-            sourceWriter.Write(or);
-            sourceWriter.Write(GetObjectReaderFieldName(type));
-            sourceWriter.Write(".Read(reader, ordinalReader)");
-        }
         else
         {
             sourceWriter.Write(GetObjectReaderFieldName(type));
@@ -461,8 +467,13 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.Flush();
     }
 
-    private bool IsNullable(ITypeSymbol type) =>
-        type is { Name: "Nullable" } || type.IsReferenceType;
+    private bool IsNullableValueTypeOrReferenceType(ITypeSymbol type) =>
+        IsNullableValueType(type) || type.IsReferenceType;
+
+    private static bool IsNullableValueType(ITypeSymbol type)
+    {
+        return type is { Name: "Nullable" };
+    }
 
     private bool IsPrimitive(ITypeSymbol readTypeType) =>
         readTypeType.Name switch
@@ -486,4 +497,6 @@ public class ReaderGenerator : IIncrementalGenerator
                 .Name,
             _ => type.Name,
         };
+
+    private record CustomType();
 }

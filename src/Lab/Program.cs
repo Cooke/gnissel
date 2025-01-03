@@ -4,8 +4,6 @@
 using System.Text.RegularExpressions;
 using Cooke.Gnissel;
 
-Type type = typeof((User, User?));
-
 Console.WriteLine("Hello, {type}");
 
 MyRegex().Matches("Hello, World!");
