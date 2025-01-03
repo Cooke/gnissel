@@ -196,15 +196,16 @@ public class ReaderGenerator : IIncrementalGenerator
         }
         else if (type.IsTupleType)
         {
-            sourceWriter.Write("private static MultiReaderMetadata ");
+            sourceWriter.Write("private MultiReaderMetadata ");
             sourceWriter.Write(GetReaderMetadataName(type));
             sourceWriter.WriteLine(" => new ([");
             sourceWriter.Indent++;
             var ctor = GetCtor(type);
             for (var i = 0; i < ctor.Parameters.Length; i++)
             {
-                sourceWriter.Write(GetReaderMetadataName(ctor.Parameters[i].Type));
-
+                sourceWriter.Write("new NestedReaderMetadata(");
+                sourceWriter.Write(GetObjectReaderFieldName(ctor.Parameters[i].Type));
+                sourceWriter.Write(")");
                 if (i < ctor.Parameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
@@ -218,7 +219,7 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             var ctor = GetCtor(type);
 
-            sourceWriter.Write("private static MultiReaderMetadata ");
+            sourceWriter.Write("private MultiReaderMetadata ");
             sourceWriter.Write("Read");
             sourceWriter.Write(GetTypeIdentifierName(type));
             sourceWriter.Write("Metadata");
@@ -228,20 +229,17 @@ public class ReaderGenerator : IIncrementalGenerator
             for (int i = 0; i < ctor.Parameters.Length; i++)
             {
                 var parameter = ctor.Parameters[i];
-                if (IsPrimitive(parameter.Type))
+                sourceWriter.Write("new NameReaderMetadata(\"");
+                sourceWriter.Write(parameter.Name);
+                sourceWriter.Write("\"");
+                if (!IsPrimitive(parameter.Type))
                 {
-                    sourceWriter.Write("new NameReaderMetadata(\"");
-                    sourceWriter.Write(parameter.Name);
-                    sourceWriter.Write("\")");
-                }
-                else
-                {
-                    sourceWriter.Write("new NestedReaderMetadata(\"");
-                    sourceWriter.Write(parameter.Name);
-                    sourceWriter.Write("\", ");
-                    sourceWriter.Write(GetReaderMetadataName(parameter.Type));
+                    sourceWriter.Write(", new NestedReaderMetadata(");
+                    sourceWriter.Write(GetObjectReaderFieldName(parameter.Type));
                     sourceWriter.Write(")");
                 }
+
+                sourceWriter.Write(")");
 
                 if (i < ctor.Parameters.Length - 1)
                 {

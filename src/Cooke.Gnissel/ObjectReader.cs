@@ -5,6 +5,8 @@ namespace Cooke.Gnissel;
 public interface IObjectReader
 {
     Type ObjectType { get; }
+
+    ImmutableArray<ReadDescriptor> ReadDescriptors { get; }
 }
 
 public class ObjectReader<TOut>(

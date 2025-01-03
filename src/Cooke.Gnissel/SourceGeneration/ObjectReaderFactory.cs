@@ -5,9 +5,13 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public abstract record ReaderMetadata;
 
-public record NestedReaderMetadata(string Name, ReaderMetadata Inner) : ReaderMetadata;
+public record NestedReaderMetadata(IObjectReader Inner) : ReaderMetadata;
 
-public record NameReaderMetadata(string Name) : ReaderMetadata;
+public record NameReaderMetadata(string Name, ReaderMetadata Inner) : ReaderMetadata
+{
+    public NameReaderMetadata(string Name)
+        : this(Name, new NextOrdinalReaderMetadata()) { }
+}
 
 public record NextOrdinalReaderMetadata : ReaderMetadata;
 
@@ -41,14 +45,36 @@ public static class ObjectReaderFactory
                     : new NextOrdinalReadDescriptor();
                 break;
 
-            case NameReaderMetadata { Name: var name }:
-                yield return new NameReadDescriptor(adapter.ToColumnName(objectPath.Add(name)));
+            case NameReaderMetadata { Name: var name, Inner: var inner }:
+                foreach (
+                    var readDescriptor in GetReadDescriptors(adapter, objectPath.Add(name), inner)
+                )
+                {
+                    yield return readDescriptor;
+                }
                 break;
 
-            case NestedReaderMetadata { Name: var name, Inner: var inner }:
-                foreach (var segment in GetReadDescriptors(adapter, objectPath.Add(name), inner))
+            case NestedReaderMetadata { Inner: var inner }:
+                foreach (var innerDescriptor in inner.ReadDescriptors)
                 {
-                    yield return segment;
+                    if (objectPath.Length > 0)
+                    {
+                        yield return new NameReadDescriptor(
+                            adapter.ToColumnName(
+                                innerDescriptor switch
+                                {
+                                    NameReadDescriptor nameReadDescriptor => objectPath.Add(
+                                        nameReadDescriptor.Name
+                                    ),
+                                    NextOrdinalReadDescriptor => objectPath,
+                                }
+                            )
+                        );
+                    }
+                    else
+                    {
+                        yield return innerDescriptor;
+                    }
                 }
                 break;
 
