@@ -3,7 +3,6 @@ using System.ComponentModel.DataAnnotations.Schema;
 using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Internals;
-using Cooke.Gnissel.Services.Implementations;
 
 namespace Cooke.Gnissel.Typed.Internals;
 
@@ -14,17 +13,19 @@ internal static class ColumnBuilder
             .. typeof(T)
                 .GetProperties()
                 .Where(x =>
-                    // Only pick public properties or properties that can be read back via the DefaultObjectReader.
-                    // TODO share logic with DefaultObjectReader
+                    // Only pick public properties that can be read back via a constructor
                     x.SetMethod?.IsPublic == true
-                    || ExpressionObjectReaderProvider
-                        .GetReaderConstructor(typeof(T))
+                    || GetReaderConstructor(typeof(T))
                         .GetParameters()
                         .Select(p => p.Name)
                         .Contains(x.Name, StringComparer.InvariantCultureIgnoreCase)
                 )
                 .SelectMany(p => CreateColumns<T>(options, [p])),
         ];
+
+    private static ConstructorInfo GetReaderConstructor(Type type) =>
+        type.GetConstructors().OrderByDescending(x => x.GetParameters().Length).FirstOrDefault()
+        ?? throw new ArgumentException($"No valid constructor found for type {type}");
 
     private static IEnumerable<Column<T>> CreateColumns<T>(
         TableOptions options,

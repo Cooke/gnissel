@@ -97,7 +97,7 @@ public partial class DbOptions
 
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
 
-    public ObjectReader<T> GetReader<T>() => _objectReaderProvider.Get<T>(this);
+    public ObjectReader<T> GetReader<T>() => _objectReaderProvider.Get<T>();
 
     public bool IsDbMapped(Type type) => GetConverter(type) != null || DbAdapter.IsDbMapped(type);
 }

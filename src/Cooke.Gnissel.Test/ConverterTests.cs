@@ -32,6 +32,7 @@ public class ConverterTests
     private TestDbContext CreateDb(IImmutableList<DbConverter> converters)
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
+
         return new TestDbContext(
             new(adapter, new ExpressionObjectReaderProvider(adapter), converters)
         );

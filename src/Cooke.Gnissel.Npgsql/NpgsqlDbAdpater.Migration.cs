@@ -79,7 +79,7 @@ public partial class NpgsqlDbAdapter
 
     private class FieldValueObjectReaderProvider : IObjectReaderProvider
     {
-        public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions) =>
+        public ObjectReader<TOut> Get<TOut>() =>
             new(
                 (reader, ordinalReader) => reader.GetFieldValue<TOut>(ordinalReader.Read()),
                 [new NextOrdinalReadDescriptor()]

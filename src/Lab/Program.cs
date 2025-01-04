@@ -1,26 +1,69 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
-using System.Text.RegularExpressions;
 using Cooke.Gnissel;
+using Cooke.Gnissel.Services;
+using Cooke.Gnissel.SourceGeneration;
 
 Console.WriteLine("Hello, {type}");
 
-MyRegex().Matches("Hello, World!");
+class User(string Name, Address Address);
 
-class User;
+struct Address;
 
 partial class Program
 {
-    [GeneratedRegex("Hello, World!")]
-    private static partial Regex MyRegex();
+    public static void Setup() { }
 
-    public static T GetEnumValue<T>(string value)
-        where T : notnull
+    private static class GeneratedObjectReaders
     {
-        ObjectReader<int?> nullableInt32Reader = null!;
-        ObjectReader<int> int32Reader = Test.CreateNonNullReader(nullableInt32Reader);
+        public static IObjectReaderProvider Create(IDbAdapter adapter)
+        {
+            var builder = CreateBuilder();
+            var objectReaderProvider = builder.Build(adapter);
+            return objectReaderProvider;
+        }
 
-        throw new NotImplementedException();
+        private static ObjectReaderProviderBuilder CreateBuilder()
+        {
+            var builder = new ObjectReaderProviderBuilder();
+            TryAddDescriptors(builder);
+            return builder;
+        }
+
+        private static void TryAddDescriptors(ObjectReaderProviderBuilder builder)
+        {
+            builder.TryAdd(UserReaderDescriptor);
+        }
+    }
+
+    private static readonly ObjectReaderMetadata UserReaderMetadata = new MultiObjectReaderMetadata(
+        [
+            new NameObjectReaderMetadata("Name"),
+            new NameObjectReaderMetadata(
+                "Address",
+                new NestedObjectReaderMetadata(typeof(Address?))
+            ),
+        ]
+    );
+
+    private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor =
+        new(UserReaderFactory, UserReaderMetadata);
+
+    private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
+    {
+        var addressReader = context.ReaderProvider.Get<Address?>();
+        return (reader, ordinalReader) =>
+        {
+            var name = reader.GetStringOrNull(ordinalReader.Read());
+            var address = addressReader.Read(reader, ordinalReader);
+
+            if (name is null && address != null)
+            {
+                return null;
+            }
+
+            return new User(name ?? throw new InvalidOperationException(), address!.Value);
+        };
     }
 }
