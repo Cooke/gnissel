@@ -6,6 +6,13 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public class ObjectReaderProviderBuilder
 {
+    public ObjectReaderProviderBuilder() { }
+
+    public ObjectReaderProviderBuilder(IEnumerable<IObjectReaderDescriptor> descriptors)
+    {
+        _descriptors = descriptors.ToDictionary(x => x.ObjectType);
+    }
+
     private readonly Dictionary<Type, IObjectReaderDescriptor> _descriptors = new();
 
     private readonly ImmutableDictionary<Type, IObjectReader>.Builder _readers =

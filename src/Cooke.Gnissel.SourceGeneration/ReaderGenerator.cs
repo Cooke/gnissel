@@ -9,6 +9,12 @@ public class ReaderGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
+        var objectReaderProviderPipline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
+            "Cooke.Gnissel.ObjectReaderProviderAttribute",
+            (node, ct) => true,
+            (context, _) => ((ClassDeclarationSyntax)context.TargetNode).Identifier.ValueText
+        );
+
         var typesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
@@ -53,6 +59,8 @@ public class ReaderGenerator : IIncrementalGenerator
                 (types, _) => types.Distinct(SymbolEqualityComparer.Default).Cast<ITypeSymbol>()
             );
 
+        objectReaderProviderPipline.Combine(typesPipeline);
+
         initContext.RegisterImplementationSourceOutput(
             typesPipeline,
             (context, type) =>
@@ -85,7 +93,15 @@ public class ReaderGenerator : IIncrementalGenerator
                 WritePartialReaderClassStart(sourceWriter);
 
                 sourceWriter.WriteLine(
-                    "private static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors;"
+                    "public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>"
+                );
+                sourceWriter.WriteLine(
+                    "new ObjectReaderProviderBuilder(ObjectReaderDescriptors).Build(adapter);"
+                );
+                sourceWriter.WriteLine();
+
+                sourceWriter.WriteLine(
+                    "public static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors;"
                 );
                 sourceWriter.WriteLine();
                 sourceWriter.WriteLine("static GeneratedObjectReaders() {");
@@ -270,7 +286,7 @@ public class ReaderGenerator : IIncrementalGenerator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("private static readonly ObjectReaderDescriptor<");
+        sourceWriter.Write("public static readonly ObjectReaderDescriptor<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
         sourceWriter.Write(GetObjectReaderDescriptorFieldName(type));
@@ -305,7 +321,7 @@ public class ReaderGenerator : IIncrementalGenerator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public static ObjectReaderFunc<");
+        sourceWriter.Write("private static ObjectReaderFunc<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
         sourceWriter.Write(GetCreateReadMethodName(type));

@@ -18,57 +18,57 @@ partial class Program
     public static void Setup()
     {
         var adapter = new NpgsqlDbAdapter(null!);
-        new DbContext(new DbOptions(adapter, GeneratedObjectReaders.Create(adapter)));
+        new DbContext(new DbOptions(adapter, new ObjectReaderProvider(adapter)));
     }
 
-    private static class GeneratedObjectReaders
-    {
-        public static IObjectReaderProvider Create(IDbAdapter adapter)
-        {
-            var builder = new ObjectReaderProviderBuilder();
-            foreach (var objectReaderDescriptor in ObjectReaderDescriptors)
-            {
-                builder.TryAdd(objectReaderDescriptor);
-            }
+    [ObjectReaderProvider]
+    private partial class ObjectReaderProvider;
 
-            return builder.Build(adapter);
+    private partial class ObjectReaderProvider(IDbAdapter adapter) : IObjectReaderProvider
+    {
+        private readonly IObjectReaderProvider _innerProvider = CreateProvider(adapter);
+
+        public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>
+            new ObjectReaderProviderBuilder(ObjectReaderDescriptors).Build(adapter);
+
+        static ObjectReaderProvider()
+        {
+            ObjectReaderDescriptors = [UserReaderDescriptor];
         }
 
-        static GeneratedObjectReaders() { }
+        private static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors;
 
-        private static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors =
-        [
-            UserReaderDescriptor,
-        ];
-    }
+        private static readonly ObjectReaderMetadata UserReaderMetadata =
+            new MultiObjectReaderMetadata(
+                [
+                    new NameObjectReaderMetadata("Name"),
+                    new NameObjectReaderMetadata(
+                        "Address",
+                        new NestedObjectReaderMetadata(typeof(Address?))
+                    ),
+                ]
+            );
 
-    private static readonly ObjectReaderMetadata UserReaderMetadata = new MultiObjectReaderMetadata(
-        [
-            new NameObjectReaderMetadata("Name"),
-            new NameObjectReaderMetadata(
-                "Address",
-                new NestedObjectReaderMetadata(typeof(Address?))
-            ),
-        ]
-    );
+        private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor =
+            new(UserReaderFactory, UserReaderMetadata);
 
-    private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor =
-        new(UserReaderFactory, UserReaderMetadata);
-
-    private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
-    {
-        var addressReader = context.ReaderProvider.Get<Address?>();
-        return (reader, ordinalReader) =>
+        private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
         {
-            var name = reader.GetStringOrNull(ordinalReader.Read());
-            var address = addressReader.Read(reader, ordinalReader);
-
-            if (name is null && address != null)
+            var addressReader = context.ReaderProvider.Get<Address?>();
+            return (reader, ordinalReader) =>
             {
-                return null;
-            }
+                var name = reader.GetStringOrNull(ordinalReader.Read());
+                var address = addressReader.Read(reader, ordinalReader);
 
-            return new User(name ?? throw new InvalidOperationException(), address!.Value);
-        };
+                if (name is null && address != null)
+                {
+                    return null;
+                }
+
+                return new User(name ?? throw new InvalidOperationException(), address!.Value);
+            };
+        }
+
+        public ObjectReader<TOut> Get<TOut>() => _innerProvider.Get<TOut>();
     }
 }
