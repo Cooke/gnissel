@@ -60,15 +60,15 @@ public class ReaderGenerator : IIncrementalGenerator
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
                 WritePartialReaderClassStart(sourceWriter);
-                WriteObjectReaderField(sourceWriter, type);
                 WriteReaderMetadata(sourceWriter, type);
-                WriteReaderMethodStart(sourceWriter, type);
+                WriteObjectReaderDescriptorField(sourceWriter, type);
+                WriteCreateReadMethodStart(sourceWriter, type);
                 WriteReaderBody(type, sourceWriter);
-                WriteReaderMethodEnd(sourceWriter);
+                WriteCreateReadMethodEnd(sourceWriter);
                 WritePartialReaderClassEnd(sourceWriter);
 
                 context.AddSource(
-                    $"GeneratedObjectReaderProvider.{GetTypeIdentifierName(type)}.cs",
+                    $"GeneratedObjectReaders.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
@@ -85,52 +85,32 @@ public class ReaderGenerator : IIncrementalGenerator
                 WritePartialReaderClassStart(sourceWriter);
 
                 sourceWriter.WriteLine(
-                    "private readonly ImmutableDictionary<Type, object> _objectReaders;"
+                    "private static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors;"
                 );
                 sourceWriter.WriteLine();
-                sourceWriter.WriteLine("public GeneratedObjectReaderProvider(IDbAdapter adapter)");
-                sourceWriter.WriteLine("{");
+                sourceWriter.WriteLine("static GeneratedObjectReaders() {");
                 sourceWriter.Indent++;
-                sourceWriter.WriteLine(
-                    "var readers = ImmutableDictionary.CreateBuilder<Type, object>();"
-                );
-                sourceWriter.WriteLine();
+                sourceWriter.WriteLine("ObjectReaderDescriptors = [");
+                sourceWriter.Indent++;
 
-                foreach (var name in names)
+                for (var index = 0; index < names.Length; index++)
                 {
-                    sourceWriter.Write(GetObjectReaderFieldName(name));
-                    sourceWriter.Write(" = ObjectReaderFactory.Create(adapter, Read");
-                    sourceWriter.Write(name);
-                    sourceWriter.Write(", Read");
-                    sourceWriter.Write(name);
-                    sourceWriter.WriteLine("Metadata);");
-                    sourceWriter.Write("readers.Add(");
-                    sourceWriter.Write(GetObjectReaderFieldName(name));
-                    sourceWriter.Write(".ObjectType, ");
-                    sourceWriter.Write(GetObjectReaderFieldName(name));
-                    sourceWriter.WriteLine(");");
-                    sourceWriter.WriteLine();
-                }
+                    var name = names[index];
+                    sourceWriter.Write(GetObjectReaderDescriptorFieldName(name));
 
-                sourceWriter.WriteLine("_objectReaders = readers.ToImmutable();");
+                    if (index < names.Length - 1)
+                    {
+                        sourceWriter.WriteLine(",");
+                    }
+                }
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("];");
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");
-                sourceWriter.WriteLine();
-                sourceWriter.WriteLine(
-                    "public ObjectReader<TOut> Get<TOut>(DbOptions dbOptions) =>"
-                );
-                sourceWriter.Indent++;
-                sourceWriter.WriteLine("_objectReaders.TryGetValue(typeof(TOut), out var reader)");
-                sourceWriter.WriteLine("? (ObjectReader<TOut>)reader");
-                sourceWriter.WriteLine(
-                    ": throw new InvalidOperationException(\"No reader found for type \" + typeof(TOut).Name);"
-                );
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine();
 
                 WritePartialReaderClassEnd(sourceWriter);
 
-                context.AddSource("GeneratedObjectReaderProvider.cs", stringWriter.ToString());
+                context.AddSource("GeneratedObjectReaders.cs", stringWriter.ToString());
             }
         );
     }
@@ -188,24 +168,24 @@ public class ReaderGenerator : IIncrementalGenerator
 
     private void WriteReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
+        sourceWriter.Write("private static readonly ObjectReaderMetadata ");
+        sourceWriter.Write(GetReaderMetadataName(type));
         if (IsPrimitive(type))
         {
-            sourceWriter.Write("private static readonly NextOrdinalReaderMetadata ");
-            sourceWriter.Write(GetReaderMetadataName(type));
-            sourceWriter.WriteLine(" = new ();");
+            sourceWriter.WriteLine(" = new NextOrdinalObjectReaderMetadata();");
         }
         else if (type.IsTupleType)
         {
-            sourceWriter.Write("private MultiReaderMetadata ");
-            sourceWriter.Write(GetReaderMetadataName(type));
-            sourceWriter.WriteLine(" => new ([");
+            sourceWriter.WriteLine(" = new MultiObjectReaderMetadata([");
             sourceWriter.Indent++;
             var ctor = GetCtor(type);
             for (var i = 0; i < ctor.Parameters.Length; i++)
             {
-                sourceWriter.Write("new NestedReaderMetadata(");
-                sourceWriter.Write(GetObjectReaderFieldName(ctor.Parameters[i].Type));
-                sourceWriter.Write(")");
+                sourceWriter.Write("new NestedObjectReaderMetadata(typeof(");
+                sourceWriter.Write(
+                    ctor.Parameters[i].Type.ToDisplayString(NullableFlowState.NotNull)
+                );
+                sourceWriter.Write("))");
                 if (i < ctor.Parameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
@@ -217,26 +197,21 @@ public class ReaderGenerator : IIncrementalGenerator
         }
         else
         {
-            var ctor = GetCtor(type);
-
-            sourceWriter.Write("private MultiReaderMetadata ");
-            sourceWriter.Write("Read");
-            sourceWriter.Write(GetTypeIdentifierName(type));
-            sourceWriter.Write("Metadata");
-            sourceWriter.WriteLine(" => new ([");
+            sourceWriter.WriteLine(" = new MultiObjectReaderMetadata([");
             sourceWriter.Indent++;
+            var ctor = GetCtor(type);
 
             for (int i = 0; i < ctor.Parameters.Length; i++)
             {
                 var parameter = ctor.Parameters[i];
-                sourceWriter.Write("new NameReaderMetadata(\"");
+                sourceWriter.Write("new NameObjectReaderMetadata(\"");
                 sourceWriter.Write(parameter.Name);
                 sourceWriter.Write("\"");
                 if (!IsPrimitive(parameter.Type))
                 {
-                    sourceWriter.Write(", new NestedReaderMetadata(");
-                    sourceWriter.Write(GetObjectReaderFieldName(parameter.Type));
-                    sourceWriter.Write(")");
+                    sourceWriter.Write(", new NestedObjectReaderMetadata(typeof(");
+                    sourceWriter.Write(parameter.Type.ToDisplayString(NullableFlowState.NotNull));
+                    sourceWriter.Write("))");
                 }
 
                 sourceWriter.Write(")");
@@ -256,7 +231,7 @@ public class ReaderGenerator : IIncrementalGenerator
 
     private static string GetReaderMetadataName(ITypeSymbol type)
     {
-        return $"Read{GetTypeIdentifierName(AdjustNulls(type))}Metadata";
+        return $"{GetTypeIdentifierName(AdjustNulls(type))}ReaderMetadata";
     }
 
     private static string GetTypeIdentifierName(ITypeSymbol type)
@@ -290,15 +265,28 @@ public class ReaderGenerator : IIncrementalGenerator
             };
     }
 
-    private static void WriteObjectReaderField(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    private static void WriteObjectReaderDescriptorField(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type
+    )
     {
-        sourceWriter.Write("private readonly ObjectReader<");
+        sourceWriter.Write("private static readonly ObjectReaderDescriptor<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
-        sourceWriter.Write(GetObjectReaderFieldName(type));
-        sourceWriter.WriteLine(";");
+        sourceWriter.Write(GetObjectReaderDescriptorFieldName(type));
+        sourceWriter.Write(" = new(");
+        sourceWriter.Write(GetCreateReadMethodName(type));
+        sourceWriter.Write(", ");
+        sourceWriter.Write(GetReaderMetadataName(type));
+        sourceWriter.WriteLine(");");
         sourceWriter.WriteLine();
     }
+
+    private static string GetObjectReaderDescriptorFieldName(ITypeSymbol type) =>
+        GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
+
+    private static string GetObjectReaderDescriptorFieldName(string typeIdentifierName) =>
+        $"{typeIdentifierName}ReaderDescriptor";
 
     private static void WriteTypeNameEnsureNullable(
         IndentedTextWriter sourceWriter,
@@ -312,21 +300,55 @@ public class ReaderGenerator : IIncrementalGenerator
         }
     }
 
-    private static string GetObjectReaderFieldName(ITypeSymbol type) =>
-        GetObjectReaderFieldName(GetTypeIdentifierName(type));
-
-    private static string GetObjectReaderFieldName(string typeDisplayName) =>
-        $"_{char.ToLower(typeDisplayName[0])}{typeDisplayName.Substring(1)}Reader";
-
-    private static void WriteReaderMethodStart(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    private static void WriteCreateReadMethodStart(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type
+    )
     {
-        sourceWriter.Write("public ");
+        sourceWriter.Write("public static ObjectReaderFunc<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
-        sourceWriter.Write(" Read");
-        sourceWriter.Write(GetTypeIdentifierName(type));
-        sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader)");
+        sourceWriter.Write("> ");
+        sourceWriter.Write(GetCreateReadMethodName(type));
+        sourceWriter.WriteLine("(ObjectReaderCreateContext context)");
         sourceWriter.WriteLine("{");
         sourceWriter.Indent++;
+
+        if (!IsPrimitive(type))
+        {
+            var ctor = GetCtor(type);
+            var typeSymbols = ctor
+                .Parameters.Select(x => x.Type)
+                .Where(x => !IsPrimitive(x))
+                .Distinct(SymbolEqualityComparer.Default)
+                .OfType<ITypeSymbol>()
+                .ToArray();
+            foreach (var usedType in typeSymbols)
+            {
+                sourceWriter.Write("var ");
+                sourceWriter.Write(GetReaderVariableName(usedType));
+                sourceWriter.Write(" = context.ReaderProvider.Get<");
+                WriteTypeNameEnsureNullable(sourceWriter, usedType);
+                sourceWriter.WriteLine(">();");
+            }
+
+            if (typeSymbols.Any())
+            {
+                sourceWriter.WriteLine();
+            }
+        }
+
+        sourceWriter.WriteLine("return (reader, ordinalReader) =>");
+        sourceWriter.WriteLine("{");
+        sourceWriter.Indent++;
+    }
+
+    private static string GetCreateReadMethodName(ITypeSymbol type) =>
+        $"Create{GetTypeIdentifierName(type)}ReadFunc";
+
+    private static string GetReaderVariableName(ITypeSymbol usedType)
+    {
+        var typeIdentifierName = GetTypeIdentifierName(usedType);
+        return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
     }
 
     private void WriteReaderBody(ITypeSymbol type, IndentedTextWriter sourceWriter)
@@ -341,9 +363,8 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             var ctor = GetCtor(type);
 
-            for (var i = 0; i < ctor!.Parameters.Length; i++)
+            foreach (var parameter in ctor.Parameters)
             {
-                var parameter = ctor.Parameters[i];
                 sourceWriter.Write("var ");
                 sourceWriter.Write(parameter.Name);
                 sourceWriter.Write(" = ");
@@ -424,7 +445,7 @@ public class ReaderGenerator : IIncrementalGenerator
         }
         else
         {
-            sourceWriter.Write(GetObjectReaderFieldName(type));
+            sourceWriter.Write(GetReaderVariableName(type));
             sourceWriter.Write(".Read(reader, ordinalReader)");
         }
     }
@@ -437,8 +458,10 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.Write(")");
     }
 
-    private static void WriteReaderMethodEnd(IndentedTextWriter sourceWriter)
+    private static void WriteCreateReadMethodEnd(IndentedTextWriter sourceWriter)
     {
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("};");
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
     }
@@ -453,7 +476,7 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("using System.Collections.Immutable;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine();
-        sourceWriter.WriteLine("public partial class GeneratedObjectReaderProvider");
+        sourceWriter.WriteLine("public partial class GeneratedObjectReaders");
         sourceWriter.WriteLine("{");
         sourceWriter.Indent++;
     }
@@ -473,7 +496,7 @@ public class ReaderGenerator : IIncrementalGenerator
         return type is { Name: "Nullable" };
     }
 
-    private bool IsPrimitive(ITypeSymbol readTypeType) =>
+    private static bool IsPrimitive(ITypeSymbol readTypeType) =>
         readTypeType.Name switch
         {
             "Int32" or "String" or "DateTime" or "TimeSpan" => true,

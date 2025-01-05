@@ -1,7 +1,9 @@
 ﻿// See https://aka.ms/new-console-template for more information
 
 
+using System.Collections.Immutable;
 using Cooke.Gnissel;
+using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.SourceGeneration;
 
@@ -13,28 +15,31 @@ struct Address;
 
 partial class Program
 {
-    public static void Setup() { }
+    public static void Setup()
+    {
+        var adapter = new NpgsqlDbAdapter(null!);
+        new DbContext(new DbOptions(adapter, GeneratedObjectReaders.Create(adapter)));
+    }
 
     private static class GeneratedObjectReaders
     {
         public static IObjectReaderProvider Create(IDbAdapter adapter)
         {
-            var builder = CreateBuilder();
-            var objectReaderProvider = builder.Build(adapter);
-            return objectReaderProvider;
-        }
-
-        private static ObjectReaderProviderBuilder CreateBuilder()
-        {
             var builder = new ObjectReaderProviderBuilder();
-            TryAddDescriptors(builder);
-            return builder;
+            foreach (var objectReaderDescriptor in ObjectReaderDescriptors)
+            {
+                builder.TryAdd(objectReaderDescriptor);
+            }
+
+            return builder.Build(adapter);
         }
 
-        private static void TryAddDescriptors(ObjectReaderProviderBuilder builder)
-        {
-            builder.TryAdd(UserReaderDescriptor);
-        }
+        static GeneratedObjectReaders() { }
+
+        private static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors =
+        [
+            UserReaderDescriptor,
+        ];
     }
 
     private static readonly ObjectReaderMetadata UserReaderMetadata = new MultiObjectReaderMetadata(
