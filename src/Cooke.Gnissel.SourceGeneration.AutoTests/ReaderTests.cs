@@ -6,28 +6,14 @@ public class ReaderTests
     public Task Int()
     {
         var source = """
-            using System.Diagnostics.Contracts;
+            using Cooke.Gnissel;
+            using Cooke.Gnissel.Services;
 
-            namespace Cooke.Gnissel.SourceGeneration.Test;
+            var dbContext = new AppDbContext((IDbAdapter)null!);
+            var query = dbContext.Query<int>("SELECT count(*) FROM Users");
 
-            public class Program
-            {
-                public void Main()
-                {
-                    var dbContext = new AppDbContext();
-                    var query = dbContext.Query<int>("SELECT count(*) FROM Users");
-                }
-            }
-
-            public class Query<T> { }
-
-            public abstract class DbContext
-            {
-                [Pure]
-                public Query<TOut> Query<TOut>(string sql) => new Query<TOut>();
-            }
-
-            public partial class AppDbContext : DbContext { }
+            [DbContext]
+            public partial class AppDbContext;
             """;
 
         return TestHelper.Verify(source);

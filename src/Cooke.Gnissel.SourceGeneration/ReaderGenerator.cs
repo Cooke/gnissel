@@ -9,13 +9,28 @@ public class ReaderGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
-        var objectReaderProviderPipline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
-            "Cooke.Gnissel.ObjectReaderProviderAttribute",
-            (node, ct) => true,
-            (context, _) => ((ClassDeclarationSyntax)context.TargetNode).Identifier.ValueText
+        var dbContextsPipline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
+            "Cooke.Gnissel.DbContextAttribute",
+            (node, _) => node is ClassDeclarationSyntax,
+            (context, _) => (INamedTypeSymbol)context.TargetSymbol
         );
 
-        var typesPipeline = initContext
+        initContext.RegisterSourceOutput(
+            dbContextsPipline,
+            (context, dbContextType) =>
+            {
+                var stringWriter = new StringWriter();
+                var sourceWriter = new IndentedTextWriter(stringWriter);
+                WritePartialDbContextClass(sourceWriter, dbContextType);
+                sourceWriter.Flush();
+                context.AddSource(
+                    GetDbContextIdentifierName(dbContextType) + ".cs",
+                    stringWriter.ToString()
+                );
+            }
+        );
+
+        var dbContextTypesPipline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
                     node
@@ -34,63 +49,97 @@ public class ReaderGenerator : IIncrementalGenerator
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
                     var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
-                    var dbContextTypeInfo = context.SemanticModel.GetTypeInfo(
+                    var instanceType = context.SemanticModel.GetTypeInfo(
                         memberAccess.Expression,
                         ct
                     );
 
-                    if (!IsDbContext(dbContextTypeInfo))
+                    if (
+                        instanceType
+                            .Type?.GetAttributes()
+                            .Any(x => x.AttributeClass?.Name == "DbContextAttribute") != true
+                    )
                     {
                         return null;
                     }
 
                     var genericName = (GenericNameSyntax)memberAccess.Name;
                     var typeArg = genericName.TypeArgumentList.Arguments[0];
-                    var typeInfo = context.SemanticModel.GetTypeInfo(typeArg);
-                    return typeInfo.Type;
+                    var typeArgInfo = context.SemanticModel.GetTypeInfo(typeArg);
+                    if (typeArgInfo.Type is null)
+                    {
+                        return null;
+                    }
+
+                    return new DbContextType(instanceType.Type, typeArgInfo.Type);
                 }
             )
             .Where(type => type != null)
             .Select((input, _) => input!)
-            .SelectMany(FindAllUsedTypes)
-            .Select(AdjustNulls)
+            // Currently indirect usage is not supporte (unbound type parameters)
+            .Where(type => type.Type is not ITypeParameterSymbol)
             .Collect()
             .SelectMany(
-                (types, _) => types.Distinct(SymbolEqualityComparer.Default).Cast<ITypeSymbol>()
+                (invocations, _) =>
+                    invocations
+                        .GroupBy(x => x.DbContext, SymbolEqualityComparer.Default)
+                        .SelectMany(contextTypes =>
+                            contextTypes
+                                .Select(x => x.Type)
+                                .SelectMany(FindAllUsedTypes)
+                                .Select(AdjustNulls)
+                                .Distinct(SymbolEqualityComparer.Default)
+                                .Cast<ITypeSymbol>()
+                                .Select(type => new DbContextType(
+                                    (ITypeSymbol)contextTypes.Key!,
+                                    type
+                                ))
+                        )
             );
 
-        objectReaderProviderPipline.Combine(typesPipeline);
-
         initContext.RegisterImplementationSourceOutput(
-            typesPipeline,
-            (context, type) =>
+            dbContextTypesPipline,
+            (context, dbContextType) =>
             {
+                var type = dbContextType.Type;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReaderClassStart(sourceWriter);
+                WritePartialReaderClassStart(sourceWriter, dbContextType.DbContext);
+                sourceWriter.WriteLine();
                 WriteReaderMetadata(sourceWriter, type);
                 WriteObjectReaderDescriptorField(sourceWriter, type);
                 WriteCreateReadMethodStart(sourceWriter, type);
                 WriteReaderBody(type, sourceWriter);
                 WriteCreateReadMethodEnd(sourceWriter);
                 WritePartialReaderClassEnd(sourceWriter);
+                sourceWriter.Flush();
 
                 context.AddSource(
-                    $"GeneratedObjectReaders.{GetTypeIdentifierName(type)}.cs",
+                    $"{GetDbContextIdentifierName(dbContextType.DbContext)}.Readers.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
         );
 
-        var typeIdentifierNames = typesPipeline.Select((x, _) => GetTypeIdentifierName(x));
-
         initContext.RegisterImplementationSourceOutput(
-            typeIdentifierNames.Collect(),
-            (context, names) =>
+            dbContextTypesPipline
+                .Select((x, _) => new { x.DbContext, TypeName = GetTypeIdentifierName(x.Type) })
+                .Collect()
+                .SelectMany(
+                    (dbContextTypes, _) =>
+                        dbContextTypes
+                            .GroupBy(x => x.DbContext, SymbolEqualityComparer.Default)
+                            .Select(group => new
+                            {
+                                DbContext = (ITypeSymbol)group.Key!,
+                                TypeNames = group.Select(x => x.TypeName).ToArray(),
+                            })
+                ),
+            (context, dbContextTypeNames) =>
             {
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReaderClassStart(sourceWriter);
+                WritePartialReaderClassStart(sourceWriter, dbContextTypeNames.DbContext);
 
                 sourceWriter.WriteLine(
                     "public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>"
@@ -104,11 +153,12 @@ public class ReaderGenerator : IIncrementalGenerator
                     "public static readonly ImmutableArray<IObjectReaderDescriptor> ObjectReaderDescriptors;"
                 );
                 sourceWriter.WriteLine();
-                sourceWriter.WriteLine("static GeneratedObjectReaders() {");
+                sourceWriter.WriteLine("static ObjectReaders() {");
                 sourceWriter.Indent++;
                 sourceWriter.WriteLine("ObjectReaderDescriptors = [");
                 sourceWriter.Indent++;
 
+                var names = dbContextTypeNames.TypeNames;
                 for (var index = 0; index < names.Length; index++)
                 {
                     var name = names[index];
@@ -125,8 +175,12 @@ public class ReaderGenerator : IIncrementalGenerator
                 sourceWriter.WriteLine("}");
 
                 WritePartialReaderClassEnd(sourceWriter);
+                sourceWriter.Flush();
 
-                context.AddSource("GeneratedObjectReaders.cs", stringWriter.ToString());
+                context.AddSource(
+                    $"{GetDbContextIdentifierName(dbContextTypeNames.DbContext)}.Readers.cs",
+                    stringWriter.ToString()
+                );
             }
         );
     }
@@ -155,7 +209,7 @@ public class ReaderGenerator : IIncrementalGenerator
         };
     }
 
-    private IEnumerable<ITypeSymbol> FindAllUsedTypes(ITypeSymbol type, CancellationToken ct)
+    private IEnumerable<ITypeSymbol> FindAllUsedTypes(ITypeSymbol type)
     {
         yield return type;
 
@@ -174,7 +228,7 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             if (!IsPrimitive(t.Type))
             {
-                foreach (var innerType in FindAllUsedTypes(t.Type, ct))
+                foreach (var innerType in FindAllUsedTypes(t.Type))
                 {
                     yield return innerType;
                 }
@@ -482,26 +536,70 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("}");
     }
 
-    private static void WritePartialReaderClassStart(IndentedTextWriter sourceWriter)
+    private static void WritePartialReaderClassStart(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol dbContextType
+    )
     {
-        sourceWriter.WriteLine("namespace Gnissel.SourceGeneration;");
-        sourceWriter.WriteLine();
+        if (!dbContextType.ContainingNamespace.IsGlobalNamespace)
+        {
+            sourceWriter.Write("namespace ");
+            sourceWriter.Write(dbContextType.ContainingNamespace.ToDisplayString());
+            sourceWriter.WriteLine(";");
+        }
+
         sourceWriter.WriteLine("using System.Data.Common;");
         sourceWriter.WriteLine("using Cooke.Gnissel;");
         sourceWriter.WriteLine("using Cooke.Gnissel.SourceGeneration;");
         sourceWriter.WriteLine("using System.Collections.Immutable;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine();
-        sourceWriter.WriteLine("public partial class GeneratedObjectReaders");
-        sourceWriter.WriteLine("{");
+        sourceWriter.Write("public partial class ");
+        sourceWriter.Write(GetDbContextIdentifierName(dbContextType));
+        sourceWriter.WriteLine(" {");
         sourceWriter.Indent++;
+        sourceWriter.WriteLine("public static partial class ObjectReaders {");
+        sourceWriter.Indent++;
+    }
+
+    private static string GetDbContextIdentifierName(ITypeSymbol dbContextType) =>
+        dbContextType.Name;
+
+    private static void WritePartialDbContextClass(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol dbContextType
+    )
+    {
+        if (!dbContextType.ContainingNamespace.IsGlobalNamespace)
+        {
+            sourceWriter.Write("namespace ");
+            sourceWriter.Write(dbContextType.ContainingNamespace.ToDisplayString());
+            sourceWriter.WriteLine(";");
+        }
+
+        sourceWriter.WriteLine("using System.Data.Common;");
+        sourceWriter.WriteLine("using Cooke.Gnissel;");
+        sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
+        sourceWriter.WriteLine();
+        sourceWriter.Write("public partial class ");
+        sourceWriter.Write(dbContextType.Name);
+        sourceWriter.WriteLine("(DbOptions options) : DbContext(options) {");
+        sourceWriter.Indent++;
+        sourceWriter.Write("public ");
+        sourceWriter.Write(dbContextType.Name);
+        sourceWriter.WriteLine(
+            " (IDbAdapter adapter) : this(new DbOptions(adapter, ObjectReaders.CreateProvider(adapter))) { }"
+        );
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
     }
 
     private static void WritePartialReaderClassEnd(IndentedTextWriter sourceWriter)
     {
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
-        sourceWriter.Flush();
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
     }
 
     private bool IsNullableValueTypeOrReferenceType(ITypeSymbol type) =>
@@ -535,5 +633,10 @@ public class ReaderGenerator : IIncrementalGenerator
             _ => type.Name,
         };
 
-    private record CustomType();
+    private record DbContextType(ITypeSymbol DbContext, ITypeSymbol Type)
+    {
+        public ITypeSymbol DbContext { get; } = DbContext;
+
+        public ITypeSymbol Type { get; } = Type;
+    }
 }

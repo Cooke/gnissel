@@ -1,11 +1,8 @@
 ﻿using Cooke.Gnissel;
 using Cooke.Gnissel.Npgsql;
-using Gnissel.SourceGeneration;
 
 var adapter = new NpgsqlDbAdapter(null!);
-var dbContext = new DbContext(
-    new DbOptions(adapter, GeneratedObjectReaders.CreateProvider(adapter))
-);
+var dbContext = new MyDbContext(adapter);
 dbContext.Query<User>($"");
 dbContext.Query<User?>($"");
 dbContext.Query<(User, Device)>($"");
@@ -23,6 +20,11 @@ dbContext.Query<TimeSpan>($"");
 dbContext.Query<TimeSpan?>($"");
 dbContext.Query<(TimeSpan?, DateTime)>($"");
 dbContext.Query<(TimeSpan, DateTime)>($"");
+
+void Test<T>()
+{
+    return dbContext.Query<T>($"");
+}
 
 public class User(
     string Name,
@@ -46,5 +48,5 @@ public enum Role
     User,
 }
 
-[ObjectReaderProvider]
-public partial class ObjectReaderProvider { }
+[DbContext]
+public partial class MyDbContext;

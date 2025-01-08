@@ -24,7 +24,8 @@ public static class TestHelper
             options: new CSharpCompilationOptions(
                 OutputKind.ConsoleApplication,
                 nullableContextOptions: NullableContextOptions.Enable
-            )
+            ),
+            references: [MetadataReference.CreateFromFile(typeof(DbContext).Assembly.Location)]
         );
 
         // Create an instance of our EnumGenerator incremental source generator
