@@ -1,5 +1,6 @@
 ﻿using Cooke.Gnissel;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Queries;
 
 var adapter = new NpgsqlDbAdapter(null!);
 var dbContext = new MyDbContext(adapter);
@@ -21,7 +22,7 @@ dbContext.Query<TimeSpan?>($"");
 dbContext.Query<(TimeSpan?, DateTime)>($"");
 dbContext.Query<(TimeSpan, DateTime)>($"");
 
-void Test<T>()
+Query<T> Test<T>()
 {
     return dbContext.Query<T>($"");
 }
@@ -48,5 +49,5 @@ public enum Role
     User,
 }
 
-[DbContext]
+[DbContext(EnumMappingTechnique = EnumMappingTechnique.String)]
 public partial class MyDbContext;

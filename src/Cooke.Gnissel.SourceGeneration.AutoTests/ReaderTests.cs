@@ -10,7 +10,7 @@ public class ReaderTests
             using Cooke.Gnissel.Services;
 
             var dbContext = new AppDbContext((IDbAdapter)null!);
-            var query = dbContext.Query<int>("SELECT count(*) FROM Users");
+            var query = dbContext.Query<int>($"SELECT count(*) FROM Users");
 
             [DbContext]
             public partial class AppDbContext;

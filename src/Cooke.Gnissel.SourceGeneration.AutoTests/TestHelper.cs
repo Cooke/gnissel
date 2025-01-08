@@ -1,6 +1,7 @@
 ﻿using System.Runtime.CompilerServices;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.Testing;
 
 namespace Cooke.Gnissel.SourceGeneration.AutoTests;
 
@@ -25,7 +26,9 @@ public static class TestHelper
                 OutputKind.ConsoleApplication,
                 nullableContextOptions: NullableContextOptions.Enable
             ),
-            references: [MetadataReference.CreateFromFile(typeof(DbContext).Assembly.Location)]
+            references: ReferenceAssemblies
+                .Net.Net90.ResolveAsync((string?)null, CancellationToken.None)
+                .Result.Add(MetadataReference.CreateFromFile(typeof(DbContext).Assembly.Location))
         );
 
         // Create an instance of our EnumGenerator incremental source generator
@@ -36,6 +39,8 @@ public static class TestHelper
 
         // Run the source generator!
         driver = driver.RunGenerators(compilation);
+
+        var result = driver.GetRunResult();
 
         // Use verify to snapshot test the source generator output!
         return Verifier.Verify(driver).UseDirectory("snapshots");
