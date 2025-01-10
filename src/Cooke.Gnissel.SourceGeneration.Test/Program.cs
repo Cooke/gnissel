@@ -49,5 +49,5 @@ public enum Role
     User,
 }
 
-[DbContext(EnumMappingTechnique = EnumMappingTechnique.String)]
+[DbContext(EnumMappingTechnique = EnumMappingTechnique.Direct)]
 public partial class MyDbContext;

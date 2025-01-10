@@ -20,6 +20,52 @@ public class ReaderTests
     }
 
     [Fact]
+    public Task EnumAsString()
+    {
+        var source = """
+            using Cooke.Gnissel;
+            using Cooke.Gnissel.Services;
+
+            var dbContext = new AppDbContext((IDbAdapter)null!);
+            var query = dbContext.Query<Role>($"SELECT count(*) FROM Users");
+
+            [DbContext(EnumMappingTechnique = EnumMappingTechnique.String)]
+            public partial class AppDbContext;
+
+            public enum Role
+            {
+                Admin,
+                User,
+            }
+            """;
+
+        return TestHelper.Verify(source);
+    }
+
+    [Fact]
+    public Task EnumAsValue()
+    {
+        var source = """
+            using Cooke.Gnissel;
+            using Cooke.Gnissel.Services;
+
+            var dbContext = new AppDbContext((IDbAdapter)null!);
+            var query = dbContext.Query<Role>($"SELECT count(*) FROM Users");
+
+            [DbContext(EnumMappingTechnique = EnumMappingTechnique.Value)]
+            public partial class AppDbContext;
+
+            public enum Role
+            {
+                Admin,
+                User,
+            }
+            """;
+
+        return TestHelper.Verify(source);
+    }
+
+    [Fact]
     public Task NullableInt()
     {
         var source = """

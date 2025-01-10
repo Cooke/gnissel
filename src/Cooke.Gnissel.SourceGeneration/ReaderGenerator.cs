@@ -102,6 +102,8 @@ public class ReaderGenerator : IIncrementalGenerator
             (context, dbContextType) =>
             {
                 var type = dbContextType.Type;
+                var dbContextOptions = GetDbContextOptions(dbContextType);
+
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
                 WritePartialReaderClassStart(sourceWriter, dbContextType.DbContext);
@@ -109,7 +111,7 @@ public class ReaderGenerator : IIncrementalGenerator
                 WriteReaderMetadata(sourceWriter, type);
                 WriteObjectReaderDescriptorField(sourceWriter, type);
                 WriteCreateReadMethodStart(sourceWriter, type);
-                WriteReaderBody(type, sourceWriter);
+                WriteReaderBody(type, dbContextOptions, sourceWriter);
                 WriteCreateReadMethodEnd(sourceWriter);
                 WritePartialReaderClassEnd(sourceWriter);
                 sourceWriter.Flush();
@@ -185,6 +187,28 @@ public class ReaderGenerator : IIncrementalGenerator
         );
     }
 
+    private static DbContextOptions GetDbContextOptions(DbContextType dbContextType)
+    {
+        var dbContextArguments = dbContextType
+            .DbContext.GetAttributes()
+            .First(x => x.AttributeClass?.Name == "DbContextAttribute")
+            .NamedArguments;
+
+        EnumMappingTechnique? enumMappingTechnique = null;
+        foreach (var dbContextArgument in dbContextArguments)
+        {
+            switch (dbContextArgument.Key)
+            {
+                case "EnumMappingTechnique":
+                    enumMappingTechnique = (EnumMappingTechnique)dbContextArgument.Value.Value;
+                    break;
+            }
+        }
+        return new DbContextOptions(
+            enumMappingTechnique.GetValueOrDefault(EnumMappingTechnique.Direct)
+        );
+    }
+
     private static ITypeSymbol AdjustNulls(ITypeSymbol type, CancellationToken ct) =>
         AdjustNulls(type);
 
@@ -240,7 +264,7 @@ public class ReaderGenerator : IIncrementalGenerator
     {
         sourceWriter.Write("private static readonly ObjectReaderMetadata ");
         sourceWriter.Write(GetReaderMetadataName(type));
-        if (IsPrimitive(type))
+        if (IsPrimitive(type) || type.TypeKind == TypeKind.Enum)
         {
             sourceWriter.WriteLine(" = new NextOrdinalObjectReaderMetadata();");
         }
@@ -421,13 +445,53 @@ public class ReaderGenerator : IIncrementalGenerator
         return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
     }
 
-    private void WriteReaderBody(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    private void WriteReaderBody(
+        ITypeSymbol type,
+        DbContextOptions dbContextOptions,
+        IndentedTextWriter sourceWriter
+    )
     {
         if (IsPrimitive(type))
         {
             sourceWriter.Write("return ");
             WriteReadCall(type, sourceWriter);
             sourceWriter.WriteLine(";");
+        }
+        else if (
+            type is INamedTypeSymbol { EnumUnderlyingType: not null and var underlyingEnumType }
+        )
+        {
+            switch (dbContextOptions.EnumMappingTechnique)
+            {
+                case EnumMappingTechnique.Direct:
+                    sourceWriter.Write("return reader.GetValueOrNull<");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.WriteLine(">(ordinalReader.Read());");
+                    break;
+
+                case EnumMappingTechnique.String:
+                    sourceWriter.WriteLine(
+                        "var str = reader.GetStringOrNull(ordinalReader.Read());"
+                    );
+                    sourceWriter.Write("return str is null ? null : ");
+                    sourceWriter.Write("Enum.Parse<");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.WriteLine(">(str);");
+                    break;
+
+                case EnumMappingTechnique.Value:
+                    sourceWriter.Write("var val = reader.GetValueOrNull<");
+                    sourceWriter.Write(underlyingEnumType.ToDisplayString());
+                    sourceWriter.WriteLine(">(ordinalReader.Read());");
+                    sourceWriter.Write("return val is null ? null : ");
+                    sourceWriter.Write("(");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.WriteLine(")val;");
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
         else
         {
@@ -638,5 +702,17 @@ public class ReaderGenerator : IIncrementalGenerator
         public ITypeSymbol DbContext { get; } = DbContext;
 
         public ITypeSymbol Type { get; } = Type;
+    }
+
+    private enum EnumMappingTechnique
+    {
+        Direct,
+        String,
+        Value,
+    }
+
+    private record DbContextOptions(EnumMappingTechnique EnumMappingTechnique)
+    {
+        public EnumMappingTechnique EnumMappingTechnique { get; } = EnumMappingTechnique;
     }
 }

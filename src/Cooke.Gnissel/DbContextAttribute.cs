@@ -10,5 +10,5 @@ public enum EnumMappingTechnique
 {
     Direct,
     String,
-    Number,
+    Value,
 }
