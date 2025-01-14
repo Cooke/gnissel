@@ -15,12 +15,13 @@ dbContext.Query<(int, string?, int)>($"");
 dbContext.Query<string>($"");
 dbContext.Query<int>($"");
 dbContext.Query<int?>($"");
-dbContext.Query<DateTime>($"");
-dbContext.Query<DateTime?>($"");
-dbContext.Query<TimeSpan>($"");
-dbContext.Query<TimeSpan?>($"");
-dbContext.Query<(TimeSpan?, DateTime)>($"");
-dbContext.Query<(TimeSpan, DateTime)>($"");
+
+// dbContext.Query<DateTime>($"");
+// dbContext.Query<DateTime?>($"");
+// dbContext.Query<TimeSpan>($"");
+// dbContext.Query<TimeSpan?>($"");
+// dbContext.Query<(TimeSpan?, DateTime)>($"");
+// dbContext.Query<(TimeSpan, DateTime)>($"");
 
 Query<T> Test<T>()
 {

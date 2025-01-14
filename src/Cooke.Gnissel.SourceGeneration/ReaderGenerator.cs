@@ -1,4 +1,5 @@
 ﻿using System.CodeDom.Compiler;
+using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -76,7 +77,7 @@ public class ReaderGenerator : IIncrementalGenerator
             )
             .Where(type => type != null)
             .Select((input, _) => input!)
-            // Currently indirect usage is not supporte (unbound type parameters)
+            // Currently indirect usage is not supported (unbound type parameters)
             .Where(type => type.Type is not ITypeParameterSymbol)
             .Collect()
             .SelectMany(
@@ -86,7 +87,7 @@ public class ReaderGenerator : IIncrementalGenerator
                         .SelectMany(contextTypes =>
                             contextTypes
                                 .Select(x => x.Type)
-                                .SelectMany(FindAllUsedTypes)
+                                .SelectMany(FindAllReaderTypes)
                                 .Select(AdjustNulls)
                                 .Distinct(SymbolEqualityComparer.Default)
                                 .Cast<ITypeSymbol>()
@@ -233,11 +234,11 @@ public class ReaderGenerator : IIncrementalGenerator
         };
     }
 
-    private IEnumerable<ITypeSymbol> FindAllUsedTypes(ITypeSymbol type)
+    private IEnumerable<ITypeSymbol> FindAllReaderTypes(ITypeSymbol type)
     {
         yield return type;
 
-        if (IsPrimitive(type))
+        if (IsBuildIn(type))
         {
             yield break;
         }
@@ -250,9 +251,9 @@ public class ReaderGenerator : IIncrementalGenerator
 
         foreach (var t in ctor.Parameters)
         {
-            if (!IsPrimitive(t.Type))
+            if (!BuildInDirectlyMappedTypes.Contains(t.Type.Name))
             {
-                foreach (var innerType in FindAllUsedTypes(t.Type))
+                foreach (var innerType in FindAllReaderTypes(t.Type))
                 {
                     yield return innerType;
                 }
@@ -264,7 +265,7 @@ public class ReaderGenerator : IIncrementalGenerator
     {
         sourceWriter.Write("private static readonly ObjectReaderMetadata ");
         sourceWriter.Write(GetReaderMetadataName(type));
-        if (IsPrimitive(type) || type.TypeKind == TypeKind.Enum)
+        if (IsBuildIn(type) || type.TypeKind == TypeKind.Enum)
         {
             sourceWriter.WriteLine(" = new NextOrdinalObjectReaderMetadata();");
         }
@@ -301,7 +302,7 @@ public class ReaderGenerator : IIncrementalGenerator
                 sourceWriter.Write("new NameObjectReaderMetadata(\"");
                 sourceWriter.Write(parameter.Name);
                 sourceWriter.Write("\"");
-                if (!IsPrimitive(parameter.Type))
+                if (!BuildInDirectlyMappedTypes.Contains(parameter.Type.Name))
                 {
                     sourceWriter.Write(", new NestedObjectReaderMetadata(typeof(");
                     sourceWriter.Write(parameter.Type.ToDisplayString(NullableFlowState.NotNull));
@@ -407,12 +408,12 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("{");
         sourceWriter.Indent++;
 
-        if (!IsPrimitive(type))
+        if (!IsBuildIn(type))
         {
             var ctor = GetCtor(type);
             var typeSymbols = ctor
                 .Parameters.Select(x => x.Type)
-                .Where(x => !IsPrimitive(x))
+                .Where(x => !BuildInDirectlyMappedTypes.Contains(x.Name))
                 .Distinct(SymbolEqualityComparer.Default)
                 .OfType<ITypeSymbol>()
                 .ToArray();
@@ -451,7 +452,7 @@ public class ReaderGenerator : IIncrementalGenerator
         IndentedTextWriter sourceWriter
     )
     {
-        if (IsPrimitive(type))
+        if (IsBuildIn(type))
         {
             sourceWriter.Write("return ");
             WriteReadCall(type, sourceWriter);
@@ -573,23 +574,24 @@ public class ReaderGenerator : IIncrementalGenerator
 
     private void WriteReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
-        if (IsPrimitive(type))
+        if (BuildInDirectlyMappedTypes.Contains(type.Name))
         {
-            WriteDbReaderNullableCall(type, sourceWriter);
+            sourceWriter.Write("reader.Get");
+            sourceWriter.Write(GetReaderGetSuffix(type));
+            sourceWriter.Write("OrNull(ordinalReader.Read()");
+            sourceWriter.Write(")");
+        }
+        if (BuildInIndirectlyMappedTypes.Contains(type.Name))
+        {
+            sourceWriter.Write("reader.GetValueOrNull<");
+            sourceWriter.Write(type.ToDisplayString());
+            sourceWriter.Write(">(ordinalReader.Read())");
         }
         else
         {
             sourceWriter.Write(GetReaderVariableName(type));
             sourceWriter.Write(".Read(reader, ordinalReader)");
         }
-    }
-
-    private void WriteDbReaderNullableCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
-    {
-        sourceWriter.Write("reader.Get");
-        sourceWriter.Write(GetReaderGetSuffix(type));
-        sourceWriter.Write("OrNull(ordinalReader.Read()");
-        sourceWriter.Write(")");
     }
 
     private static void WriteCreateReadMethodEnd(IndentedTextWriter sourceWriter)
@@ -674,19 +676,18 @@ public class ReaderGenerator : IIncrementalGenerator
         return type is { Name: "Nullable" };
     }
 
-    private static bool IsPrimitive(ITypeSymbol readTypeType) =>
-        readTypeType.Name switch
-        {
-            "Int32" or "String" or "DateTime" or "TimeSpan" => true,
-            "Nullable" => true,
-            _ => false,
-        };
+    private static readonly IImmutableSet<string> BuildInDirectlyMappedTypes =
+        ImmutableHashSet.Create("Int32", "String");
 
-    private static bool IsDbContext(TypeInfo dbContextTypeInfo)
-    {
-        return dbContextTypeInfo.Type?.BaseType?.Name == "DbContext"
-            || dbContextTypeInfo.Type?.Name == "DbContext";
-    }
+    private static readonly IImmutableSet<string> BuildInIndirectlyMappedTypes =
+        ImmutableHashSet.Create("DateTime", "TimeSpan");
+
+    private static readonly IImmutableSet<string> BuildInTypes = BuildInDirectlyMappedTypes
+        .Union(BuildInIndirectlyMappedTypes)
+        .ToImmutableHashSet();
+
+    private static bool IsBuildIn(ITypeSymbol readTypeType) =>
+        BuildInTypes.Contains(readTypeType.Name);
 
     private string GetReaderGetSuffix(ITypeSymbol type) =>
         type switch
