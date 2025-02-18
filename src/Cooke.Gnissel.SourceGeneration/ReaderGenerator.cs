@@ -1,5 +1,6 @@
 ﻿using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 
@@ -41,7 +42,9 @@ public class ReaderGenerator : IIncrementalGenerator
                             {
                                 Name: GenericNameSyntax
                                 {
-                                    Identifier.ValueText: "Query",
+                                    Identifier.ValueText: "Query"
+                                        or "QuerySingle"
+                                        or "QuerySingleOrDefault",
                                     TypeArgumentList.Arguments.Count: 1
                                 }
                             }
@@ -114,7 +117,7 @@ public class ReaderGenerator : IIncrementalGenerator
                 WriteCreateReadMethodStart(sourceWriter, type);
                 WriteReaderBody(type, dbContextOptions, sourceWriter);
                 WriteCreateReadMethodEnd(sourceWriter);
-                WritePartialReaderClassEnd(sourceWriter);
+                WritePartialReaderClassEnd(sourceWriter, dbContextType.DbContext);
                 sourceWriter.Flush();
 
                 context.AddSource(
@@ -177,7 +180,7 @@ public class ReaderGenerator : IIncrementalGenerator
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");
 
-                WritePartialReaderClassEnd(sourceWriter);
+                WritePartialReaderClassEnd(sourceWriter, dbContextTypeNames.DbContext);
                 sourceWriter.Flush();
 
                 context.AddSource(
@@ -546,12 +549,19 @@ public class ReaderGenerator : IIncrementalGenerator
                 var parameter = ctor.Parameters[i];
                 sourceWriter.Write(parameter.Name);
 
-                if (parameter.Type.NullableAnnotation == NullableAnnotation.NotAnnotated)
+                if (
+                    parameter.Type is
+                    { IsReferenceType: true, NullableAnnotation: NullableAnnotation.NotAnnotated }
+                )
                 {
                     sourceWriter.Write(
                         " ?? throw new InvalidOperationException(\"Expected non-null value\")"
                     );
                 }
+                // else if (parameter.Type.IsValueType && !IsNullableValueType(parameter.Type))
+                // {
+                //     sourceWriter.Write(".Value");
+                // }
 
                 if (i < ctor.Parameters.Length - 1)
                 {
@@ -581,7 +591,7 @@ public class ReaderGenerator : IIncrementalGenerator
             sourceWriter.Write("OrNull(ordinalReader.Read()");
             sourceWriter.Write(")");
         }
-        if (BuildInIndirectlyMappedTypes.Contains(type.Name))
+        else if (BuildInIndirectlyMappedTypes.Contains(type.Name))
         {
             sourceWriter.Write("reader.GetValueOrNull<");
             sourceWriter.Write(type.ToDisplayString());
@@ -620,16 +630,33 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("using System.Collections.Immutable;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine();
-        sourceWriter.Write("public partial class ");
-        sourceWriter.Write(GetDbContextIdentifierName(dbContextType));
+        WriteDbContextClassStart(sourceWriter, dbContextType);
         sourceWriter.WriteLine(" {");
         sourceWriter.Indent++;
         sourceWriter.WriteLine("public static partial class ObjectReaders {");
         sourceWriter.Indent++;
     }
 
-    private static string GetDbContextIdentifierName(ITypeSymbol dbContextType) =>
-        dbContextType.Name;
+    private static string GetDbContextIdentifierName(ITypeSymbol dbContextType)
+    {
+        var sb = new StringBuilder();
+        AppendName(dbContextType);
+        return sb.ToString();
+
+        void AppendName(ITypeSymbol symbol)
+        {
+            if (symbol.ContainingType == null)
+            {
+                sb.Append(symbol.Name);
+            }
+            else
+            {
+                AppendName(symbol.ContainingType);
+                sb.Append(".");
+                sb.Append(symbol.Name);
+            }
+        }
+    }
 
     private static void WritePartialDbContextClass(
         IndentedTextWriter sourceWriter,
@@ -647,8 +674,8 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("using Cooke.Gnissel;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine();
-        sourceWriter.Write("public partial class ");
-        sourceWriter.Write(dbContextType.Name);
+
+        WriteDbContextClassStart(sourceWriter, dbContextType);
         sourceWriter.WriteLine("(DbOptions options) : DbContext(options) {");
         sourceWriter.Indent++;
         sourceWriter.Write("public ");
@@ -658,14 +685,66 @@ public class ReaderGenerator : IIncrementalGenerator
         );
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
+
+        WriteDbContextClassEnd(sourceWriter, dbContextType);
     }
 
-    private static void WritePartialReaderClassEnd(IndentedTextWriter sourceWriter)
+    private static void WriteDbContextClassStart(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol dbContextType
+    )
+    {
+        var containingType = dbContextType.ContainingType;
+        while (containingType != null)
+        {
+            sourceWriter.Write("public partial class ");
+            sourceWriter.Write(containingType.Name);
+            sourceWriter.WriteLine(" {");
+            sourceWriter.Indent++;
+            containingType = containingType.ContainingType;
+        }
+        sourceWriter.Write(
+            $"{AccessibilityToString(dbContextType.DeclaredAccessibility)} partial class "
+        );
+        sourceWriter.Write(dbContextType.Name);
+    }
+
+    private static void WriteDbContextClassEnd(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol dbContextType
+    )
+    {
+        var containingType = dbContextType.ContainingType;
+        while (containingType != null)
+        {
+            sourceWriter.Indent--;
+            sourceWriter.WriteLine("}");
+            containingType = containingType.ContainingType;
+        }
+    }
+
+    private static string AccessibilityToString(Accessibility accessibility) =>
+        accessibility switch
+        {
+            Accessibility.Public => "public",
+            Accessibility.Internal => "internal",
+            Accessibility.Private => "private",
+            Accessibility.Protected => "protected",
+            Accessibility.ProtectedAndInternal => "protected internal",
+            _ => throw new ArgumentOutOfRangeException(),
+        };
+
+    private static void WritePartialReaderClassEnd(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol dbContextType
+    )
     {
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
+
+        WriteDbContextClassEnd(sourceWriter, dbContextType);
     }
 
     private bool IsNullableValueTypeOrReferenceType(ITypeSymbol type) =>

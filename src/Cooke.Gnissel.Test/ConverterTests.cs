@@ -33,9 +33,7 @@ public class ConverterTests
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
 
-        return new TestDbContext(
-            new(adapter, new ExpressionObjectReaderProvider(adapter), converters)
-        );
+        return new TestDbContext(new(adapter, new(adapter), converters));
     }
 
     [OneTimeTearDown]

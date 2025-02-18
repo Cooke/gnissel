@@ -8,16 +8,16 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class MappingProperiesTests
+public partial class MappingPropertiesTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
-    private DbContext _db;
+    private TestDbContext _db;
 
     [OneTimeSetUp]
     public void Setup()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new DbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new TestDbContext(adapter);
     }
 
     [Test]
@@ -31,4 +31,7 @@ public class MappingProperiesTests
     {
         public required string Name { get; init; }
     }
+
+    [DbContext]
+    private partial class TestDbContext { }
 }
