@@ -222,9 +222,9 @@ public class ReaderGenerator : IIncrementalGenerator
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.WriteLine(">();");
 
-        sourceWriter.Write("return (reader, ordinalReader) =>");
+        sourceWriter.Write("return (reader, ordinalReader) => ");
         sourceWriter.Write(GetReaderVariableName(type));
-        sourceWriter.WriteLine(".Read(reader, ordinalReader);");
+        sourceWriter.WriteLine(".Read(reader, ordinalReader).Value;");
 
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
