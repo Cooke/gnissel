@@ -20,6 +20,7 @@ dbContext.Query<DateTime>($"");
 dbContext.Query<DateTime?>($"");
 dbContext.Query<TimeSpan>($"");
 dbContext.Query<TimeSpan?>($"");
+
 dbContext.Query<(TimeSpan?, DateTime)>($"");
 dbContext.Query<(TimeSpan, DateTime)>($"");
 
