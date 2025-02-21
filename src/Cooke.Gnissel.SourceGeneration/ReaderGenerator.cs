@@ -339,23 +339,28 @@ public class ReaderGenerator : IIncrementalGenerator
             sourceWriter.WriteLine(" = new MultiObjectReaderMetadata([");
             sourceWriter.Indent++;
             var ctor = GetCtor(type);
+            var initializeProperties = GetInitializeProperties(type, ctor);
+            var newArgs = ctor
+                .Parameters.Select(x => new { x.Name, x.Type })
+                .Concat(initializeProperties.Select(x => new { x.Name, x.Type }))
+                .ToArray();
 
-            for (int i = 0; i < ctor.Parameters.Length; i++)
+            for (int i = 0; i < newArgs.Length; i++)
             {
-                var parameter = ctor.Parameters[i];
+                var arg = newArgs[i];
                 sourceWriter.Write("new NameObjectReaderMetadata(\"");
-                sourceWriter.Write(parameter.Name);
+                sourceWriter.Write(arg.Name);
                 sourceWriter.Write("\"");
-                if (!BuildInDirectlyMappedTypes.Contains(parameter.Type.Name))
+                if (!BuildInDirectlyMappedTypes.Contains(arg.Type.Name))
                 {
                     sourceWriter.Write(", new NestedObjectReaderMetadata(typeof(");
-                    sourceWriter.Write(parameter.Type.ToDisplayString(NullableFlowState.NotNull));
+                    sourceWriter.Write(arg.Type.ToDisplayString(NullableFlowState.NotNull));
                     sourceWriter.Write("))");
                 }
 
                 sourceWriter.Write(")");
 
-                if (i < ctor.Parameters.Length - 1)
+                if (i < newArgs.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
                 }
@@ -568,8 +573,10 @@ public class ReaderGenerator : IIncrementalGenerator
         else
         {
             var ctor = GetCtor(type);
+            var ctorParameters = ctor.Parameters;
+            var initializeProperties = GetInitializeProperties(type, ctor);
 
-            foreach (var parameter in ctor.Parameters)
+            foreach (var parameter in ctorParameters)
             {
                 sourceWriter.Write("var ");
                 sourceWriter.Write(parameter.Name);
@@ -577,18 +584,30 @@ public class ReaderGenerator : IIncrementalGenerator
                 WriteReadCall(parameter.Type, sourceWriter);
                 sourceWriter.WriteLine(";");
             }
+            foreach (var property in initializeProperties)
+            {
+                sourceWriter.Write("var ");
+                sourceWriter.Write(property.Name);
+                sourceWriter.Write(" = ");
+                WriteReadCall(property.Type, sourceWriter);
+                sourceWriter.WriteLine(";");
+            }
             sourceWriter.WriteLine();
 
-            if (ctor.Parameters.Length > 0)
+            if (ctorParameters.Length > 0)
             {
                 sourceWriter.Write("if (");
-                for (var i = 0; i < ctor.Parameters.Length; i++)
+                var paramsAndProps = ctorParameters
+                    .Select(x => x.Name)
+                    .Concat(initializeProperties.Select(x => x.Name))
+                    .ToArray();
+                for (var i = 0; i < paramsAndProps.Length; i++)
                 {
-                    var parameter = ctor.Parameters[i];
-                    sourceWriter.Write(parameter.Name);
+                    var parameter = paramsAndProps[i];
+                    sourceWriter.Write(parameter);
                     sourceWriter.Write(" is null");
 
-                    if (i < ctor.Parameters.Length - 1)
+                    if (i < paramsAndProps.Length - 1)
                     {
                         sourceWriter.Write(" && ");
                     }
@@ -612,9 +631,9 @@ public class ReaderGenerator : IIncrementalGenerator
 
             sourceWriter.WriteLine("(");
             sourceWriter.Indent++;
-            for (var i = 0; i < ctor.Parameters.Length; i++)
+            for (var i = 0; i < ctorParameters.Length; i++)
             {
-                var parameter = ctor.Parameters[i];
+                var parameter = ctorParameters[i];
                 sourceWriter.Write(parameter.Name);
 
                 if (
@@ -631,14 +650,54 @@ public class ReaderGenerator : IIncrementalGenerator
                     sourceWriter.Write(".Value");
                 }
 
-                if (i < ctor.Parameters.Length - 1)
+                if (i < ctorParameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
                 }
             }
             sourceWriter.Indent--;
-            sourceWriter.WriteLine(");");
+            sourceWriter.Write(")");
+
+            if (initializeProperties.Any())
+            {
+                sourceWriter.WriteLine(" {");
+                sourceWriter.Indent++;
+                for (var index = 0; index < initializeProperties.Length; index++)
+                {
+                    var property = initializeProperties[index];
+                    sourceWriter.Write(property.Name);
+                    sourceWriter.Write(" = ");
+                    sourceWriter.Write(property.Name);
+
+                    if (index < initializeProperties.Length - 1)
+                    {
+                        sourceWriter.WriteLine(",");
+                    }
+                    else
+                    {
+                        sourceWriter.WriteLine();
+                    }
+                }
+                sourceWriter.Indent--;
+                sourceWriter.Write("}");
+            }
+
+            sourceWriter.WriteLine(";");
         }
+    }
+
+    private static IPropertySymbol[] GetInitializeProperties(ITypeSymbol type, IMethodSymbol ctor)
+    {
+        var initializeProperties = type.GetMembers()
+            .OfType<IPropertySymbol>()
+            .Where(x =>
+                x.SetMethod is { DeclaredAccessibility: Accessibility.Public }
+                && !ctor
+                    .Parameters.Select(p => p.Name)
+                    .Contains(x.Name, StringComparer.InvariantCultureIgnoreCase)
+            )
+            .ToArray();
+        return initializeProperties;
     }
 
     private static IMethodSymbol? GetCtorOrNull(ITypeSymbol type) =>
