@@ -10,7 +10,7 @@ public static partial class ObjectReaders
 
     static ObjectReaders()
     {
-        Descriptors = [UserReaderDescriptor];
+        Descriptors = [UserReaderDescriptor, .. CreateAnons()];
     }
 
     public static readonly ImmutableArray<IObjectReaderDescriptor> Descriptors;
@@ -26,11 +26,11 @@ public static partial class ObjectReaders
     );
 
     private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor = new(
-        UserReaderFactory,
+        CreateUserReaderFunc,
         UserReaderMetadata
     );
 
-    private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
+    private static ObjectReaderFunc<User?> CreateUserReaderFunc(ObjectReaderCreateContext context)
     {
         var addressReader = context.ReaderProvider.Get<Address?>();
         return (reader, ordinalReader) =>
