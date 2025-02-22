@@ -4,6 +4,7 @@ using System.Collections.Concurrent;
 using System.Collections.Immutable;
 using System.Data.Common;
 using Cooke.Gnissel.Services;
+using Cooke.Gnissel.SourceGeneration;
 
 #endregion
 
@@ -17,6 +18,9 @@ public partial class DbOptions
     private readonly IObjectReaderProvider _objectReaderProvider;
     private readonly IDbConnector _connector;
     private readonly IImmutableList<DbConverter> _converters;
+
+    public DbOptions(IDbAdapter adapter, IEnumerable<IObjectReaderDescriptor> descriptors)
+        : this(adapter, new ObjectReaderProviderBuilder(descriptors).Build(adapter)) { }
 
     public DbOptions(IDbAdapter adapter, IObjectReaderProvider objectReaderProvider)
         : this(adapter, objectReaderProvider, adapter.CreateConnector(), []) { }

@@ -3,15 +3,18 @@
 
 using Cooke.Gnissel;
 using Cooke.Gnissel.Services;
+using Cooke.Gnissel.SourceGeneration;
 using Cooke.Gnissel.Typed;
 
-var dbContext = new MyDbContext((IDbAdapter)null!);
+var dbContext = new DbContext(new DbOptions(null!, ObjectReaders.Descriptors));
 
-[DbContext]
-public partial class MyDbContext
+public class MyDbContext(DbOptions options) : DbContext(options)
 {
-    public Table<User> Users { get; } = new(dbOptions);
+    public Table<User> Users { get; } = new(options);
 }
+
+[ObjectReaders]
+public static partial class ObjectReaders;
 
 public class User(string Name, Address Address);
 

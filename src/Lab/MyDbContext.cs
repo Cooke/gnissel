@@ -3,52 +3,47 @@ using Cooke.Gnissel;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.SourceGeneration;
 
-public partial class MyDbContext(DbOptions dbOptions) : DbContext(dbOptions)
+public static partial class ObjectReaders
 {
-    public MyDbContext(IDbAdapter adapter)
-        : this(new DbOptions(adapter, ObjectReaders.CreateProvider(adapter))) { }
+    public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>
+        new ObjectReaderProviderBuilder(Descriptors).Build(adapter);
 
-    public static class ObjectReaders
+    static ObjectReaders()
     {
-        public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>
-            new ObjectReaderProviderBuilder(Descriptors).Build(adapter);
+        Descriptors = [UserReaderDescriptor];
+    }
 
-        static ObjectReaders()
+    public static readonly ImmutableArray<IObjectReaderDescriptor> Descriptors;
+
+    private static readonly ObjectReaderMetadata UserReaderMetadata = new MultiObjectReaderMetadata(
+        [
+            new NameObjectReaderMetadata("Name"),
+            new NameObjectReaderMetadata(
+                "Address",
+                new NestedObjectReaderMetadata(typeof(Address?))
+            ),
+        ]
+    );
+
+    private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor = new(
+        UserReaderFactory,
+        UserReaderMetadata
+    );
+
+    private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
+    {
+        var addressReader = context.ReaderProvider.Get<Address?>();
+        return (reader, ordinalReader) =>
         {
-            Descriptors = [UserReaderDescriptor];
-        }
+            var name = reader.GetStringOrNull(ordinalReader.Read());
+            var address = addressReader.Read(reader, ordinalReader);
 
-        public static readonly ImmutableArray<IObjectReaderDescriptor> Descriptors;
-
-        private static readonly ObjectReaderMetadata UserReaderMetadata =
-            new MultiObjectReaderMetadata(
-                [
-                    new NameObjectReaderMetadata("Name"),
-                    new NameObjectReaderMetadata(
-                        "Address",
-                        new NestedObjectReaderMetadata(typeof(Address?))
-                    ),
-                ]
-            );
-
-        private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor =
-            new(UserReaderFactory, UserReaderMetadata);
-
-        private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
-        {
-            var addressReader = context.ReaderProvider.Get<Address?>();
-            return (reader, ordinalReader) =>
+            if (name is null && address != null)
             {
-                var name = reader.GetStringOrNull(ordinalReader.Read());
-                var address = addressReader.Read(reader, ordinalReader);
+                return null;
+            }
 
-                if (name is null && address != null)
-                {
-                    return null;
-                }
-
-                return new User(name ?? throw new InvalidOperationException(), address!.Value);
-            };
-        }
+            return new User(name ?? throw new InvalidOperationException(), address!.Value);
+        };
     }
 }

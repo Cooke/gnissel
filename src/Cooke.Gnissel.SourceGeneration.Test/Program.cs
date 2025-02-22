@@ -1,6 +1,7 @@
 ﻿using Cooke.Gnissel;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Queries;
+using Cooke.Gnissel.Typed;
 
 var adapter = new NpgsqlDbAdapter(null!);
 var dbContext = new MyDbContext(adapter);
@@ -29,7 +30,9 @@ Query<T> Test<T>()
     return dbContext.Query<T>($"");
 }
 
-public class User(
+var users = dbContext.Users.Select(x => new { x.Name, x.Age });
+
+public record User(
     string Name,
     int Age,
     int? Size,
@@ -52,4 +55,7 @@ public enum Role
 }
 
 [DbContext(EnumMappingTechnique = EnumMappingTechnique.Direct)]
-public partial class MyDbContext;
+public partial class MyDbContext
+{
+    public Table<User> Users { get; } = new(options);
+}
