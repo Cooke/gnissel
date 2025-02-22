@@ -3,6 +3,7 @@ using System.Collections.Immutable;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Operations;
 
 namespace Cooke.Gnissel.SourceGeneration;
 
@@ -32,7 +33,49 @@ public class ReaderGenerator : IIncrementalGenerator
             }
         );
 
-        var dbContextTypesPipline = initContext
+        var selectTypesPipeline = initContext
+            .SyntaxProvider.CreateSyntaxProvider(
+                (node, _) =>
+                    node
+                        is InvocationExpressionSyntax
+                        {
+                            Expression: MemberAccessExpressionSyntax
+                            {
+                                Name.Identifier.ValueText: "Select"
+                            },
+                            ArgumentList.Arguments.Count: 1
+                        },
+                (context, ct) =>
+                {
+                    var invocation = (InvocationExpressionSyntax)context.Node;
+                    var operation = context.SemanticModel.GetOperation(invocation, ct);
+                    if (
+                        operation
+                        is not IInvocationOperation
+                        {
+                            TargetMethod: { TypeArguments: { Length: 1 } typeArguments }
+                        }
+                    )
+                    {
+                        return null;
+                    }
+
+                    var typeArg = typeArguments[0];
+                    return typeArg;
+                }
+            )
+            .Where(x => x != null)
+            .Select((v, _) => v!);
+
+        initContext.RegisterImplementationSourceOutput(
+            selectTypesPipeline,
+            (context, type) =>
+            {
+                context.AddSource($"Fun.1.cs", type.ToDisplayString());
+            }
+        );
+
+        var dbContextTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
                     node
@@ -102,7 +145,7 @@ public class ReaderGenerator : IIncrementalGenerator
             );
 
         initContext.RegisterImplementationSourceOutput(
-            dbContextTypesPipline,
+            dbContextTypesPipeline,
             (context, dbContextType) =>
             {
                 var type = dbContextType.Type;
@@ -135,7 +178,7 @@ public class ReaderGenerator : IIncrementalGenerator
         );
 
         initContext.RegisterImplementationSourceOutput(
-            dbContextTypesPipline
+            dbContextTypesPipeline
                 .Select((x, _) => new { x.DbContext, x.Type })
                 .Collect()
                 .SelectMany(

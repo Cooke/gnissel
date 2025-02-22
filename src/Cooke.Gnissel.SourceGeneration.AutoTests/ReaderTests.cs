@@ -3,6 +3,29 @@
 public class ReaderTests
 {
     [Fact]
+    public Task Run()
+    {
+        var source = """
+            using Cooke.Gnissel;
+            using Cooke.Gnissel.Services;
+            using Cooke.Gnissel.Typed;
+
+            var dbContext = new AppDbContext((IDbAdapter)null!);
+
+            var partialUsers = dbContext.Users.Select(x => new { x.Name, x.Age }).FirstOrDefault().ExecuteAsync();
+
+            [DbContext]
+            public partial class AppDbContext {
+               public Table<User> Users { get; } = new();
+            }
+
+            public record User(string Name, int Age);
+            """;
+
+        return TestHelper.Verify(source);
+    }
+
+    [Fact]
     public Task Int()
     {
         var source = """

@@ -16,20 +16,6 @@ public class MyDbContext(DbOptions options) : DbContext(options)
     public Table<User> Users { get; } = new(options);
 }
 
-[ObjectReaders]
-public static partial class ObjectReaders
-{
-    public static IObjectReaderDescriptor Create()
-    {
-        var metadata = new NextOrdinalObjectReaderMetadata();
-        var readFactory = (ObjectReaderCreateContext context) =>
-            (DbDataReader dbReader, OrdinalReader ordinalReader) =>
-                new { Name = dbReader.GetString(ordinalReader.Read()) };
-
-        return CreateObjectReader(readFactory, metadata);
-    }
-}
-
 public record User(string Name, Address Address);
 
 public struct Address;

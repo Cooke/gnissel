@@ -30,7 +30,9 @@ Query<T> Test<T>()
     return dbContext.Query<T>($"");
 }
 
-var users = dbContext.Users.Select(x => new { x.Name, x.Age });
+var partialUsers = dbContext.Users.Select(x => new { x.Name, x.Age });
+
+// var users = dbContext.Users.Select(x => new { x.Name, x.Age });
 
 public record User(
     string Name,
