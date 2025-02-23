@@ -19,6 +19,12 @@ public partial class DbOptions
     private readonly IDbConnector _connector;
     private readonly IImmutableList<DbConverter> _converters;
 
+    public DbOptions(IDbAdapter adapter)
+        : this(
+            adapter,
+            new ObjectReaderProviderBuilder(GlobalObjectReaders.Descriptors).Build(adapter)
+        ) { }
+
     public DbOptions(IDbAdapter adapter, IEnumerable<IObjectReaderDescriptor> descriptors)
         : this(adapter, new ObjectReaderProviderBuilder(descriptors).Build(adapter)) { }
 

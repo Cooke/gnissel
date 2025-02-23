@@ -2,7 +2,9 @@ using System.Collections.Immutable;
 using System.Data.Common;
 using Cooke.Gnissel;
 
-public static partial class ObjectReaders
+namespace Gnissel.SourceGeneration;
+
+internal static partial class ObjectReaders
 {
     private static IImmutableList<IObjectReaderDescriptor> CreateAnons()
     {

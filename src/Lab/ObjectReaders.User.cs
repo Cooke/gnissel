@@ -1,20 +1,9 @@
-using System.Collections.Immutable;
 using Cooke.Gnissel;
-using Cooke.Gnissel.Services;
-using Cooke.Gnissel.SourceGeneration;
 
-public static partial class ObjectReaders
+namespace Gnissel.SourceGeneration;
+
+internal static partial class ObjectReaders
 {
-    public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>
-        new ObjectReaderProviderBuilder(Descriptors).Build(adapter);
-
-    static ObjectReaders()
-    {
-        Descriptors = [UserReaderDescriptor, .. CreateAnons()];
-    }
-
-    public static readonly ImmutableArray<IObjectReaderDescriptor> Descriptors;
-
     private static readonly ObjectReaderMetadata UserReaderMetadata = new MultiObjectReaderMetadata(
         [
             new NameObjectReaderMetadata("Name"),
@@ -25,12 +14,10 @@ public static partial class ObjectReaders
         ]
     );
 
-    private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor = new(
-        CreateUserReaderFunc,
-        UserReaderMetadata
-    );
+    private static readonly ObjectReaderDescriptor<User?> UserReaderDescriptor =
+        new(UserReaderFactory, UserReaderMetadata);
 
-    private static ObjectReaderFunc<User?> CreateUserReaderFunc(ObjectReaderCreateContext context)
+    private static ObjectReaderFunc<User?> UserReaderFactory(ObjectReaderCreateContext context)
     {
         var addressReader = context.ReaderProvider.Get<Address?>();
         return (reader, ordinalReader) =>
