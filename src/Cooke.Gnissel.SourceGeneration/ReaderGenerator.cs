@@ -12,27 +12,6 @@ public class ReaderGenerator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
-        var dbContextsPipline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
-            "Cooke.Gnissel.DbContextAttribute",
-            (node, _) => node is ClassDeclarationSyntax,
-            (context, _) => (INamedTypeSymbol)context.TargetSymbol
-        );
-
-        initContext.RegisterSourceOutput(
-            dbContextsPipline,
-            (context, dbContextType) =>
-            {
-                var stringWriter = new StringWriter();
-                var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialDbContextClass(sourceWriter, dbContextType);
-                sourceWriter.Flush();
-                context.AddSource(
-                    GetDbContextIdentifierName(dbContextType) + ".cs",
-                    stringWriter.ToString()
-                );
-            }
-        );
-
         var selectTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
@@ -67,15 +46,15 @@ public class ReaderGenerator : IIncrementalGenerator
             .Where(x => x != null)
             .Select((v, _) => v!);
 
-        initContext.RegisterImplementationSourceOutput(
-            selectTypesPipeline,
-            (context, type) =>
-            {
-                context.AddSource($"Fun.1.cs", type.ToDisplayString());
-            }
-        );
+        // initContext.RegisterImplementationSourceOutput(
+        //     selectTypesPipeline,
+        //     (context, type) =>
+        //     {
+        //         context.AddSource($"Fun.1.cs", type.ToDisplayString());
+        //     }
+        // );
 
-        var dbContextTypesPipeline = initContext
+        var dbContextQueryTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
                     node
@@ -118,42 +97,30 @@ public class ReaderGenerator : IIncrementalGenerator
                         return null;
                     }
 
-                    return new DbContextType(instanceType.Type, typeArgInfo.Type);
+                    return typeArgInfo.Type;
                 }
             )
             .Where(type => type != null)
             .Select((input, _) => input!)
             // Currently indirect usage is not supported (unbound type parameters)
-            .Where(type => type.Type is not ITypeParameterSymbol)
+            .Where(type => type is not ITypeParameterSymbol)
             .Collect()
             .SelectMany(
-                (invocations, _) =>
-                    invocations
-                        .GroupBy(x => x.DbContext, SymbolEqualityComparer.Default)
-                        .SelectMany(contextTypes =>
-                            contextTypes
-                                .Select(x => x.Type)
-                                .SelectMany(FindAllReaderTypes)
-                                .Select(AdjustNulls)
-                                .Distinct(SymbolEqualityComparer.Default)
-                                .Cast<ITypeSymbol>()
-                                .Select(type => new DbContextType(
-                                    (ITypeSymbol)contextTypes.Key!,
-                                    type
-                                ))
-                        )
+                (types, _) =>
+                    types
+                        .SelectMany(FindAllReaderTypes)
+                        .Select(AdjustNulls)
+                        .Distinct(SymbolEqualityComparer.Default)
+                        .Cast<ITypeSymbol>()
             );
 
         initContext.RegisterImplementationSourceOutput(
-            dbContextTypesPipeline,
-            (context, dbContextType) =>
+            dbContextQueryTypesPipeline,
+            (context, type) =>
             {
-                var type = dbContextType.Type;
-                var dbContextOptions = GetDbContextOptions(dbContextType);
-
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReaderClassStart(sourceWriter, dbContextType.DbContext);
+                WritePartialReaderClassStart(sourceWriter);
                 sourceWriter.WriteLine();
                 WriteReaderMetadata(sourceWriter, type);
                 WriteObjectReaderDescriptorField(sourceWriter, type);
@@ -165,37 +132,25 @@ public class ReaderGenerator : IIncrementalGenerator
                 }
 
                 WriteCreateReadMethodStart(sourceWriter, type);
-                WriteReaderBody(type, dbContextOptions, sourceWriter);
+                WriteReaderBody(type, sourceWriter);
                 WriteCreateReadMethodEnd(sourceWriter);
-                WritePartialReaderClassEnd(sourceWriter, dbContextType.DbContext);
+                WritePartialReaderClassEnd(sourceWriter);
                 sourceWriter.Flush();
 
                 context.AddSource(
-                    $"{GetDbContextIdentifierName(dbContextType.DbContext)}.Readers.{GetTypeIdentifierName(type)}.cs",
+                    $"ObjectReaders.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
         );
 
         initContext.RegisterImplementationSourceOutput(
-            dbContextTypesPipeline
-                .Select((x, _) => new { x.DbContext, x.Type })
-                .Collect()
-                .SelectMany(
-                    (dbContextTypes, _) =>
-                        dbContextTypes
-                            .GroupBy(x => x.DbContext, SymbolEqualityComparer.Default)
-                            .Select(group => new
-                            {
-                                DbContext = (ITypeSymbol)group.Key!,
-                                Types = group.Select(x => x.Type).ToArray(),
-                            })
-                ),
-            (context, dbContextTypeNames) =>
+            dbContextQueryTypesPipeline.Collect(),
+            (context, types) =>
             {
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReaderClassStart(sourceWriter, dbContextTypeNames.DbContext);
+                WritePartialReaderClassStart(sourceWriter);
 
                 sourceWriter.WriteLine(
                     "public static IObjectReaderProvider CreateProvider(IDbAdapter adapter) =>"
@@ -214,7 +169,6 @@ public class ReaderGenerator : IIncrementalGenerator
                 sourceWriter.WriteLine("ObjectReaderDescriptors = [");
                 sourceWriter.Indent++;
 
-                var types = dbContextTypeNames.Types;
                 for (var index = 0; index < types.Length; index++)
                 {
                     var type = types[index];
@@ -273,31 +227,6 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("}");
         sourceWriter.WriteLine();
     }
-
-    private static DbContextOptions GetDbContextOptions(DbContextType dbContextType)
-    {
-        var dbContextArguments = dbContextType
-            .DbContext.GetAttributes()
-            .First(x => x.AttributeClass?.Name == "DbContextAttribute")
-            .NamedArguments;
-
-        EnumMappingTechnique? enumMappingTechnique = null;
-        foreach (var dbContextArgument in dbContextArguments)
-        {
-            switch (dbContextArgument.Key)
-            {
-                case "EnumMappingTechnique":
-                    enumMappingTechnique = (EnumMappingTechnique)dbContextArgument.Value.Value;
-                    break;
-            }
-        }
-        return new DbContextOptions(
-            enumMappingTechnique.GetValueOrDefault(EnumMappingTechnique.Direct)
-        );
-    }
-
-    private static ITypeSymbol AdjustNulls(ITypeSymbol type, CancellationToken ct) =>
-        AdjustNulls(type);
 
     private static ITypeSymbol AdjustNulls(ITypeSymbol type)
     {
@@ -565,11 +494,7 @@ public class ReaderGenerator : IIncrementalGenerator
         return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
     }
 
-    private void WriteReaderBody(
-        ITypeSymbol type,
-        DbContextOptions dbContextOptions,
-        IndentedTextWriter sourceWriter
-    )
+    private void WriteReaderBody(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
         if (IsBuildIn(type))
         {
@@ -581,37 +506,40 @@ public class ReaderGenerator : IIncrementalGenerator
             type is INamedTypeSymbol { EnumUnderlyingType: not null and var underlyingEnumType }
         )
         {
-            switch (dbContextOptions.EnumMappingTechnique)
-            {
-                case EnumMappingTechnique.Direct:
-                    sourceWriter.Write("return reader.GetValueOrNull<");
-                    sourceWriter.Write(type.ToDisplayString());
-                    sourceWriter.WriteLine(">(ordinalReader.Read());");
-                    break;
-
-                case EnumMappingTechnique.String:
-                    sourceWriter.WriteLine(
-                        "var str = reader.GetStringOrNull(ordinalReader.Read());"
-                    );
-                    sourceWriter.Write("return str is null ? null : ");
-                    sourceWriter.Write("Enum.Parse<");
-                    sourceWriter.Write(type.ToDisplayString());
-                    sourceWriter.WriteLine(">(str);");
-                    break;
-
-                case EnumMappingTechnique.Value:
-                    sourceWriter.Write("var val = reader.GetValueOrNull<");
-                    sourceWriter.Write(underlyingEnumType.ToDisplayString());
-                    sourceWriter.WriteLine(">(ordinalReader.Read());");
-                    sourceWriter.Write("return val is null ? null : ");
-                    sourceWriter.Write("(");
-                    sourceWriter.Write(type.ToDisplayString());
-                    sourceWriter.WriteLine(")val;");
-                    break;
-
-                default:
-                    throw new ArgumentOutOfRangeException();
-            }
+            sourceWriter.Write("return reader.GetValueOrNull<");
+            sourceWriter.Write(type.ToDisplayString());
+            sourceWriter.WriteLine(">(ordinalReader.Read());");
+            // switch (dbContextOptions.EnumMappingTechnique)
+            // {
+            //     case EnumMappingTechnique.Direct:
+            //         sourceWriter.Write("return reader.GetValueOrNull<");
+            //         sourceWriter.Write(type.ToDisplayString());
+            //         sourceWriter.WriteLine(">(ordinalReader.Read());");
+            //         break;
+            //
+            //     case EnumMappingTechnique.String:
+            //         sourceWriter.WriteLine(
+            //             "var str = reader.GetStringOrNull(ordinalReader.Read());"
+            //         );
+            //         sourceWriter.Write("return str is null ? null : ");
+            //         sourceWriter.Write("Enum.Parse<");
+            //         sourceWriter.Write(type.ToDisplayString());
+            //         sourceWriter.WriteLine(">(str);");
+            //         break;
+            //
+            //     case EnumMappingTechnique.Value:
+            //         sourceWriter.Write("var val = reader.GetValueOrNull<");
+            //         sourceWriter.Write(underlyingEnumType.ToDisplayString());
+            //         sourceWriter.WriteLine(">(ordinalReader.Read());");
+            //         sourceWriter.Write("return val is null ? null : ");
+            //         sourceWriter.Write("(");
+            //         sourceWriter.Write(type.ToDisplayString());
+            //         sourceWriter.WriteLine(")val;");
+            //         break;
+            //
+            //     default:
+            //         throw new ArgumentOutOfRangeException();
+            // }
         }
         else
         {
@@ -776,17 +704,10 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("}");
     }
 
-    private static void WritePartialReaderClassStart(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol dbContextType
-    )
+    private static void WritePartialReaderClassStart(IndentedTextWriter sourceWriter)
     {
-        if (!dbContextType.ContainingNamespace.IsGlobalNamespace)
-        {
-            sourceWriter.Write("namespace ");
-            sourceWriter.Write(dbContextType.ContainingNamespace.ToDisplayString());
-            sourceWriter.WriteLine(";");
-        }
+        sourceWriter.WriteLine("namespace Cooke.Gnissel.SourceGeneration;");
+        sourceWriter.WriteLine();
 
         sourceWriter.WriteLine("using System.Data.Common;");
         sourceWriter.WriteLine("using System.Collections.Immutable;");
@@ -794,10 +715,10 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine("using Cooke.Gnissel.SourceGeneration;");
         sourceWriter.WriteLine();
-        WriteDbContextClassStart(sourceWriter, dbContextType);
+        sourceWriter.WriteLine("namespace Gnissel.SourceGeneration;");
+        sourceWriter.WriteLine();
+        sourceWriter.Write($"public partial class ObjectReaders ");
         sourceWriter.WriteLine(" {");
-        sourceWriter.Indent++;
-        sourceWriter.WriteLine("public static partial class ObjectReaders {");
         sourceWriter.Indent++;
     }
 
@@ -822,71 +743,6 @@ public class ReaderGenerator : IIncrementalGenerator
         }
     }
 
-    private static void WritePartialDbContextClass(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol dbContextType
-    )
-    {
-        if (!dbContextType.ContainingNamespace.IsGlobalNamespace)
-        {
-            sourceWriter.Write("namespace ");
-            sourceWriter.Write(dbContextType.ContainingNamespace.ToDisplayString());
-            sourceWriter.WriteLine(";");
-        }
-
-        sourceWriter.WriteLine("using System.Data.Common;");
-        sourceWriter.WriteLine("using Cooke.Gnissel;");
-        sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
-        sourceWriter.WriteLine();
-
-        WriteDbContextClassStart(sourceWriter, dbContextType);
-        sourceWriter.WriteLine("(DbOptions options) : DbContext(options) {");
-        sourceWriter.Indent++;
-        sourceWriter.Write("public ");
-        sourceWriter.Write(dbContextType.Name);
-        sourceWriter.WriteLine(
-            " (IDbAdapter adapter) : this(new DbOptions(adapter, ObjectReaders.CreateProvider(adapter))) { }"
-        );
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("}");
-
-        WriteDbContextClassEnd(sourceWriter, dbContextType);
-    }
-
-    private static void WriteDbContextClassStart(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol dbContextType
-    )
-    {
-        var containingType = dbContextType.ContainingType;
-        while (containingType != null)
-        {
-            sourceWriter.Write("public partial class ");
-            sourceWriter.Write(containingType.Name);
-            sourceWriter.WriteLine(" {");
-            sourceWriter.Indent++;
-            containingType = containingType.ContainingType;
-        }
-        sourceWriter.Write(
-            $"{AccessibilityToString(dbContextType.DeclaredAccessibility)} partial class "
-        );
-        sourceWriter.Write(dbContextType.Name);
-    }
-
-    private static void WriteDbContextClassEnd(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol dbContextType
-    )
-    {
-        var containingType = dbContextType.ContainingType;
-        while (containingType != null)
-        {
-            sourceWriter.Indent--;
-            sourceWriter.WriteLine("}");
-            containingType = containingType.ContainingType;
-        }
-    }
-
     private static string AccessibilityToString(Accessibility accessibility) =>
         accessibility switch
         {
@@ -898,17 +754,10 @@ public class ReaderGenerator : IIncrementalGenerator
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-    private static void WritePartialReaderClassEnd(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol dbContextType
-    )
+    private static void WritePartialReaderClassEnd(IndentedTextWriter sourceWriter)
     {
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("}");
-
-        WriteDbContextClassEnd(sourceWriter, dbContextType);
     }
 
     private bool IsNullableValueTypeOrReferenceType(ITypeSymbol type) =>
@@ -941,22 +790,10 @@ public class ReaderGenerator : IIncrementalGenerator
             _ => type.Name,
         };
 
-    private record DbContextType(ITypeSymbol DbContext, ITypeSymbol Type)
-    {
-        public ITypeSymbol DbContext { get; } = DbContext;
-
-        public ITypeSymbol Type { get; } = Type;
-    }
-
     private enum EnumMappingTechnique
     {
         Direct,
         String,
         Value,
-    }
-
-    private record DbContextOptions(EnumMappingTechnique EnumMappingTechnique)
-    {
-        public EnumMappingTechnique EnumMappingTechnique { get; } = EnumMappingTechnique;
     }
 }
