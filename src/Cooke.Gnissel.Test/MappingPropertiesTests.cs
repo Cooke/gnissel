@@ -1,7 +1,7 @@
 #region
 
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
+using Gnissel.SourceGeneration;
 using Npgsql;
 
 #endregion
@@ -11,13 +11,12 @@ namespace Cooke.Gnissel.Test;
 public partial class MappingPropertiesTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
-    private TestDbContext _db;
+    private DbContext _db;
 
     [OneTimeSetUp]
     public void Setup()
     {
-        var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(adapter);
+        _db = new DbContext(new NpgsqlDbAdapter(_dataSource), ObjectReaders.AllDescriptors);
     }
 
     [Test]
@@ -27,11 +26,8 @@ public partial class MappingPropertiesTests
         Assert.That(user, Is.EqualTo(new User(1) { Name = "Bob" }));
     }
 
-    private record User(int Id)
+    public record User(int Id)
     {
         public required string Name { get; init; }
     }
-
-    [DbContext]
-    private partial class TestDbContext { }
 }

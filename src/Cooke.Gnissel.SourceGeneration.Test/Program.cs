@@ -4,7 +4,7 @@ using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed;
 
 var adapter = new NpgsqlDbAdapter(null!);
-var dbContext = new MyDbContext(adapter);
+var dbContext = new MyDbContext(new DbOptions(adapter));
 dbContext.Query<User>($"");
 dbContext.Query<User?>($"");
 dbContext.Query<(User, Device)>($"");
@@ -56,8 +56,7 @@ public enum Role
     User,
 }
 
-[DbContext(EnumMappingTechnique = EnumMappingTechnique.Direct)]
-public partial class MyDbContext
+public class MyDbContext(DbOptions dbOptions) : DbContext(dbOptions)
 {
-    public Table<User> Users { get; } = new(options);
+    public Table<User> Users { get; } = new(dbOptions);
 }

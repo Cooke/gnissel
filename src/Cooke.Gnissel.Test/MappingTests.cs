@@ -2,12 +2,10 @@
 
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
-using System.Data.Common;
 using Cooke.Gnissel.AsyncEnumerable;
-using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
+using Gnissel.SourceGeneration;
 using Npgsql;
 
 #endregion
@@ -22,8 +20,9 @@ public class MappingTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new TestDbContext(
+            new DbOptions(new NpgsqlDbAdapter(_dataSource), ObjectReaders.AllDescriptors)
+        );
 
         await _dataSource
             .CreateCommand(
@@ -34,13 +33,6 @@ public class MappingTests
                         name text NOT NULL,
                         age  integer,
                         description text
-                    );
-
-                    create table devices
-                    (
-                        id   text primary key,
-                        name text,
-                        user_id  integer references users(id)
                     );
 
                     create table dates
@@ -56,7 +48,6 @@ public class MappingTests
     [OneTimeTearDown]
     public void OneTimeTearDown()
     {
-        _dataSource.CreateCommand("DROP TABLE devices").ExecuteNonQuery();
         _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
         _dataSource.CreateCommand("DROP TABLE dates").ExecuteNonQuery();
     }
@@ -65,7 +56,6 @@ public class MappingTests
     public void TearDown()
     {
         _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
-        _dataSource.CreateCommand("TRUNCATE devices RESTART IDENTITY CASCADE").ExecuteNonQuery();
         _dataSource.CreateCommand("TRUNCATE dates RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
@@ -212,18 +202,12 @@ public class MappingTests
         CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
     }
 
-    [DbConverter(typeof(EnumStringDbConverter))]
-    private enum UserName
+    public enum UserName
     {
         Bob,
     }
 
-    private class TestDbContext(DbOptions options) : DbContext(options)
-    {
-        public Table<User> Users { get; } = new(options);
-    }
-
-    private record User(
+    public record User(
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age,
@@ -238,27 +222,18 @@ public class MappingTests
         public string DescriptionOrName { get; private init; } = Description ?? Name;
     };
 
-    private record UserWithParametersInDifferentOrder(
+    public record UserWithParametersInDifferentOrder(
         int Age,
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name
     );
 
-    private record UserWithTypedName(Name Name, int Age);
+    public record UserWithTypedName(Name Name, int Age);
 
-    [DbConverter(typeof(NestedValueDbConverter))]
-    private record Name(string Value);
+    public record Name(string Value);
 
-    public record Device(string Id, string Name, int UserId);
-
-    private class UserNameDbConverter : ConcreteDbConverter<UserName>
+    private class TestDbContext(DbOptions options) : DbContext(options)
     {
-        public override DbValue ToValue(UserName value) =>
-            new DbValue<string>(value.ToString(), null);
-
-        public override UserName FromReader(DbDataReader reader, int ordinal) =>
-            Enum.TryParse(reader.GetString(ordinal), false, out UserName value)
-                ? value
-                : throw new DbConvertException(reader.GetFieldType(ordinal), typeof(UserName));
+        public Table<User> Users { get; } = new(options);
     }
 }

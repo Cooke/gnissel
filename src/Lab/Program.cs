@@ -13,9 +13,3 @@ public class MyDbContext(DbOptions options) : DbContext(options)
 public record User(string Name, Address Address);
 
 public struct Address;
-
-namespace Gnissel.SourceGeneration
-{
-    [ObjectReaders]
-    internal partial class ObjectReaders { }
-}

@@ -15,6 +15,12 @@ public class DbContext(DbOptions dbOptions)
     private readonly IDbAdapter _dbAdapter = dbOptions.DbAdapter;
     private readonly IDbConnector _dbConnector = dbOptions.DbConnector;
 
+    public DbContext(
+        IDbAdapter adapter,
+        IEnumerable<IObjectReaderDescriptor> objectReaderDescriptors
+    )
+        : this(new DbOptions(adapter, objectReaderDescriptors)) { }
+
     [Pure]
     public Query<TOut> Query<TOut>(Sql sql) =>
         dbOptions
