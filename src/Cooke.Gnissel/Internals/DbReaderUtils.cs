@@ -60,10 +60,9 @@ internal static class DbReaderUtils
                 {
                     if (
                         !consumedOrdinals[ordinal]
-                        && ordinalName.StartsWith(
-                            reader.GetName(ordinal),
-                            StringComparison.OrdinalIgnoreCase
-                        )
+                        && reader
+                            .GetName(ordinal)
+                            .Equals(ordinalName, StringComparison.OrdinalIgnoreCase)
                     )
                     {
                         ordinalsByReadIndex[readIndex] = ordinal;
