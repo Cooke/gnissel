@@ -1,4 +1,3 @@
-using System.Data.Common;
 using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
@@ -58,13 +57,12 @@ public class Sql
 
     public abstract record Parameter : Fragment
     {
-        public abstract DbParameter CreateParameter(DbOptions options);
+        public abstract void WriteParameter(IParameterWriter writer);
     }
 
     public record Parameter<T>(T Value, string? Format) : Parameter
     {
-        public override DbParameter CreateParameter(DbOptions options) =>
-            options.CreateParameter(Value, Format);
+        public override void WriteParameter(IParameterWriter writer) => writer.Write(Value, Format);
     }
 
     public record LiteralValue(object? Value) : Fragment;

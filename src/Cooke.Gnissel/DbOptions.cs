@@ -18,6 +18,7 @@ public partial class DbOptions
     private readonly IObjectReaderProvider _objectReaderProvider;
     private readonly IDbConnector _connector;
     private readonly IImmutableList<DbConverter> _converters;
+    private readonly IObjectWriterProvider _objectWriterProvider;
 
     public DbOptions(IDbAdapter adapter)
         : this(
@@ -97,17 +98,27 @@ public partial class DbOptions
 
     public IDbConnector DbConnector => _connector;
 
-    public DbParameter CreateParameter<T>(T value, string? dbType)
-    {
-        var converter = GetConverter<T>();
-        return converter != null
-            ? converter.ToValue(value).CreateParameter(DbAdapter)
-            : DbAdapter.CreateParameter(value, dbType);
-    }
+    public DbParameter CreateParameter<T>(T value, string? dbType) =>
+        _adapter.CreateParameter(value, dbType);
 
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
 
     public ObjectReader<T> GetReader<T>() => _objectReaderProvider.Get<T>();
 
     public bool IsDbMapped(Type type) => GetConverter(type) != null || DbAdapter.IsDbMapped(type);
+}
+
+public interface IObjectWriterProvider
+{
+    IObjectWriter<T> Get<T>();
+}
+
+public interface IObjectWriter<T>
+{
+    void Write(T value, IParameterWriter parameterWriter);
+}
+
+public interface IParameterWriter
+{
+    void Write<T>(T value, string? dbType = null);
 }

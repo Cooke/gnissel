@@ -8,20 +8,32 @@ public partial class NpgsqlDbAdapter
 {
     public RenderedSql RenderSql(Sql sql, DbOptions options)
     {
-        var sb = new StringBuilder(
-            sql.Fragments.Sum(x =>
-                x switch
-                {
-                    Sql.Literal { Value: var s } => s.Length,
-                    Sql.Parameter => 4,
-                    Sql.Identifier { Value: var s } => s.Length + 2,
-                    Sql.LiteralValue => 20,
-                    _ => 0
-                }
-            )
-        );
+        var estimatedQueryLength = 0;
+        var numParameters = 0;
+        foreach (var x in sql.Fragments)
+            switch (x)
+            {
+                case Sql.Literal { Value: var s }:
+                    estimatedQueryLength += s.Length;
+                    break;
+                case Sql.Parameter:
+                    estimatedQueryLength += 4;
+                    numParameters++;
+                    break;
+                case Sql.Identifier { Value: var s }:
+                    estimatedQueryLength += s.Length + 2;
+                    break;
+                case Sql.LiteralValue:
+                    estimatedQueryLength += 20;
+                    break;
+                default:
+                    estimatedQueryLength += 0;
+                    break;
+            }
 
-        var parameters = new List<DbParameter>();
+        var sb = new StringBuilder(estimatedQueryLength);
+
+        var parameterWriter = new ListParameterWriter(options, numParameters);
         foreach (var fragment in sql.Fragments)
         {
             switch (fragment)
@@ -32,8 +44,8 @@ public partial class NpgsqlDbAdapter
 
                 case Sql.Parameter p:
                     sb.Append('$');
-                    sb.Append(parameters.Count + 1);
-                    parameters.Add(p.CreateParameter(options));
+                    sb.Append(parameterWriter.Parameters.Count + 1);
+                    p.WriteParameter(parameterWriter);
                     break;
 
                 case Sql.Identifier { Value: var identifier }:
@@ -46,7 +58,7 @@ public partial class NpgsqlDbAdapter
             }
         }
 
-        return new RenderedSql(sb.ToString(), parameters.ToArray());
+        return new RenderedSql(sb.ToString(), parameterWriter.Parameters.ToArray());
     }
 
     private static string FormatLiteralValue(object? value, DbOptions dbOptions)
@@ -71,7 +83,7 @@ public partial class NpgsqlDbAdapter
         {
             null => "NULL",
             string str => FormatString(str),
-            _ => value.ToString()
+            _ => value.ToString(),
         } ?? throw new InvalidOperationException();
 
     private static string FormatString(string strValue) => $"'{strValue}'";
@@ -80,4 +92,12 @@ public partial class NpgsqlDbAdapter
         Regex.IsMatch(identifier, @"[^a-z0-9_]")
             ? $"\"{identifier.Replace("\"", "\"\"")}\""
             : identifier;
+
+    private class ListParameterWriter(DbOptions options, int numParameters) : IParameterWriter
+    {
+        public List<DbParameter> Parameters { get; } = new(numParameters);
+
+        public void Write<T>(T value, string? dbType = null) =>
+            Parameters.Add(options.CreateParameter(value, dbType));
+    }
 }
