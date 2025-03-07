@@ -31,18 +31,14 @@ public enum AnotherType
     Two,
 }
 
-[DbMap(EnumTechnique = EnumMappingTechnique.String)]
+[DbMap(Technique = EnumMappingTechnique.String)]
 public enum UserType
 {
     Admin,
     User,
 }
 
-[DbMappers(
-    OptIn = false,
-    MappingTechnique = MappingTechnique.Default,
-    EnumMappingTechnique = EnumMappingTechnique.String
-)]
-[DbMap(typeof(AnotherType), MappingTechnique = MappingTechnique.AsIs)]
+[DbMappers(MappingTechnique = MappingTechnique.Default)]
+[DbMap(typeof(AnotherType), Technique = MappingTechnique.AsIs)]
 [DbMap(typeof(UserType))]
 internal partial class ObjectReaders { }

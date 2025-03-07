@@ -21,7 +21,7 @@ public interface IObjectReaderDescriptorProvider
     public IObjectReaderDescriptor Get(Type type);
 }
 
-public interface IObjectReaderDescriptor
+public interface IObjectReaderDescriptor : IObjectMapperDescriptor
 {
     public IObjectReader Create(ObjectReaderCreateContext context);
 

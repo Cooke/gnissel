@@ -20,41 +20,58 @@ public partial class DbOptions
     private readonly IImmutableList<DbConverter> _converters;
     private readonly IObjectWriterProvider _objectWriterProvider;
 
-    public DbOptions(IDbAdapter adapter)
+    public DbOptions(IDbAdapter adapter, IReadOnlyCollection<IObjectMapperDescriptor> descriptors)
         : this(
             adapter,
-            new ObjectReaderProviderBuilder(GlobalObjectReaders.Descriptors).Build(adapter)
+            new ObjectReaderProviderBuilder(descriptors.OfType<IObjectReaderDescriptor>()).Build(
+                adapter
+            ),
+            new ObjectWriterProviderBuilder(descriptors.OfType<IObjectWriterDescriptor>()).Build(
+                adapter
+            )
         ) { }
 
-    public DbOptions(IDbAdapter adapter, IEnumerable<IObjectReaderDescriptor> descriptors)
-        : this(adapter, new ObjectReaderProviderBuilder(descriptors).Build(adapter)) { }
-
-    public DbOptions(IDbAdapter adapter, IObjectReaderProvider objectReaderProvider)
-        : this(adapter, objectReaderProvider, adapter.CreateConnector(), []) { }
+    public DbOptions(
+        IDbAdapter adapter,
+        IObjectReaderProvider objectReaderProvider,
+        IObjectWriterProvider objectWriterProvider
+    )
+        : this(adapter, objectReaderProvider, objectWriterProvider, adapter.CreateConnector(), [])
+    { }
 
     public DbOptions(
         IDbAdapter adapter,
         IObjectReaderProvider objectReaderProvider,
+        IObjectWriterProvider objectWriterProvider,
         IDbConnector connector
     )
-        : this(adapter, objectReaderProvider, connector, []) { }
+        : this(adapter, objectReaderProvider, objectWriterProvider, connector, []) { }
 
     public DbOptions(
         IDbAdapter adapter,
         IObjectReaderProvider objectReaderProvider,
+        IObjectWriterProvider objectWriterProvider,
         IImmutableList<DbConverter> converters
     )
-        : this(adapter, objectReaderProvider, adapter.CreateConnector(), converters) { }
+        : this(
+            adapter,
+            objectReaderProvider,
+            objectWriterProvider,
+            adapter.CreateConnector(),
+            converters
+        ) { }
 
     public DbOptions(
         IDbAdapter adapter,
         IObjectReaderProvider objectReaderProvider,
+        IObjectWriterProvider objectWriterProvider,
         IDbConnector connector,
         IImmutableList<DbConverter> converters
     )
     {
         _adapter = adapter;
         _objectReaderProvider = objectReaderProvider;
+        _objectWriterProvider = objectWriterProvider;
         _connector = connector;
         _converters = converters;
         _concreteConverters = new(
@@ -72,6 +89,7 @@ public partial class DbOptions
         ImmutableList<ConcreteDbConverterFactory> converterFactories,
         IDbAdapter adapter,
         IObjectReaderProvider objectReaderProvider,
+        IObjectWriterProvider objectWriterProvider,
         IDbConnector connector,
         IImmutableList<DbConverter> converters
     )
@@ -80,6 +98,7 @@ public partial class DbOptions
         _converterFactories = converterFactories;
         _adapter = adapter;
         _objectReaderProvider = objectReaderProvider;
+        _objectWriterProvider = objectWriterProvider;
         _converters = converters;
         _connector = connector;
     }
@@ -90,6 +109,7 @@ public partial class DbOptions
             _converterFactories,
             DbAdapter,
             _objectReaderProvider,
+            _objectWriterProvider,
             newConnector,
             _converters
         );
@@ -106,19 +126,4 @@ public partial class DbOptions
     public ObjectReader<T> GetReader<T>() => _objectReaderProvider.Get<T>();
 
     public bool IsDbMapped(Type type) => GetConverter(type) != null || DbAdapter.IsDbMapped(type);
-}
-
-public interface IObjectWriterProvider
-{
-    IObjectWriter<T> Get<T>();
-}
-
-public interface IObjectWriter<T>
-{
-    void Write(T value, IParameterWriter parameterWriter);
-}
-
-public interface IParameterWriter
-{
-    void Write<T>(T value, string? dbType = null);
 }

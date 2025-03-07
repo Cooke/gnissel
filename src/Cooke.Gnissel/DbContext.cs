@@ -17,9 +17,9 @@ public class DbContext(DbOptions dbOptions)
 
     public DbContext(
         IDbAdapter adapter,
-        IEnumerable<IObjectReaderDescriptor> objectReaderDescriptors
+        IReadOnlyCollection<IObjectMapperDescriptor> objectMapperDescriptors
     )
-        : this(new DbOptions(adapter, objectReaderDescriptors)) { }
+        : this(new DbOptions(adapter, objectMapperDescriptors)) { }
 
     [Pure]
     public Query<TOut> Query<TOut>(Sql sql) =>

@@ -3,6 +3,7 @@ using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Microsoft.Extensions.Logging;
+using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
@@ -25,6 +26,7 @@ public partial class NpgsqlDbAdapter
                 new DbOptions(
                     this,
                     new FieldValueObjectReaderProvider(),
+                    new FieldValueObjectWriterProvider(),
                     new FixedConnectionDbConnector(connection, this)
                 )
             );
@@ -61,7 +63,11 @@ public partial class NpgsqlDbAdapter
 
     private async Task CreateMigrationHistoryTableIfNotExist(CancellationToken cancellationToken)
     {
-        var initialOptions = new DbOptions(this, new FieldValueObjectReaderProvider());
+        var initialOptions = new DbOptions(
+            this,
+            new FieldValueObjectReaderProvider(),
+            new FieldValueObjectWriterProvider()
+        );
         var initialContext = new DbContext(initialOptions);
 
         await initialContext
@@ -84,5 +90,10 @@ public partial class NpgsqlDbAdapter
                 (reader, ordinalReader) => reader.GetFieldValue<TOut>(ordinalReader.Read()),
                 [new NextOrdinalReadDescriptor()]
             );
+    }
+
+    private class FieldValueObjectWriterProvider : IObjectWriterProvider
+    {
+        public ObjectWriter<TOut> Get<TOut>() => new((value, writer) => writer.Write(value));
     }
 }

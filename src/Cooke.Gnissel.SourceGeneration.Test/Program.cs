@@ -2,9 +2,10 @@
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed;
+using Gnissel.SourceGeneration;
 
 var adapter = new NpgsqlDbAdapter(null!);
-var dbContext = new MyDbContext(new DbOptions(adapter));
+var dbContext = new MyDbContext(new DbOptions(adapter, ObjectReaders.AllDescriptors));
 dbContext.Query<User>($"");
 dbContext.Query<User?>($"");
 dbContext.Query<(User, Device)>($"");
