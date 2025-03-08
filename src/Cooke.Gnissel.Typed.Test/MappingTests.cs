@@ -14,7 +14,7 @@ public class MappingTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         _npgsqlDbAdapter = new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build());
-        var db = new DbContext(new(_npgsqlDbAdapter));
+        var db = new DbContext(_npgsqlDbAdapter, Mappers);
         db.NonQuery(
                 $"""
                     create table accounts
@@ -67,4 +67,7 @@ public class MappingTests : IDisposable
     }
 
     private record UserAddress(string Street, string City);
+
+    [DbMappers]
+    private partial class Mappers;
 }

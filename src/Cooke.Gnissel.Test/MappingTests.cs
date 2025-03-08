@@ -5,14 +5,13 @@ using System.Data;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
-using Gnissel.SourceGeneration;
 using Npgsql;
 
 #endregion
 
 namespace Cooke.Gnissel.Test;
 
-public class MappingTests
+public partial class MappingTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
@@ -21,7 +20,7 @@ public class MappingTests
     public async Task Setup()
     {
         _db = new TestDbContext(
-            new DbOptions(new NpgsqlDbAdapter(_dataSource), ObjectReaders.AllDescriptors)
+            new DbOptions(new NpgsqlDbAdapter(_dataSource), Mappers.AllDescriptors)
         );
 
         await _dataSource
@@ -202,12 +201,12 @@ public class MappingTests
         CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
     }
 
-    public enum UserName
+    private enum UserName
     {
         Bob,
     }
 
-    public record User(
+    private record User(
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
         int Age,
@@ -222,18 +221,21 @@ public class MappingTests
         public string DescriptionOrName { get; private init; } = Description ?? Name;
     };
 
-    public record UserWithParametersInDifferentOrder(
+    private record UserWithParametersInDifferentOrder(
         int Age,
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name
     );
 
-    public record UserWithTypedName(Name Name, int Age);
+    private record UserWithTypedName(Name Name, int Age);
 
-    public record Name(string Value);
+    private record Name(string Value);
 
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
     }
+
+    [DbMappers]
+    private partial class Mappers;
 }

@@ -46,7 +46,13 @@ public class ReaderGenerator : IIncrementalGenerator
             .Where(x => x != null)
             .Select((v, _) => v!);
 
-        var dbContextQueryTypesPipeline = initContext
+        var mappersPipeline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
+            "Cooke.Gnissel.DbMappersAttribute",
+            (_, _) => true,
+            (context, _) => (INamedTypeSymbol)context.TargetSymbol
+        );
+
+        var firstLevelQueryTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
                     node
@@ -89,23 +95,44 @@ public class ReaderGenerator : IIncrementalGenerator
             .Select((input, _) => input!)
             // Currently indirect usage is not supported (unbound type parameters)
             .Where(type => type is not ITypeParameterSymbol)
-            .Collect()
-            .SelectMany(
-                (types, _) =>
-                    types
-                        .SelectMany(FindAllReaderTypes)
-                        .Select(AdjustNulls)
-                        .Distinct(SymbolEqualityComparer.Default)
-                        .Cast<ITypeSymbol>()
+            .Collect();
+
+        var mapperClassesWithTypesPipeline = mappersPipeline
+            .Combine(firstLevelQueryTypesPipeline)
+            .Select(
+                (pair, _) =>
+                {
+                    var mappersClass = pair.Left;
+                    var types = pair.Right;
+                    return (
+                        mappersClass,
+                        types: types
+                            .Where(t => IsAccessibleDeep(t, mappersClass))
+                            .SelectMany(FindAllReadTypes)
+                            .Select(AdjustNulls)
+                            .Distinct(SymbolEqualityComparer.Default)
+                            .Cast<ITypeSymbol>()
+                            .ToArray()
+                    );
+                }
             );
 
         initContext.RegisterImplementationSourceOutput(
-            dbContextQueryTypesPipeline,
-            (context, type) =>
+            mapperClassesWithTypesPipeline.SelectMany(
+                (mappersClassWithTypes, _) =>
+                    mappersClassWithTypes.types.Select(t => new ReadTypeWithMappersClass(
+                        t,
+                        mappersClassWithTypes.mappersClass
+                    ))
+            ),
+            (context, readTypeWithMappersClass) =>
             {
+                var type = readTypeWithMappersClass.Type;
+                var mappersClass = readTypeWithMappersClass.MappersClass;
+
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReaderClassStart(sourceWriter);
+                WritePartialMappersClassStart(mappersClass, sourceWriter);
                 sourceWriter.WriteLine();
                 WriteReaderMetadata(sourceWriter, type);
                 WriteObjectReaderDescriptorField(sourceWriter, type);
@@ -123,25 +150,27 @@ public class ReaderGenerator : IIncrementalGenerator
                 sourceWriter.Flush();
 
                 context.AddSource(
-                    $"ObjectReaders.{GetTypeIdentifierName(type)}.cs",
+                    $"{GetSourceName(mappersClass)}.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
         );
 
         initContext.RegisterImplementationSourceOutput(
-            dbContextQueryTypesPipeline.Collect(),
-            (context, types) =>
+            mapperClassesWithTypesPipeline,
+            (context, mapperWithTypes) =>
             {
+                var types = mapperWithTypes.types;
+                var mappersClass = mapperWithTypes.mappersClass;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReaderClassStart(sourceWriter);
+                WritePartialMappersClassStart(mappersClass, sourceWriter);
 
                 sourceWriter.WriteLine(
                     "public static readonly ImmutableArray<IObjectReaderDescriptor> AllDescriptors;"
                 );
                 sourceWriter.WriteLine();
-                sourceWriter.WriteLine("static ObjectReaders() {");
+                sourceWriter.WriteLine($"static {mappersClass.Name}() {{");
                 sourceWriter.Indent++;
                 sourceWriter.WriteLine("AllDescriptors = [");
                 sourceWriter.Indent++;
@@ -171,9 +200,28 @@ public class ReaderGenerator : IIncrementalGenerator
                 WritePartialReaderClassEnd(sourceWriter);
                 sourceWriter.Flush();
 
-                context.AddSource("ObjectReaders.cs", stringWriter.ToString());
+                context.AddSource($"{GetSourceName(mappersClass)}.cs", stringWriter.ToString());
             }
         );
+    }
+
+    private bool IsAccessibleDeep(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass) =>
+        FindAllReadTypes(typeSymbol).All(t => IsAccessible(t, mappersClass));
+
+    private static bool IsAccessible(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass)
+    {
+        return typeSymbol.DeclaredAccessibility != Accessibility.Private
+            || SymbolEqualityComparer.Default.Equals(
+                typeSymbol.ContainingType,
+                mappersClass.ContainingType
+            );
+    }
+
+    public record ReadTypeWithMappersClass(ITypeSymbol Type, INamedTypeSymbol MappersClass)
+    {
+        public ITypeSymbol Type { get; } = Type;
+
+        public INamedTypeSymbol MappersClass { get; } = MappersClass;
     }
 
     private static void WriteNotNullableReadMethod(
@@ -226,7 +274,7 @@ public class ReaderGenerator : IIncrementalGenerator
         };
     }
 
-    private IEnumerable<ITypeSymbol> FindAllReaderTypes(ITypeSymbol type)
+    private IEnumerable<ITypeSymbol> FindAllReadTypes(ITypeSymbol type)
     {
         yield return type;
 
@@ -245,7 +293,7 @@ public class ReaderGenerator : IIncrementalGenerator
         {
             if (!BuildInDirectlyMappedTypes.Contains(t.Type.Name))
             {
-                foreach (var innerType in FindAllReaderTypes(t.Type))
+                foreach (var innerType in FindAllReadTypes(t.Type))
                 {
                     yield return innerType;
                 }
@@ -339,6 +387,22 @@ public class ReaderGenerator : IIncrementalGenerator
     private static string GetReaderMetadataName(ITypeSymbol type)
     {
         return $"{GetTypeIdentifierName(AdjustNulls(type))}ReaderMetadata";
+    }
+
+    private static string? GetSourceName(ITypeSymbol? type)
+    {
+        if (type == null)
+        {
+            return null;
+        }
+
+        var baseName = GetSourceName(type.ContainingType);
+        if (baseName != null)
+        {
+            return baseName + "." + type.Name;
+        }
+
+        return type.Name;
     }
 
     private static string GetTypeIdentifierName(ITypeSymbol type)
@@ -706,7 +770,10 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("}");
     }
 
-    private static void WritePartialReaderClassStart(IndentedTextWriter sourceWriter)
+    private static void WritePartialMappersClassStart(
+        INamedTypeSymbol mappersClass,
+        IndentedTextWriter sourceWriter
+    )
     {
         sourceWriter.WriteLine("using System.Data.Common;");
         sourceWriter.WriteLine("using System.Collections.Immutable;");
@@ -714,11 +781,53 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine("using Cooke.Gnissel.SourceGeneration;");
         sourceWriter.WriteLine();
-        sourceWriter.WriteLine("namespace Gnissel.SourceGeneration;");
-        sourceWriter.WriteLine();
-        sourceWriter.Write($"public partial class ObjectReaders ");
+        WriteNamespace(mappersClass.ContainingNamespace, sourceWriter);
+        WritePartialClassStart(sourceWriter, mappersClass);
+    }
+
+    private static void WritePartialClassStart(
+        IndentedTextWriter sourceWriter,
+        INamedTypeSymbol? cls
+    )
+    {
+        if (cls == null)
+        {
+            return;
+        }
+
+        WritePartialClassStart(sourceWriter, cls.ContainingType);
+        sourceWriter.Write(AccessibilityToString(cls.DeclaredAccessibility));
+        sourceWriter.Write(" partial class ");
+        sourceWriter.Write(cls.Name);
         sourceWriter.WriteLine(" {");
         sourceWriter.Indent++;
+    }
+
+    private static void WriteNamespace(INamespaceSymbol? ns, IndentedTextWriter sourceWriter)
+    {
+        if (ns == null || ns.Name == string.Empty)
+        {
+            return;
+        }
+
+        sourceWriter.Write("namespace ");
+        WriteNamespaceParts(ns);
+        sourceWriter.WriteLine(";");
+        sourceWriter.WriteLine();
+
+        void WriteNamespaceParts(INamespaceSymbol nsPart)
+        {
+            if (
+                nsPart.ContainingNamespace != null
+                && nsPart.ContainingNamespace.Name != string.Empty
+            )
+            {
+                WriteNamespaceParts(nsPart.ContainingNamespace);
+                sourceWriter.Write(".");
+            }
+
+            sourceWriter.Write(nsPart.Name);
+        }
     }
 
     private static string GetDbContextIdentifierName(ITypeSymbol dbContextType)
