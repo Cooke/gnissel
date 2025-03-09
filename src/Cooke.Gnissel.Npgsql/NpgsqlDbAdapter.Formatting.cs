@@ -68,13 +68,6 @@ public partial class NpgsqlDbAdapter
             return "NULL";
         }
 
-        var converter = dbOptions.GetConverter(value.GetType());
-        if (converter != null)
-        {
-            // IMPROVEMENT: remove boxing of Value
-            return FormatLiteralValue(converter.ToValue(value).Value);
-        }
-
         return FormatLiteralValue(value);
     }
 
