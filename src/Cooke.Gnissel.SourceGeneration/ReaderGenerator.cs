@@ -49,7 +49,7 @@ public class ReaderGenerator : IIncrementalGenerator
         var mappersPipeline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
             "Cooke.Gnissel.DbMappersAttribute",
             (_, _) => true,
-            (context, _) => (INamedTypeSymbol)context.TargetSymbol
+            (context, _) => new MappersClass((INamedTypeSymbol)context.TargetSymbol)
         );
 
         var firstLevelQueryTypesPipeline = initContext
@@ -144,13 +144,13 @@ public class ReaderGenerator : IIncrementalGenerator
                 }
 
                 WriteCreateReadMethodStart(sourceWriter, type);
-                WriteReaderBody(type, sourceWriter);
+                WriteReaderBody(type, mappersClass, sourceWriter);
                 WriteCreateReadMethodEnd(sourceWriter);
-                WritePartialReaderClassEnd(sourceWriter);
+                WritePartialMappersClassEnd(mappersClass, sourceWriter);
                 sourceWriter.Flush();
 
                 context.AddSource(
-                    $"{GetSourceName(mappersClass)}.{GetTypeIdentifierName(type)}.cs",
+                    $"{GetSourceName(mappersClass.Symbol)}.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
@@ -170,7 +170,7 @@ public class ReaderGenerator : IIncrementalGenerator
                     "public static readonly ImmutableArray<IObjectReaderDescriptor> AllDescriptors;"
                 );
                 sourceWriter.WriteLine();
-                sourceWriter.WriteLine($"static {mappersClass.Name}() {{");
+                sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
                 sourceWriter.Indent++;
                 sourceWriter.WriteLine("AllDescriptors = [");
                 sourceWriter.Indent++;
@@ -197,16 +197,19 @@ public class ReaderGenerator : IIncrementalGenerator
                 sourceWriter.WriteLine("}");
                 sourceWriter.WriteLine();
 
-                WritePartialReaderClassEnd(sourceWriter);
+                WritePartialMappersClassEnd(mappersClass, sourceWriter);
                 sourceWriter.Flush();
 
-                context.AddSource($"{GetSourceName(mappersClass)}.cs", stringWriter.ToString());
+                context.AddSource(
+                    $"{GetSourceName(mappersClass.Symbol)}.cs",
+                    stringWriter.ToString()
+                );
             }
         );
     }
 
-    private bool IsAccessibleDeep(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass) =>
-        FindAllReadTypes(typeSymbol).All(t => IsAccessible(t, mappersClass));
+    private bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
+        FindAllReadTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
 
     private static bool IsAccessible(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass)
     {
@@ -217,11 +220,11 @@ public class ReaderGenerator : IIncrementalGenerator
             );
     }
 
-    public record ReadTypeWithMappersClass(ITypeSymbol Type, INamedTypeSymbol MappersClass)
+    private record ReadTypeWithMappersClass(ITypeSymbol Type, MappersClass MappersClass)
     {
         public ITypeSymbol Type { get; } = Type;
 
-        public INamedTypeSymbol MappersClass { get; } = MappersClass;
+        public MappersClass MappersClass { get; } = MappersClass;
     }
 
     private static void WriteNotNullableReadMethod(
@@ -549,7 +552,11 @@ public class ReaderGenerator : IIncrementalGenerator
         return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
     }
 
-    private void WriteReaderBody(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    private void WriteReaderBody(
+        ITypeSymbol type,
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter
+    )
     {
         if (IsBuildIn(type))
         {
@@ -559,38 +566,37 @@ public class ReaderGenerator : IIncrementalGenerator
             type is INamedTypeSymbol { EnumUnderlyingType: not null and var underlyingEnumType }
         )
         {
-            WriteGetValue(type, sourceWriter);
-            // switch (dbContextOptions.EnumMappingTechnique)
-            // {
-            //     case EnumMappingTechnique.Direct:
-            //         sourceWriter.Write("return reader.GetValueOrNull<");
-            //         sourceWriter.Write(type.ToDisplayString());
-            //         sourceWriter.WriteLine(">(ordinalReader.Read());");
-            //         break;
-            //
-            //     case EnumMappingTechnique.String:
-            //         sourceWriter.WriteLine(
-            //             "var str = reader.GetStringOrNull(ordinalReader.Read());"
-            //         );
-            //         sourceWriter.Write("return str is null ? null : ");
-            //         sourceWriter.Write("Enum.Parse<");
-            //         sourceWriter.Write(type.ToDisplayString());
-            //         sourceWriter.WriteLine(">(str);");
-            //         break;
-            //
-            //     case EnumMappingTechnique.Value:
-            //         sourceWriter.Write("var val = reader.GetValueOrNull<");
-            //         sourceWriter.Write(underlyingEnumType.ToDisplayString());
-            //         sourceWriter.WriteLine(">(ordinalReader.Read());");
-            //         sourceWriter.Write("return val is null ? null : ");
-            //         sourceWriter.Write("(");
-            //         sourceWriter.Write(type.ToDisplayString());
-            //         sourceWriter.WriteLine(")val;");
-            //         break;
-            //
-            //     default:
-            //         throw new ArgumentOutOfRangeException();
-            // }
+            switch (mappersClass.EnumMappingTechnique)
+            {
+                case MappingTechnique.AsIs:
+                    sourceWriter.Write("return reader.GetNullableValue<");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.WriteLine(">(ordinalReader.Read());");
+                    break;
+
+                case MappingTechnique.AsString:
+                    sourceWriter.WriteLine(
+                        "var str = reader.GetValueOrNull<string>(ordinalReader.Read());"
+                    );
+                    sourceWriter.Write("return str is null ? null : ");
+                    sourceWriter.Write("Enum.Parse<");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.WriteLine(">(str);");
+                    break;
+
+                case MappingTechnique.AsInteger:
+                    sourceWriter.Write("var val = reader.GetNullableValue<");
+                    sourceWriter.Write(underlyingEnumType.ToDisplayString());
+                    sourceWriter.WriteLine(">(ordinalReader.Read());");
+                    sourceWriter.Write("return val is null ? null : ");
+                    sourceWriter.Write("(");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.WriteLine(")val;");
+                    break;
+
+                default:
+                    throw new ArgumentOutOfRangeException();
+            }
         }
         else
         {
@@ -771,7 +777,7 @@ public class ReaderGenerator : IIncrementalGenerator
     }
 
     private static void WritePartialMappersClassStart(
-        INamedTypeSymbol mappersClass,
+        MappersClass mappersClass,
         IndentedTextWriter sourceWriter
     )
     {
@@ -781,8 +787,8 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine("using Cooke.Gnissel.SourceGeneration;");
         sourceWriter.WriteLine();
-        WriteNamespace(mappersClass.ContainingNamespace, sourceWriter);
-        WritePartialClassStart(sourceWriter, mappersClass);
+        WriteNamespace(mappersClass.Symbol.ContainingNamespace, sourceWriter);
+        WritePartialClassStart(sourceWriter, mappersClass.Symbol);
     }
 
     private static void WritePartialClassStart(
@@ -862,10 +868,18 @@ public class ReaderGenerator : IIncrementalGenerator
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-    private static void WritePartialReaderClassEnd(IndentedTextWriter sourceWriter)
+    private static void WritePartialMappersClassEnd(
+        MappersClass mapperClass,
+        IndentedTextWriter sourceWriter
+    )
     {
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("}");
+        var type = mapperClass.Symbol;
+        while (type != null)
+        {
+            sourceWriter.Indent--;
+            sourceWriter.WriteLine("}");
+            type = type.ContainingType;
+        }
     }
 
     private bool IsNullableValueTypeOrReferenceType(ITypeSymbol type) =>
@@ -898,10 +912,36 @@ public class ReaderGenerator : IIncrementalGenerator
             _ => type.Name,
         };
 
-    private enum EnumMappingTechnique
+    private class MappersClass
     {
-        Direct,
-        String,
-        Value,
+        public MappersClass(INamedTypeSymbol symbol)
+        {
+            Symbol = symbol;
+
+            var mappersAttribute = symbol
+                .GetAttributes()
+                .First(x => x.AttributeClass?.Name == "DbMappersAttribute");
+
+            foreach (var argument in mappersAttribute.NamedArguments)
+            {
+                switch (argument.Key)
+                {
+                    case "EnumMappingTechnique":
+                        EnumMappingTechnique = (MappingTechnique)argument.Value.Value;
+                        break;
+                }
+            }
+        }
+
+        public INamedTypeSymbol Symbol { get; }
+
+        public MappingTechnique EnumMappingTechnique { get; } = MappingTechnique.AsIs;
+    }
+
+    private enum MappingTechnique
+    {
+        AsIs,
+        AsString,
+        AsInteger,
     }
 }

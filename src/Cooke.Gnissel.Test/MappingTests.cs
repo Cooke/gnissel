@@ -236,6 +236,6 @@ public partial class MappingTests
         public Table<User> Users { get; } = new(options);
     }
 
-    [DbMappers]
+    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
     private partial class Mappers;
 }
