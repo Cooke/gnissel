@@ -131,7 +131,7 @@ public class ReaderGenerator : IIncrementalGenerator
 
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialMappersClassStart(mappersClass, sourceWriter);
+                WritePartialReadMappersClassStart(mappersClass, sourceWriter);
                 sourceWriter.WriteLine();
                 WriteReaderMetadata(sourceWriter, type);
                 WriteObjectReaderDescriptorField(sourceWriter, type);
@@ -145,11 +145,11 @@ public class ReaderGenerator : IIncrementalGenerator
                 WriteCreateReadMethodStart(sourceWriter, type);
                 WriteReaderBody(type, mappersClass, sourceWriter);
                 WriteCreateReadMethodEnd(sourceWriter);
-                WritePartialMappersClassEnd(mappersClass, sourceWriter);
+                WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
                 sourceWriter.Flush();
 
                 context.AddSource(
-                    $"{GetSourceName(mappersClass.Symbol)}.{GetTypeIdentifierName(type)}.cs",
+                    $"{GetSourceName(mappersClass.Symbol)}.ReadMappers.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
                 );
             }
@@ -177,10 +177,12 @@ public class ReaderGenerator : IIncrementalGenerator
                 for (var index = 0; index < types.Length; index++)
                 {
                     var type = types[index];
+                    sourceWriter.Write("ReadMappers.");
                     sourceWriter.Write(GetObjectReaderDescriptorFieldName(type));
                     if (type.IsValueType)
                     {
                         sourceWriter.WriteLine(",");
+                        sourceWriter.Write("ReadMappers.");
                         sourceWriter.Write(GetNotNullableObjectReaderDescriptorFieldName(type));
                     }
 
@@ -775,6 +777,40 @@ public class ReaderGenerator : IIncrementalGenerator
         sourceWriter.WriteLine("}");
     }
 
+    private static void WritePartialReadMappersClassStart(
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter
+    )
+    {
+        WritePartialMappersClassStart(mappersClass, sourceWriter);
+        sourceWriter.WriteLine("public static partial class ReadMappers {");
+        sourceWriter.Indent++;
+    }
+
+    private static void WritePartialReadMappersClassEnd(
+        MappersClass mapperClass,
+        IndentedTextWriter sourceWriter
+    )
+    {
+        WritePartialMappersClassEnd(mapperClass, sourceWriter);
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
+    }
+
+    private static void WritePartialMappersClassEnd(
+        MappersClass mapperClass,
+        IndentedTextWriter sourceWriter
+    )
+    {
+        var type = mapperClass.Symbol;
+        while (type != null)
+        {
+            sourceWriter.Indent--;
+            sourceWriter.WriteLine("}");
+            type = type.ContainingType;
+        }
+    }
+
     private static void WritePartialMappersClassStart(
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter
@@ -845,20 +881,6 @@ public class ReaderGenerator : IIncrementalGenerator
             Accessibility.ProtectedAndInternal => "protected internal",
             _ => throw new ArgumentOutOfRangeException(),
         };
-
-    private static void WritePartialMappersClassEnd(
-        MappersClass mapperClass,
-        IndentedTextWriter sourceWriter
-    )
-    {
-        var type = mapperClass.Symbol;
-        while (type != null)
-        {
-            sourceWriter.Indent--;
-            sourceWriter.WriteLine("}");
-            type = type.ContainingType;
-        }
-    }
 
     private static bool IsNullableValueType(ITypeSymbol type)
     {
