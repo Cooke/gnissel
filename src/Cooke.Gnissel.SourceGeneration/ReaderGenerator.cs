@@ -1,6 +1,5 @@
 ﻿using System.CodeDom.Compiler;
 using System.Collections.Immutable;
-using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Operations;
@@ -836,27 +835,6 @@ public class ReaderGenerator : IIncrementalGenerator
         }
     }
 
-    private static string GetDbContextIdentifierName(ITypeSymbol dbContextType)
-    {
-        var sb = new StringBuilder();
-        AppendName(dbContextType);
-        return sb.ToString();
-
-        void AppendName(ITypeSymbol symbol)
-        {
-            if (symbol.ContainingType == null)
-            {
-                sb.Append(symbol.Name);
-            }
-            else
-            {
-                AppendName(symbol.ContainingType);
-                sb.Append(".");
-                sb.Append(symbol.Name);
-            }
-        }
-    }
-
     private static string AccessibilityToString(Accessibility accessibility) =>
         accessibility switch
         {
@@ -881,9 +859,6 @@ public class ReaderGenerator : IIncrementalGenerator
             type = type.ContainingType;
         }
     }
-
-    private bool IsNullableValueTypeOrReferenceType(ITypeSymbol type) =>
-        IsNullableValueType(type) || type.IsReferenceType;
 
     private static bool IsNullableValueType(ITypeSymbol type)
     {
@@ -927,7 +902,7 @@ public class ReaderGenerator : IIncrementalGenerator
                 switch (argument.Key)
                 {
                     case "EnumMappingTechnique":
-                        EnumMappingTechnique = (MappingTechnique)argument.Value.Value;
+                        EnumMappingTechnique = (MappingTechnique)argument.Value.Value!;
                         break;
                 }
             }
