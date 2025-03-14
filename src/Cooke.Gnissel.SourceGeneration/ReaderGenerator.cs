@@ -51,23 +51,9 @@ public partial class ReaderGenerator : IIncrementalGenerator
             (context, _) => new MappersClass((INamedTypeSymbol)context.TargetSymbol)
         );
 
-        var firstLevelQueryTypesPipeline = initContext
+        var queryTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
-                (node, _) =>
-                    node
-                        is InvocationExpressionSyntax
-                        {
-                            Expression: MemberAccessExpressionSyntax
-                            {
-                                Name: GenericNameSyntax
-                                {
-                                    Identifier.ValueText: "Query"
-                                        or "QuerySingle"
-                                        or "QuerySingleOrDefault",
-                                    TypeArgumentList.Arguments.Count: 1
-                                }
-                            }
-                        },
+                (node, _) => IsQueryInvocation(node),
                 (context, ct) =>
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
@@ -97,7 +83,7 @@ public partial class ReaderGenerator : IIncrementalGenerator
             .Collect();
 
         var mapperClassesWithTypesPipeline = mappersPipeline
-            .Combine(firstLevelQueryTypesPipeline)
+            .Combine(queryTypesPipeline)
             .Select(
                 (pair, _) =>
                 {
@@ -207,6 +193,86 @@ public partial class ReaderGenerator : IIncrementalGenerator
                 );
             }
         );
+
+        var queryWriteTypesPipeline = initContext
+            .SyntaxProvider.CreateSyntaxProvider(
+                (x, _) => IsQueryInvocation(x),
+                (context, ct) =>
+                {
+                    var invocation = (InvocationExpressionSyntax)context.Node;
+
+                    if (
+                        invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression
+                        is not InterpolatedStringExpressionSyntax interpolatedString
+                    )
+                    {
+                        return [];
+                    }
+
+                    return interpolatedString
+                        .Contents.OfType<InterpolationSyntax>()
+                        .Select(x => context.SemanticModel.GetTypeInfo(x.Expression))
+                        .Where(writeTypeInfo => writeTypeInfo.Type != null)
+                        .Select(x => x.Type!)
+                        .ToArray();
+                }
+            )
+            .SelectMany((x, _) => x);
+
+        var mappersClassWithQueryWriteTypesPipeline = mappersPipeline
+            .Combine(queryWriteTypesPipeline.Collect())
+            .Select(
+                (pair, _) =>
+                {
+                    var mappersClass = pair.Left;
+                    var types = pair.Right;
+                    return (
+                        mappersClass,
+                        types: types
+                            .Where(t => IsAccessibleDeep(t, mappersClass))
+                            .SelectMany(FindAllReadTypes)
+                            .Select(AdjustNulls)
+                            .Distinct(SymbolEqualityComparer.Default)
+                            .Cast<ITypeSymbol>()
+                            .ToArray()
+                    );
+                }
+            );
+
+        initContext.RegisterImplementationSourceOutput(
+            queryWriteTypesPipeline.SelectMany((x, _) => x.ToImmutableArray()),
+            (context, type) =>
+            {
+                var stringWriter = new StringWriter();
+                var sourceWriter = new IndentedTextWriter(stringWriter);
+                WritePartialParameterTypesClassStart(sourceWriter);
+                sourceWriter.WriteLine();
+                WriteParameterType(sourceWriter, type);
+                WritePartialParameterTypesClassEnd(sourceWriter);
+                sourceWriter.Flush();
+
+                context.AddSource(
+                    $"ParameterTypes.{GetTypeIdentifierName(type)}.cs",
+                    stringWriter.ToString()
+                );
+            }
+        );
+    }
+
+    private static bool IsQueryInvocation(SyntaxNode node)
+    {
+        return node
+            is InvocationExpressionSyntax
+            {
+                Expression: MemberAccessExpressionSyntax
+                {
+                    Name: GenericNameSyntax
+                    {
+                        Identifier.ValueText: "Query" or "QuerySingle" or "QuerySingleOrDefault",
+                        TypeArgumentList.Arguments.Count: 1
+                    }
+                }
+            };
     }
 
     private bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
