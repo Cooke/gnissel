@@ -93,4 +93,11 @@ public partial class NpgsqlDbAdapter
         public void Write<T>(T value, string? dbType = null) =>
             Parameters.Add(options.CreateParameter(value, dbType));
     }
+
+    private class ConverterParameterWriter(IParameterWriter parameterWriter, DbOptions dbOptions)
+        : IParameterWriter
+    {
+        public void Write<T>(T value, string? dbType = null) =>
+            dbOptions.GetWriter<T>().Write(value, parameterWriter);
+    }
 }

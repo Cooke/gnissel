@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cooke.Gnissel.SourceGeneration;
 
-public partial class ReaderGenerator
+public partial class Generator
 {
     private static void WriteNotNullableReadMethod(
         IndentedTextWriter sourceWriter,
@@ -33,7 +33,7 @@ public partial class ReaderGenerator
         sourceWriter.WriteLine();
     }
 
-    private void WriteReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    private static void WriteReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
         sourceWriter.Write("private static readonly ObjectReaderMetadata ");
         sourceWriter.Write(GetReaderMetadataName(type));
@@ -148,22 +148,6 @@ public partial class ReaderGenerator
         sourceWriter.Write(GetReaderMetadataName(type));
         sourceWriter.WriteLine(");");
         sourceWriter.WriteLine();
-    }
-
-    private static void WriteTypeNameEnsureNullable(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol type
-    )
-    {
-        sourceWriter.Write(type.ToDisplayString());
-        if (type.IsReferenceType && type.NullableAnnotation != NullableAnnotation.Annotated)
-        {
-            sourceWriter.Write("?");
-        }
-        else if (type.IsValueType && !IsNullableValueType(type))
-        {
-            sourceWriter.Write("?");
-        }
     }
 
     private static void WriteCreateReadMethodStart(
@@ -356,4 +340,13 @@ public partial class ReaderGenerator
             Accessibility.ProtectedAndInternal => "protected internal",
             _ => throw new ArgumentOutOfRangeException(),
         };
+
+    private static string GetNotNullableObjectReaderDescriptorFieldName(ITypeSymbol type) =>
+        "NotNullable" + GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
+
+    private static string GetObjectReaderDescriptorFieldName(ITypeSymbol type) =>
+        GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
+
+    private static string GetObjectReaderDescriptorFieldName(string typeIdentifierName) =>
+        $"{typeIdentifierName}ReaderDescriptor";
 }

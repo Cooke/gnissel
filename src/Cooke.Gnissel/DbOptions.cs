@@ -47,5 +47,7 @@ public partial class DbOptions(
 
     public ObjectReader<T> GetReader<T>() => objectReaderProvider.Get<T>();
 
+    public ObjectWriter<T> GetWriter<T>() => objectWriterProvider.Get<T>();
+
     public bool IsDbMapped(Type type) => DbAdapter.IsDbMapped(type);
 }

@@ -7,7 +7,12 @@ internal static partial class ObjectReaders
 {
     static ObjectReaders()
     {
-        Descriptors = [UserReaderDescriptor, .. CreateAnons()];
+        Descriptors = CreateReaderMappers();
+    }
+
+    private static ImmutableArray<IObjectReaderDescriptor> CreateReaderMappers()
+    {
+        return [UserReaderDescriptor, .. CreateAnons()];
     }
 
     public static readonly ImmutableArray<IObjectReaderDescriptor> Descriptors;

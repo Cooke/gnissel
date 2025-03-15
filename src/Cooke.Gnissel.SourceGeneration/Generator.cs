@@ -7,7 +7,7 @@ using Microsoft.CodeAnalysis.Operations;
 namespace Cooke.Gnissel.SourceGeneration;
 
 [Generator]
-public partial class ReaderGenerator : IIncrementalGenerator
+public partial class Generator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
@@ -53,7 +53,21 @@ public partial class ReaderGenerator : IIncrementalGenerator
 
         var queryTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
-                (node, _) => IsQueryInvocation(node),
+                (node, _) =>
+                    node
+                        is InvocationExpressionSyntax
+                        {
+                            Expression: MemberAccessExpressionSyntax
+                            {
+                                Name: GenericNameSyntax
+                                {
+                                    Identifier.ValueText: "Query"
+                                        or "QuerySingle"
+                                        or "QuerySingleOrDefault",
+                                    TypeArgumentList.Arguments.Count: 1
+                                }
+                            }
+                        },
                 (context, ct) =>
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
@@ -149,15 +163,11 @@ public partial class ReaderGenerator : IIncrementalGenerator
                 var mappersClass = mapperWithTypes.mappersClass;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialMappersClassStart(mappersClass, sourceWriter);
+                WritePartialReadMappersClassStart(mappersClass, sourceWriter);
 
                 sourceWriter.WriteLine(
-                    "public static readonly ImmutableArray<IObjectReaderDescriptor> AllDescriptors;"
+                    "public static ImmutableArray<IObjectReaderDescriptor> GetReadDescriptors() => ["
                 );
-                sourceWriter.WriteLine();
-                sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
-                sourceWriter.Indent++;
-                sourceWriter.WriteLine("AllDescriptors = [");
                 sourceWriter.Indent++;
 
                 for (var index = 0; index < types.Length; index++)
@@ -180,6 +190,40 @@ public partial class ReaderGenerator : IIncrementalGenerator
 
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("];");
+
+                WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
+                sourceWriter.Flush();
+
+                context.AddSource(
+                    $"{GetSourceName(mappersClass.Symbol)}.ReadMappers.cs",
+                    stringWriter.ToString()
+                );
+            }
+        );
+
+        initContext.RegisterImplementationSourceOutput(
+            mappersPipeline,
+            (context, mappersClass) =>
+            {
+                var stringWriter = new StringWriter();
+                var sourceWriter = new IndentedTextWriter(stringWriter);
+                WritePartialMappersClassStart(mappersClass, sourceWriter);
+                sourceWriter.WriteLine();
+
+                sourceWriter.WriteLine(
+                    "public static readonly ImmutableArray<IObjectReaderDescriptor> AllDescriptors;"
+                );
+                sourceWriter.WriteLine();
+                sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
+                sourceWriter.Indent++;
+                sourceWriter.WriteLine("AllDescriptors = [");
+                sourceWriter.Indent++;
+
+                sourceWriter.WriteLine("..GetReadDescriptors(),");
+                sourceWriter.WriteLine("..GetWriteDescriptors()");
+
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("];");
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");
                 sourceWriter.WriteLine();
@@ -194,88 +238,10 @@ public partial class ReaderGenerator : IIncrementalGenerator
             }
         );
 
-        var queryWriteTypesPipeline = initContext
-            .SyntaxProvider.CreateSyntaxProvider(
-                (x, _) => IsQueryInvocation(x),
-                (context, ct) =>
-                {
-                    var invocation = (InvocationExpressionSyntax)context.Node;
-
-                    if (
-                        invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression
-                        is not InterpolatedStringExpressionSyntax interpolatedString
-                    )
-                    {
-                        return [];
-                    }
-
-                    return interpolatedString
-                        .Contents.OfType<InterpolationSyntax>()
-                        .Select(x => context.SemanticModel.GetTypeInfo(x.Expression))
-                        .Where(writeTypeInfo => writeTypeInfo.Type != null)
-                        .Select(x => x.Type!)
-                        .ToArray();
-                }
-            )
-            .SelectMany((x, _) => x);
-
-        var mappersClassWithQueryWriteTypesPipeline = mappersPipeline
-            .Combine(queryWriteTypesPipeline.Collect())
-            .Select(
-                (pair, _) =>
-                {
-                    var mappersClass = pair.Left;
-                    var types = pair.Right;
-                    return (
-                        mappersClass,
-                        types: types
-                            .Where(t => IsAccessibleDeep(t, mappersClass))
-                            .SelectMany(FindAllReadTypes)
-                            .Select(AdjustNulls)
-                            .Distinct(SymbolEqualityComparer.Default)
-                            .Cast<ITypeSymbol>()
-                            .ToArray()
-                    );
-                }
-            );
-
-        initContext.RegisterImplementationSourceOutput(
-            queryWriteTypesPipeline.SelectMany((x, _) => x.ToImmutableArray()),
-            (context, type) =>
-            {
-                var stringWriter = new StringWriter();
-                var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialParameterTypesClassStart(sourceWriter);
-                sourceWriter.WriteLine();
-                WriteParameterType(sourceWriter, type);
-                WritePartialParameterTypesClassEnd(sourceWriter);
-                sourceWriter.Flush();
-
-                context.AddSource(
-                    $"ParameterTypes.{GetTypeIdentifierName(type)}.cs",
-                    stringWriter.ToString()
-                );
-            }
-        );
+        GenerateWriteMappers(initContext, mappersPipeline);
     }
 
-    private static bool IsQueryInvocation(SyntaxNode node)
-    {
-        return node
-            is InvocationExpressionSyntax
-            {
-                Expression: MemberAccessExpressionSyntax
-                {
-                    Name: GenericNameSyntax
-                    {
-                        Identifier.ValueText: "Query" or "QuerySingle" or "QuerySingleOrDefault",
-                        TypeArgumentList.Arguments.Count: 1
-                    }
-                }
-            };
-    }
-
-    private bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
+    private static bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
         FindAllReadTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
 
     private static bool IsAccessible(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass)
@@ -316,7 +282,7 @@ public partial class ReaderGenerator : IIncrementalGenerator
         };
     }
 
-    private IEnumerable<ITypeSymbol> FindAllReadTypes(ITypeSymbol type)
+    private static IEnumerable<ITypeSymbol> FindAllReadTypes(ITypeSymbol type)
     {
         yield return type;
 
@@ -364,68 +330,6 @@ public partial class ReaderGenerator : IIncrementalGenerator
         return type.Name;
     }
 
-    private static string GetTypeIdentifierName(ITypeSymbol type)
-    {
-        var baseName = GetBaseName(type);
-
-        if (type.ContainingType != null)
-        {
-            return GetTypeIdentifierName(type.ContainingType) + baseName;
-        }
-
-        return baseName;
-
-        static string GetBaseName(ITypeSymbol type) =>
-            type switch
-            {
-                INamedTypeSymbol { Name: "Nullable" } nullableType => "Nullable"
-                    + GetBaseName(nullableType.TypeArguments[0]),
-
-                INamedTypeSymbol { IsTupleType: true } tupleType => string.Join(
-                    "",
-                    tupleType.TypeArguments.Select(GetBaseName)
-                ),
-
-                _ => string.Join(
-                    "",
-                    type.ToDisplayParts(SymbolDisplayFormat.MinimallyQualifiedFormat)
-                        .Select(x => x.Symbol?.Name)
-                        .Where(x => !string.IsNullOrEmpty(x))
-                ),
-            };
-    }
-
-    private static string GetNotNullableObjectReaderDescriptorFieldName(ITypeSymbol type) =>
-        "NotNullable" + GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
-
-    private static string GetObjectReaderDescriptorFieldName(ITypeSymbol type) =>
-        GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
-
-    private static string GetObjectReaderDescriptorFieldName(string typeIdentifierName) =>
-        $"{typeIdentifierName}ReaderDescriptor";
-
-    private static string GetReaderVariableName(ITypeSymbol usedType)
-    {
-        var typeIdentifierName = GetTypeIdentifierName(usedType);
-        return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
-    }
-
-    private void WriteReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
-    {
-        if (BuildInDirectlyMappedTypes.Contains(type.Name))
-        {
-            sourceWriter.Write("reader.Get");
-            sourceWriter.Write(GetReaderGetSuffix(type));
-            sourceWriter.Write("OrNull(ordinalReader.Read()");
-            sourceWriter.Write(")");
-        }
-        else
-        {
-            sourceWriter.Write(GetReaderVariableName(type));
-            sourceWriter.Write(".Read(reader, ordinalReader)");
-        }
-    }
-
     private static void WriteCreateReadMethodEnd(IndentedTextWriter sourceWriter)
     {
         sourceWriter.Indent--;
@@ -451,15 +355,6 @@ public partial class ReaderGenerator : IIncrementalGenerator
 
     private static bool IsBuildIn(ITypeSymbol readTypeType) =>
         BuildInTypes.Contains(readTypeType.Name);
-
-    private string GetReaderGetSuffix(ITypeSymbol type) =>
-        type switch
-        {
-            { Name: "Nullable" } and INamedTypeSymbol namedTypeSymbol => namedTypeSymbol
-                .TypeArguments[0]
-                .Name,
-            _ => type.Name,
-        };
 
     private class MappersClass
     {

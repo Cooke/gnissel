@@ -3,7 +3,7 @@ using Microsoft.CodeAnalysis;
 
 namespace Cooke.Gnissel.SourceGeneration;
 
-public partial class ReaderGenerator
+public partial class Generator
 {
     private void WriteReaderBody(
         ITypeSymbol type,
@@ -170,4 +170,35 @@ public partial class ReaderGenerator
             sourceWriter.WriteLine(";");
         }
     }
+
+    private static string GetReaderVariableName(ITypeSymbol usedType)
+    {
+        var typeIdentifierName = GetTypeIdentifierName(usedType);
+        return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
+    }
+
+    private static void WriteReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    {
+        if (BuildInDirectlyMappedTypes.Contains(type.Name))
+        {
+            sourceWriter.Write("reader.Get");
+            sourceWriter.Write(GetReaderGetSuffix(type));
+            sourceWriter.Write("OrNull(ordinalReader.Read()");
+            sourceWriter.Write(")");
+        }
+        else
+        {
+            sourceWriter.Write(GetReaderVariableName(type));
+            sourceWriter.Write(".Read(reader, ordinalReader)");
+        }
+    }
+
+    private static string GetReaderGetSuffix(ITypeSymbol type) =>
+        type switch
+        {
+            { Name: "Nullable" } and INamedTypeSymbol namedTypeSymbol => namedTypeSymbol
+                .TypeArguments[0]
+                .Name,
+            _ => type.Name,
+        };
 }
