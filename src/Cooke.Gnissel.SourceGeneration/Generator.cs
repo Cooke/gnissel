@@ -166,7 +166,7 @@ public partial class Generator : IIncrementalGenerator
                 WritePartialReadMappersClassStart(mappersClass, sourceWriter);
 
                 sourceWriter.WriteLine(
-                    "public static ImmutableArray<IObjectReaderDescriptor> GetReadDescriptors() => ["
+                    "public static ImmutableArray<IObjectReaderDescriptor> GetDescriptors() => ["
                 );
                 sourceWriter.Indent++;
 
@@ -211,7 +211,7 @@ public partial class Generator : IIncrementalGenerator
                 sourceWriter.WriteLine();
 
                 sourceWriter.WriteLine(
-                    "public static readonly ImmutableArray<IObjectReaderDescriptor> AllDescriptors;"
+                    "public static readonly ImmutableArray<IObjectMapperDescriptor> AllDescriptors;"
                 );
                 sourceWriter.WriteLine();
                 sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
@@ -219,8 +219,8 @@ public partial class Generator : IIncrementalGenerator
                 sourceWriter.WriteLine("AllDescriptors = [");
                 sourceWriter.Indent++;
 
-                sourceWriter.WriteLine("..GetReadDescriptors(),");
-                sourceWriter.WriteLine("..GetWriteDescriptors()");
+                sourceWriter.WriteLine("..ReadMappers.GetDescriptors(),");
+                sourceWriter.WriteLine("..WriteMappers.GetDescriptors()");
 
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("];");

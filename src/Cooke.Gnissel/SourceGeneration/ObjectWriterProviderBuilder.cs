@@ -28,7 +28,14 @@ internal class DictionaryObjectWriterProvider(IImmutableDictionary<Type, IObject
     public ObjectWriter<T> Get<T>() =>
         writers.TryGetValue(typeof(T), out var writer)
             ? (ObjectWriter<T>)writer
-            : throw new InvalidOperationException($"No writer found for type {typeof(T)}");
+            : DefaultObjectWriter<T>.Instance;
+
+    private static class DefaultObjectWriter<T>
+    {
+        public static readonly ObjectWriter<T> Instance = new(
+            (value, parameterWriter) => parameterWriter.Write(value)
+        );
+    }
 }
 
 public class ObjectWriterProviderBuilder
@@ -42,19 +49,19 @@ public class ObjectWriterProviderBuilder
 
     private readonly Dictionary<Type, IObjectWriterDescriptor> _descriptors = new();
 
-    private readonly ImmutableDictionary<Type, IObjectWriter>.Builder _readers =
+    private readonly ImmutableDictionary<Type, IObjectWriter>.Builder _writers =
         ImmutableDictionary.CreateBuilder<Type, IObjectWriter>();
 
     public IObjectWriterProvider Build(IDbAdapter adapter)
     {
-        var provider = new InnerProvider(_readers, _descriptors, adapter);
+        var provider = new InnerProvider(_writers, _descriptors, adapter);
         var createContext = new ObjectWriterCreateContext(provider, provider, adapter);
         foreach (var (type, descriptor) in _descriptors)
         {
-            _readers.TryAdd(type, descriptor.Create(createContext));
+            _writers.TryAdd(type, descriptor.Create(createContext));
         }
 
-        return new DictionaryObjectWriterProvider(_readers.ToImmutable());
+        return new DictionaryObjectWriterProvider(_writers.ToImmutable());
     }
 
     public void TryAdd(IObjectWriterDescriptor descriptor) =>

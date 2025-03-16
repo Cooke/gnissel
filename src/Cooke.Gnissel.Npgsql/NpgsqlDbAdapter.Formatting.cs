@@ -34,6 +34,7 @@ public partial class NpgsqlDbAdapter
         var sb = new StringBuilder(estimatedQueryLength);
 
         var parameterWriter = new ListParameterWriter(options, numParameters);
+        var mappingParameterWriter = new MappingParameterWriter(parameterWriter, options);
         foreach (var fragment in sql.Fragments)
         {
             switch (fragment)
@@ -45,7 +46,7 @@ public partial class NpgsqlDbAdapter
                 case Sql.Parameter p:
                     sb.Append('$');
                     sb.Append(parameterWriter.Parameters.Count + 1);
-                    p.WriteParameter(parameterWriter);
+                    p.WriteParameter(mappingParameterWriter);
                     break;
 
                 case Sql.Identifier { Value: var identifier }:
@@ -94,7 +95,7 @@ public partial class NpgsqlDbAdapter
             Parameters.Add(options.CreateParameter(value, dbType));
     }
 
-    private class ConverterParameterWriter(IParameterWriter parameterWriter, DbOptions dbOptions)
+    private class MappingParameterWriter(IParameterWriter parameterWriter, DbOptions dbOptions)
         : IParameterWriter
     {
         public void Write<T>(T value, string? dbType = null) =>
