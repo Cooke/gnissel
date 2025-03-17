@@ -121,7 +121,7 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public static readonly ObjectReaderDescriptor<");
+        sourceWriter.Write("private static readonly ObjectReaderDescriptor<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
         sourceWriter.Write(GetObjectReaderDescriptorFieldName(type));

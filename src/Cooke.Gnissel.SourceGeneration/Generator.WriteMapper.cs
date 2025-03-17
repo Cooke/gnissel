@@ -204,7 +204,7 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public static readonly WriteMapperDescriptor<");
+        sourceWriter.Write("private static readonly WriteMapperDescriptor<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
         sourceWriter.Write(GetWriteMapperDescriptorFieldName(type));

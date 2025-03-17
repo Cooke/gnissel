@@ -39,7 +39,34 @@ public partial class Generator
         }
         else
         {
-            sourceWriter.WriteLine("parameterWriter.Write(value);");
+            var props = type.GetMembers()
+                .OfType<IPropertySymbol>()
+                .Where(x => x.DeclaredAccessibility == Accessibility.Public && !x.IsStatic)
+                .ToArray();
+
+            if (type.IsReferenceType)
+            {
+                sourceWriter.WriteLine("if (value is null)");
+                sourceWriter.WriteLine("{");
+                sourceWriter.Indent++;
+                foreach (var prop in props)
+                {
+                    sourceWriter.Write("parameterWriter.Write<");
+                    sourceWriter.Write(prop.Type.ToDisplayString());
+                    sourceWriter.WriteLine("?>(null);");
+                }
+                sourceWriter.WriteLine("return;");
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("}");
+                sourceWriter.WriteLine();
+            }
+
+            foreach (var prop in props)
+            {
+                sourceWriter.Write("parameterWriter.Write(value.");
+                sourceWriter.Write(prop.Name);
+                sourceWriter.WriteLine(");");
+            }
         }
     }
 }
