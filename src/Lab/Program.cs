@@ -1,7 +1,13 @@
 ﻿using Cooke.Gnissel;
 using Cooke.Gnissel.Typed;
+using Gnissel.SourceGeneration;
 
-var dbContext = new MyDbContext(null!, ObjectReaders.Descriptors);
+var mappers = new DbMappers
+{
+    Readers = new DbMappers.DbReaders() { UserReader = new ObjectReader<User?>(null!, null!) },
+};
+
+var dbContext = new MyDbContext(new DbOptions(null!, mappers));
 
 await dbContext.Users.Select(x => new { x.Name, x.Address }).FirstOrDefault().ExecuteAsync();
 
@@ -38,7 +44,10 @@ public enum UserType
     User,
 }
 
-[DbMappers(EnumMappingTechnique = MappingTechnique.AsIs)]
-[DbMap(typeof(AnotherType), Technique = MappingTechnique.AsIs)]
-[DbMap(typeof(UserType))]
-internal partial class ObjectReaders { }
+namespace Gnissel.SourceGeneration
+{
+    [DbMappers(EnumMappingTechnique = MappingTechnique.AsIs)]
+    [DbMap(typeof(AnotherType), Technique = MappingTechnique.AsIs)]
+    [DbMap(typeof(UserType))]
+    internal partial class DbMappers { }
+}

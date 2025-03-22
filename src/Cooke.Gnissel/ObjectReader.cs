@@ -26,18 +26,28 @@ public class OrdinalReader(int[] ordinals)
 
 public class ObjectReader<TOut>(
     ObjectReaderFunc<TOut> read,
-    ImmutableArray<ReadDescriptor> readDescriptors
+    Func<ImmutableArray<ReadDescriptor>> readDescriptors
 ) : IObjectReader
 {
     public ObjectReaderFunc<TOut> Read { get; } = read;
 
-    public ImmutableArray<ReadDescriptor> ReadDescriptors { get; } = readDescriptors;
+    public ImmutableArray<ReadDescriptor> ReadDescriptors { get; } = readDescriptors();
 
     public Type ObjectType => typeof(TOut);
 }
 
-public abstract record ReadDescriptor;
+public abstract record ReadDescriptor
+{
+    public abstract ReadDescriptor WithParent(string parent);
+}
 
-public record NextOrdinalReadDescriptor : ReadDescriptor;
+public record NextOrdinalReadDescriptor : ReadDescriptor
+{
+    public override ReadDescriptor WithParent(string parent) => new NameReadDescriptor(parent);
+}
 
-public record NameReadDescriptor(string Name) : ReadDescriptor;
+public record NameReadDescriptor(string Name) : ReadDescriptor
+{
+    public override ReadDescriptor WithParent(string parent) =>
+        new NameReadDescriptor(parent + "_" + Name);
+}
