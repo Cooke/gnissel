@@ -26,12 +26,21 @@ public class OrdinalReader(int[] ordinals)
 
 public class ObjectReader<TOut>(
     ObjectReaderFunc<TOut> read,
-    Func<ImmutableArray<ReadDescriptor>> readDescriptors
+    Func<ImmutableArray<ReadDescriptor>> readDescriptorsFunc
 ) : IObjectReader
 {
+    private ImmutableArray<ReadDescriptor>? _readDescriptors;
+    
     public ObjectReaderFunc<TOut> Read { get; } = read;
 
-    public ImmutableArray<ReadDescriptor> ReadDescriptors { get; } = readDescriptors();
+    public ImmutableArray<ReadDescriptor> ReadDescriptors
+    {
+        get
+        {
+            _readDescriptors ??= readDescriptorsFunc();
+            return _readDescriptors.Value;
+        }
+    }
 
     public Type ObjectType => typeof(TOut);
 }

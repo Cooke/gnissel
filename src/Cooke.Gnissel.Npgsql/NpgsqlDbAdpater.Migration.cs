@@ -3,7 +3,6 @@ using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Microsoft.Extensions.Logging;
-using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
@@ -88,7 +87,7 @@ public partial class NpgsqlDbAdapter
         public ObjectReader<TOut> Get<TOut>() =>
             new(
                 (reader, ordinalReader) => reader.GetFieldValue<TOut>(ordinalReader.Read()),
-                [new NextOrdinalReadDescriptor()]
+                () => [new NextOrdinalReadDescriptor()]
             );
     }
 

@@ -3,7 +3,6 @@
 using System.Data.Common;
 using Cooke.Gnissel.Mapping;
 using Cooke.Gnissel.Services;
-using Cooke.Gnissel.SourceGeneration;
 
 #endregion
 

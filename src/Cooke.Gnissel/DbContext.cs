@@ -3,6 +3,7 @@
 using System.Data.Common;
 using System.Diagnostics.Contracts;
 using Cooke.Gnissel.Internals;
+using Cooke.Gnissel.Mapping;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 
@@ -17,9 +18,9 @@ public class DbContext(DbOptions dbOptions)
 
     public DbContext(
         IDbAdapter adapter,
-        IReadOnlyCollection<IObjectMapperDescriptor> objectMapperDescriptors
+        IMapperProvider mapperProvider
     )
-        : this(new DbOptions(adapter, objectMapperDescriptors)) { }
+        : this(new DbOptions(adapter, mapperProvider)) { }
 
     [Pure]
     public Query<TOut> Query<TOut>(Sql sql) =>
