@@ -13,7 +13,7 @@ public partial class Generator
     {
         if (IsBuildIn(type))
         {
-            WriteGetValue(type, sourceWriter);
+            GenerateGetValue(type, sourceWriter);
         }
         else if (
             type is INamedTypeSymbol { EnumUnderlyingType: not null and var underlyingEnumType }
@@ -171,11 +171,7 @@ public partial class Generator
         }
     }
 
-    private static string GetReaderVariableName(ITypeSymbol usedType)
-    {
-        var typeIdentifierName = GetTypeIdentifierName(usedType);
-        return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Reader";
-    }
+    private static string GetReaderPropertyName(ITypeSymbol usedType) => $"Read{GetTypeIdentifierName(usedType)}";
 
     private static void WriteReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
@@ -188,7 +184,7 @@ public partial class Generator
         }
         else
         {
-            sourceWriter.Write(GetReaderVariableName(type));
+            sourceWriter.Write(GetReaderPropertyName(type));
             sourceWriter.Write(".Read(reader, ordinalReader)");
         }
     }

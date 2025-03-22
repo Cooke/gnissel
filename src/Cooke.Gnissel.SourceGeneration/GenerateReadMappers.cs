@@ -10,22 +10,15 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("private static ObjectReaderFunc<");
+        sourceWriter.Write("private ");
         sourceWriter.Write(type.ToDisplayString());
-        sourceWriter.Write("> ");
-        sourceWriter.Write(GetCreateNotNullableReadMethodName(type));
-        sourceWriter.WriteLine("(ObjectReaderCreateContext context)");
+        sourceWriter.Write(" ");
+        sourceWriter.Write(GetReadNotNullableMethodName(type));
+        sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader)");
         sourceWriter.WriteLine("{");
         sourceWriter.Indent++;
 
-        sourceWriter.Write("var ");
-        sourceWriter.Write(GetReaderVariableName(type));
-        sourceWriter.Write(" = context.ReaderProvider.Get<");
-        WriteTypeNameEnsureNullable(sourceWriter, type);
-        sourceWriter.WriteLine(">();");
-
-        sourceWriter.Write("return (reader, ordinalReader) => ");
-        sourceWriter.Write(GetReaderVariableName(type));
+        sourceWriter.Write(GetReaderPropertyName(type));
         sourceWriter.WriteLine(".Read(reader, ordinalReader).Value;");
 
         sourceWriter.Indent--;
@@ -35,32 +28,25 @@ public partial class Generator
 
     private static void WriteReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
-        sourceWriter.Write("private static readonly ObjectReaderMetadata ");
-        sourceWriter.Write(GetReaderMetadataName(type));
+        sourceWriter.Write("private ImmutableArray<ReadDescriptor> ");
+        sourceWriter.Write(GetCreateReaderDescriptorsName(type));
+        sourceWriter.WriteLine(" => [");
+        sourceWriter.Indent++;
         if (IsBuildIn(type) || type.TypeKind == TypeKind.Enum)
         {
-            sourceWriter.WriteLine(" = new NextOrdinalObjectReaderMetadata();");
+            sourceWriter.WriteLine("new NextOrdinalReadDescriptor()");
         }
         else if (type.IsTupleType)
         {
-            sourceWriter.WriteLine(" = new MultiObjectReaderMetadata([");
-            sourceWriter.Indent++;
             var ctor = GetCtor(type);
             for (var i = 0; i < ctor.Parameters.Length; i++)
             {
-                sourceWriter.Write("new NestedObjectReaderMetadata(typeof(");
-                sourceWriter.Write(
-                    ctor.Parameters[i].Type.ToDisplayString(NullableFlowState.NotNull)
-                );
-                sourceWriter.Write("))");
+                WriteSubReaderDescriptor(ctor.Parameters[i].Type, ctor.Parameters[i].Name);
                 if (i < ctor.Parameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
                 }
             }
-
-            sourceWriter.Indent--;
-            sourceWriter.WriteLine("]);");
         }
         else
         {
@@ -75,13 +61,10 @@ public partial class Generator
                 )
             )
             {
-                sourceWriter.WriteLine(" = new NextOrdinalObjectReaderMetadata();");
+                sourceWriter.WriteLine("new NextOrdinalObjectReadeDescriptor()");
             }
             else
             {
-                sourceWriter.WriteLine(" = new MultiObjectReaderMetadata([");
-                sourceWriter.Indent++;
-
                 var newArgs = ctor
                     .Parameters.Select(x => new { x.Name, x.Type })
                     .Concat(initializeProperties.Select(x => new { x.Name, x.Type }))
@@ -89,65 +72,51 @@ public partial class Generator
 
                 for (int i = 0; i < newArgs.Length; i++)
                 {
-                    var arg = newArgs[i];
-                    sourceWriter.Write("new NameObjectReaderMetadata(\"");
-                    sourceWriter.Write(arg.Name);
-                    sourceWriter.Write("\"");
-                    if (!BuildInDirectlyMappedTypes.Contains(arg.Type.Name))
-                    {
-                        sourceWriter.Write(", new NestedObjectReaderMetadata(typeof(");
-                        sourceWriter.Write(arg.Type.ToDisplayString(NullableFlowState.NotNull));
-                        sourceWriter.Write("))");
-                    }
-
-                    sourceWriter.Write(")");
-
+                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name);;
                     if (i < newArgs.Length - 1)
                     {
                         sourceWriter.WriteLine(",");
                     }
                 }
-
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("]);");
             }
         }
 
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("];");
         sourceWriter.WriteLine();
+
+        void WriteSubReaderDescriptor(ITypeSymbol typeSymbol, string name)
+        {
+            sourceWriter.Write("..");
+            sourceWriter.Write(GetReaderPropertyName(typeSymbol));
+            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(\"");
+            sourceWriter.Write(name);
+            sourceWriter.WriteLine("\")),");
+        }
     }
 
-    private static void WriteObjectReaderDescriptorField(
+    private static void WriteObjectReaderProperty(
         IndentedTextWriter sourceWriter,
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("private static readonly ObjectReaderDescriptor<");
+        sourceWriter.Write("public ObjectReader<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
-        sourceWriter.Write(GetObjectReaderDescriptorFieldName(type));
-        sourceWriter.Write(" = new(");
-        sourceWriter.Write(GetCreateReadMethodName(type));
-        sourceWriter.Write(", ");
-        sourceWriter.Write(GetReaderMetadataName(type));
-        sourceWriter.WriteLine(");");
-        sourceWriter.WriteLine();
+        sourceWriter.Write(GetObjectReaderPropertyName(type));
+        sourceWriter.WriteLine(";");
     }
 
-    private static void WriteNotNullableObjectReaderDescriptorField(
+    private static void WriteNotNullableObjectReaderProperty(
         IndentedTextWriter sourceWriter,
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public static readonly ObjectReaderDescriptor<");
+        sourceWriter.Write("public ObjectReader<");
         sourceWriter.Write(type.ToDisplayString());
         sourceWriter.Write("> ");
-        sourceWriter.Write(GetNotNullableObjectReaderDescriptorFieldName(type));
-        sourceWriter.Write(" = new(");
-        sourceWriter.Write(GetCreateNotNullableReadMethodName(type));
-        sourceWriter.Write(", ");
-        sourceWriter.Write(GetReaderMetadataName(type));
-        sourceWriter.WriteLine(");");
-        sourceWriter.WriteLine();
+        sourceWriter.Write(GetNotNullableObjectReaderPropertyName(type));
+        sourceWriter.Write(";");
     }
 
     private static void WriteCreateReadMethodStart(
@@ -155,50 +124,21 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("private static ObjectReaderFunc<");
+        sourceWriter.Write("private ");
         WriteTypeNameEnsureNullable(sourceWriter, type);
-        sourceWriter.Write("> ");
-        sourceWriter.Write(GetCreateReadMethodName(type));
-        sourceWriter.WriteLine("(ObjectReaderCreateContext context)");
-        sourceWriter.WriteLine("{");
-        sourceWriter.Indent++;
-
-        if (!IsBuildIn(type))
-        {
-            var ctor = GetCtor(type);
-            var typeSymbols = ctor
-                .Parameters.Select(x => x.Type)
-                .Where(x => !BuildInDirectlyMappedTypes.Contains(x.Name))
-                .Distinct(SymbolEqualityComparer.Default)
-                .OfType<ITypeSymbol>()
-                .ToArray();
-            foreach (var usedType in typeSymbols)
-            {
-                sourceWriter.Write("var ");
-                sourceWriter.Write(GetReaderVariableName(usedType));
-                sourceWriter.Write(" = context.ReaderProvider.Get<");
-                WriteTypeNameEnsureNullable(sourceWriter, usedType);
-                sourceWriter.WriteLine(">();");
-            }
-
-            if (typeSymbols.Any())
-            {
-                sourceWriter.WriteLine();
-            }
-        }
-
-        sourceWriter.WriteLine("return (reader, ordinalReader) =>");
-        sourceWriter.WriteLine("{");
+        sourceWriter.Write(" ");
+        sourceWriter.Write(GetReadMethodName(type));
+        sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader) {");
         sourceWriter.Indent++;
     }
 
-    private static string GetCreateReadMethodName(ITypeSymbol type) =>
-        $"Create{GetTypeIdentifierName(type)}ReadFunc";
+    private static string GetReadMethodName(ITypeSymbol type) =>
+        $"Read{GetTypeIdentifierName(type)}";
 
-    private static string GetCreateNotNullableReadMethodName(ITypeSymbol type) =>
-        $"CreateNotNullable{GetTypeIdentifierName(type)}ReadFunc";
+    private static string GetReadNotNullableMethodName(ITypeSymbol type) =>
+        $"ReadNotNull{GetTypeIdentifierName(type)}";
 
-    private static void WriteGetValue(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    private static void GenerateGetValue(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
         if (type.IsValueType)
         {
@@ -242,7 +182,7 @@ public partial class Generator
     )
     {
         WritePartialMappersClassStart(mappersClass, sourceWriter);
-        sourceWriter.WriteLine("public static partial class ReadMappers {");
+        sourceWriter.WriteLine("public partial class DbReaders {");
         sourceWriter.Indent++;
     }
 
@@ -341,12 +281,12 @@ public partial class Generator
             _ => throw new ArgumentOutOfRangeException(),
         };
 
-    private static string GetNotNullableObjectReaderDescriptorFieldName(ITypeSymbol type) =>
-        "NotNullable" + GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
+    private static string GetNotNullableObjectReaderPropertyName(ITypeSymbol type) =>
+        "NotNullable" + GetObjectReaderPropertyName(GetTypeIdentifierName(type));
 
-    private static string GetObjectReaderDescriptorFieldName(ITypeSymbol type) =>
-        GetObjectReaderDescriptorFieldName(GetTypeIdentifierName(type));
+    private static string GetObjectReaderPropertyName(ITypeSymbol type) =>
+        GetObjectReaderPropertyName(GetTypeIdentifierName(type));
 
-    private static string GetObjectReaderDescriptorFieldName(string typeIdentifierName) =>
-        $"{typeIdentifierName}ReaderDescriptor";
+    private static string GetObjectReaderPropertyName(string typeIdentifierName) =>
+        $"{typeIdentifierName}Reader";
 }

@@ -134,11 +134,11 @@ public partial class Generator : IIncrementalGenerator
                 WritePartialReadMappersClassStart(mappersClass, sourceWriter);
                 sourceWriter.WriteLine();
                 WriteReaderMetadata(sourceWriter, type);
-                WriteObjectReaderDescriptorField(sourceWriter, type);
+                WriteObjectReaderProperty(sourceWriter, type);
 
                 if (type.IsValueType)
                 {
-                    WriteNotNullableObjectReaderDescriptorField(sourceWriter, type);
+                    WriteNotNullableObjectReaderProperty(sourceWriter, type);
                     WriteNotNullableReadMethod(sourceWriter, type);
                 }
 
@@ -163,23 +163,60 @@ public partial class Generator : IIncrementalGenerator
                 var mappersClass = mapperWithTypes.mappersClass;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReadMappersClassStart(mappersClass, sourceWriter);
-
+                WritePartialMappersClassStart(mappersClass, sourceWriter);
+                
+                sourceWriter.WriteLine("public DbReaders Readers { get; init; } = new DbReaders();");
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public partial class DbReaders {");
+                sourceWriter.Indent++;
+                
+                sourceWriter.WriteLine("private IObjectReaderProvider? _readerProvider;");
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public DbReaders() { ");
+                sourceWriter.Indent++;
+                for (var index = 0; index < types.Length; index++)
+                {
+                    var type = types[index];
+                    sourceWriter.Write(GetObjectReaderPropertyName(type));
+                    sourceWriter.Write(" = new ObjectReader<");
+                    WriteTypeNameEnsureNullable(sourceWriter, type);
+                    sourceWriter.Write(">");
+                    sourceWriter.Write(GetReadMethodName(type));
+                    sourceWriter.Write(",");
+                    sourceWriter.Write(GetCreateReaderDescriptorsName(type));
+                    sourceWriter.WriteLine(");");
+                    
+                    if (type.IsValueType)
+                    {
+                        sourceWriter.Write(GetNotNullableObjectReaderPropertyName(type));
+                        sourceWriter.Write(" = new ObjectReader<");
+                        sourceWriter.Write(type.ToDisplayString());
+                        sourceWriter.Write(">");
+                        sourceWriter.Write(GetReadMethodName(type));
+                        sourceWriter.Write(",");
+                        sourceWriter.Write(GetCreateReaderDescriptorsName(type));
+                        sourceWriter.WriteLine(");");
+                    }
+                }
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("}");
+                sourceWriter.WriteLine();
+                
                 sourceWriter.WriteLine(
-                    "public static ImmutableArray<IObjectReaderDescriptor> GetDescriptors() => ["
+                    "public static ImmutableArray<IObjectReader> GetAllReaders() => ["
                 );
                 sourceWriter.Indent++;
 
                 for (var index = 0; index < types.Length; index++)
                 {
                     var type = types[index];
-                    sourceWriter.Write("ReadMappers.");
-                    sourceWriter.Write(GetObjectReaderDescriptorFieldName(type));
+                    sourceWriter.Write(GetObjectReaderPropertyName(type));
                     if (type.IsValueType)
                     {
                         sourceWriter.WriteLine(",");
-                        sourceWriter.Write("ReadMappers.");
-                        sourceWriter.Write(GetNotNullableObjectReaderDescriptorFieldName(type));
+                        sourceWriter.Write(GetNotNullableObjectReaderPropertyName(type));
                     }
 
                     if (index < types.Length - 1)
@@ -187,9 +224,20 @@ public partial class Generator : IIncrementalGenerator
                         sourceWriter.WriteLine(",");
                     }
                 }
-
+                
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("];");
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public ObjectReader<TOut> Get<TOut>()");
+                sourceWriter.WriteLine("{");
+                sourceWriter.Indent++;
+                sourceWriter.WriteLine(
+                    "_readerProvider ??= DictionaryObjectReaderProvider.From(GetAllReaders());"
+                );
+                sourceWriter.WriteLine("return _readerProvider.Get<TOut>();");
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("}");
 
                 WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
                 sourceWriter.Flush();
@@ -201,42 +249,42 @@ public partial class Generator : IIncrementalGenerator
             }
         );
 
-        initContext.RegisterImplementationSourceOutput(
-            mappersPipeline,
-            (context, mappersClass) =>
-            {
-                var stringWriter = new StringWriter();
-                var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialMappersClassStart(mappersClass, sourceWriter);
-                sourceWriter.WriteLine();
-
-                sourceWriter.WriteLine(
-                    "public static readonly ImmutableArray<IObjectMapperDescriptor> AllDescriptors;"
-                );
-                sourceWriter.WriteLine();
-                sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
-                sourceWriter.Indent++;
-                sourceWriter.WriteLine("AllDescriptors = [");
-                sourceWriter.Indent++;
-
-                sourceWriter.WriteLine("..ReadMappers.GetDescriptors(),");
-                sourceWriter.WriteLine("..WriteMappers.GetDescriptors()");
-
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("];");
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("}");
-                sourceWriter.WriteLine();
-
-                WritePartialMappersClassEnd(mappersClass, sourceWriter);
-                sourceWriter.Flush();
-
-                context.AddSource(
-                    $"{GetSourceName(mappersClass.Symbol)}.cs",
-                    stringWriter.ToString()
-                );
-            }
-        );
+        // initContext.RegisterImplementationSourceOutput(
+        //     mappersPipeline,
+        //     (context, mappersClass) =>
+        //     {
+        //         var stringWriter = new StringWriter();
+        //         var sourceWriter = new IndentedTextWriter(stringWriter);
+        //         WritePartialMappersClassStart(mappersClass, sourceWriter);
+        //         sourceWriter.WriteLine();
+        //
+        //         sourceWriter.WriteLine(
+        //             "public static readonly ImmutableArray<IObjectMapperDescriptor> AllDescriptors;"
+        //         );
+        //         sourceWriter.WriteLine();
+        //         sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
+        //         sourceWriter.Indent++;
+        //         sourceWriter.WriteLine("AllDescriptors = [");
+        //         sourceWriter.Indent++;
+        //
+        //         sourceWriter.WriteLine("..ReadMappers.GetDescriptors(),");
+        //         sourceWriter.WriteLine("..WriteMappers.GetDescriptors()");
+        //
+        //         sourceWriter.Indent--;
+        //         sourceWriter.WriteLine("];");
+        //         sourceWriter.Indent--;
+        //         sourceWriter.WriteLine("}");
+        //         sourceWriter.WriteLine();
+        //
+        //         WritePartialMappersClassEnd(mappersClass, sourceWriter);
+        //         sourceWriter.Flush();
+        //
+        //         context.AddSource(
+        //             $"{GetSourceName(mappersClass.Symbol)}.cs",
+        //             stringWriter.ToString()
+        //         );
+        //     }
+        // );
 
         GenerateWriteMappers(initContext, mappersPipeline);
     }
@@ -309,10 +357,7 @@ public partial class Generator : IIncrementalGenerator
         }
     }
 
-    private static string GetReaderMetadataName(ITypeSymbol type)
-    {
-        return $"{GetTypeIdentifierName(AdjustNulls(type))}ReaderMetadata";
-    }
+    private static string GetCreateReaderDescriptorsName(ITypeSymbol type) => $"Create{GetTypeIdentifierName(AdjustNulls(type))}Descriptors";
 
     private static string? GetSourceName(ITypeSymbol? type)
     {
