@@ -4,7 +4,7 @@ using Gnissel.SourceGeneration;
 
 var mappers = new DbMappers
 {
-    Readers = new DbMappers.DbReaders() { UserReader = new ObjectReader<User?>(null!, null!) },
+    Readers = new DbMappers.DbReaders { UserReader = new ObjectReader<User?>(null!, null!) },
 };
 
 var dbContext = new MyDbContext(new DbOptions(null!, mappers));

@@ -1,6 +1,7 @@
 #region
 
 using System.Data.Common;
+using Cooke.Gnissel.Mapping;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.SourceGeneration;
 
@@ -15,15 +16,11 @@ public partial class DbOptions(
     IDbConnector connector
 )
 {
-    public DbOptions(IDbAdapter adapter, IReadOnlyCollection<IObjectMapperDescriptor> descriptors)
+    public DbOptions(IDbAdapter adapter, IMapperProvider mapperProvider)
         : this(
             adapter,
-            new ObjectReaderProviderBuilder(descriptors.OfType<IObjectReaderDescriptor>()).Build(
-                adapter
-            ),
-            new ObjectWriterProviderBuilder(descriptors.OfType<IObjectWriterDescriptor>()).Build(
-                adapter
-            )
+            mapperProvider.ReaderProvider,
+            mapperProvider.WriterProvider
         ) { }
 
     public DbOptions(
