@@ -19,7 +19,7 @@ internal partial class DbMappers
         
         private UserType ReadNotNullUserType(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            return UserTypeReader.Read(reader, ordinalReader).Value;
+            return UserTypeReader.Read(reader, ordinalReader) ?? throw new InvalidOperationException();
         }
 
         private UserType? ReadUserType(DbDataReader reader, OrdinalReader ordinalReader)

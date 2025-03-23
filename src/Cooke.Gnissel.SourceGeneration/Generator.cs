@@ -131,21 +131,7 @@ public partial class Generator : IIncrementalGenerator
 
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialReadMappersClassStart(mappersClass, sourceWriter);
-                sourceWriter.WriteLine();
-                WriteReaderMetadata(sourceWriter, type);
-                WriteObjectReaderProperty(sourceWriter, type);
-
-                if (type.IsValueType)
-                {
-                    WriteNotNullableObjectReaderProperty(sourceWriter, type);
-                    WriteNotNullableReadMethod(sourceWriter, type);
-                }
-
-                WriteCreateReadMethodStart(sourceWriter, type);
-                WriteReaderBody(type, mappersClass, sourceWriter);
-                WriteCreateReadMethodEnd(sourceWriter);
-                WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
+                GenerateReader(mappersClass, sourceWriter, type);
                 sourceWriter.Flush();
 
                 context.AddSource(
@@ -179,9 +165,9 @@ public partial class Generator : IIncrementalGenerator
                 for (var index = 0; index < types.Length; index++)
                 {
                     var type = types[index];
-                    sourceWriter.Write(GetObjectReaderPropertyName(type));
+                    sourceWriter.Write(GetReaderPropertyName(type));
                     sourceWriter.Write(" = new ObjectReader<");
-                    WriteTypeNameEnsureNullable(sourceWriter, type);
+                    sourceWriter.Write(type.ToDisplayString());
                     sourceWriter.Write(">");
                     sourceWriter.Write(GetReadMethodName(type));
                     sourceWriter.Write(",");
@@ -190,11 +176,11 @@ public partial class Generator : IIncrementalGenerator
                     
                     if (type.IsValueType)
                     {
-                        sourceWriter.Write(GetNotNullableObjectReaderPropertyName(type));
+                        sourceWriter.Write(GetNullableReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
                         sourceWriter.Write(type.ToDisplayString());
-                        sourceWriter.Write(">");
-                        sourceWriter.Write(GetReadMethodName(type));
+                        sourceWriter.Write("?>");
+                        sourceWriter.Write(GetNullableReadMethodName(type));
                         sourceWriter.Write(",");
                         sourceWriter.Write(GetCreateReaderDescriptorsName(type));
                         sourceWriter.WriteLine(");");
@@ -212,11 +198,11 @@ public partial class Generator : IIncrementalGenerator
                 for (var index = 0; index < types.Length; index++)
                 {
                     var type = types[index];
-                    sourceWriter.Write(GetObjectReaderPropertyName(type));
+                    sourceWriter.Write(GetReaderPropertyName(type));
                     if (type.IsValueType)
                     {
                         sourceWriter.WriteLine(",");
-                        sourceWriter.Write(GetNotNullableObjectReaderPropertyName(type));
+                        sourceWriter.Write(GetNullableReaderPropertyName(type));
                     }
 
                     if (index < types.Length - 1)
@@ -288,6 +274,8 @@ public partial class Generator : IIncrementalGenerator
 
         GenerateWriteMappers(initContext, mappersPipeline);
     }
+
+    
 
     private static bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
         FindAllReadTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
@@ -375,18 +363,7 @@ public partial class Generator : IIncrementalGenerator
         return type.Name;
     }
 
-    private static void WriteCreateReadMethodEnd(IndentedTextWriter sourceWriter)
-    {
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("};");
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("}");
-    }
-
-    private static bool IsNullableValueType(ITypeSymbol type)
-    {
-        return type is { Name: "Nullable" };
-    }
+    private static bool IsNullableValueType(ITypeSymbol type) => type is { Name: "Nullable" };
 
     private static readonly IImmutableSet<string> BuildInDirectlyMappedTypes =
         ImmutableHashSet.Create("Int32", "String");

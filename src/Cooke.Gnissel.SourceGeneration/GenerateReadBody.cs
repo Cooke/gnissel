@@ -5,15 +5,43 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public partial class Generator
 {
-    private void WriteReaderBody(
+    private void GenerateReadMethod(
         ITypeSymbol type,
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter
     )
     {
+        sourceWriter.Write("private ");
+        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.Write(" ");
+        sourceWriter.Write(GetReadMethodName(type));
+        sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader) {");
+        sourceWriter.Indent++;
+
+        if (type.IsValueType)
+        {
+            sourceWriter.Write("return ");
+            sourceWriter.Write(GetNullableReaderPropertyName(type));
+            sourceWriter.Write(".Read(reader, ordinalReader) ?? throw new InvalidOperationException(\"Expected non-null value\");");
+            sourceWriter.WriteLine(";");
+        }
+        else
+        {
+            GenerateReadMethodBody(type, mappersClass, sourceWriter);
+        }
+
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
+        sourceWriter.WriteLine();
+    }
+
+    private static void GenerateReadMethodBody(ITypeSymbol type, MappersClass mappersClass, IndentedTextWriter sourceWriter)
+    {
         if (IsBuildIn(type))
         {
-            GenerateGetValue(type, sourceWriter);
+            sourceWriter.Write("return ");
+            GenerateNativeReadCall(type, sourceWriter);
+            sourceWriter.WriteLine(";");
         }
         else if (
             type is INamedTypeSymbol { EnumUnderlyingType: not null and var underlyingEnumType }
@@ -62,7 +90,7 @@ public partial class Generator
                 sourceWriter.Write("var ");
                 sourceWriter.Write(parameter.Name);
                 sourceWriter.Write(" = ");
-                WriteReadCall(parameter.Type, sourceWriter);
+                GenerateReadCall(parameter.Type, sourceWriter);
                 sourceWriter.WriteLine(";");
             }
 
@@ -71,7 +99,7 @@ public partial class Generator
                 sourceWriter.Write("var ");
                 sourceWriter.Write(property.Name);
                 sourceWriter.Write(" = ");
-                WriteReadCall(property.Type, sourceWriter);
+                GenerateReadCall(property.Type, sourceWriter);
                 sourceWriter.WriteLine(";");
             }
 
@@ -171,16 +199,12 @@ public partial class Generator
         }
     }
 
-    private static string GetReaderPropertyName(ITypeSymbol usedType) => $"Read{GetTypeIdentifierName(usedType)}";
 
-    private static void WriteReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    private static void GenerateReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
         if (BuildInDirectlyMappedTypes.Contains(type.Name))
         {
-            sourceWriter.Write("reader.Get");
-            sourceWriter.Write(GetReaderGetSuffix(type));
-            sourceWriter.Write("OrNull(ordinalReader.Read()");
-            sourceWriter.Write(")");
+            GenerateNativeReadCall(type, sourceWriter);
         }
         else
         {
@@ -189,12 +213,18 @@ public partial class Generator
         }
     }
 
-    private static string GetReaderGetSuffix(ITypeSymbol type) =>
-        type switch
+    private static void GenerateNativeReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
+    {
+        if (IsNullableValueType(type) || type.IsValueType)
         {
-            { Name: "Nullable" } and INamedTypeSymbol namedTypeSymbol => namedTypeSymbol
-                .TypeArguments[0]
-                .Name,
-            _ => type.Name,
-        };
+            sourceWriter.Write("reader.GetNullableValue<");    
+        }
+        else
+        {
+            sourceWriter.Write("reader.GetValueOrNull<");
+        }
+        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.Write(">(ordinalReader.Read()");
+        sourceWriter.Write(")");
+    }
 }
