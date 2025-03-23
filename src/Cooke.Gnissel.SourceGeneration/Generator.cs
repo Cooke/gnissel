@@ -168,7 +168,7 @@ public partial class Generator : IIncrementalGenerator
                     sourceWriter.Write(GetReaderPropertyName(type));
                     sourceWriter.Write(" = new ObjectReader<");
                     sourceWriter.Write(type.ToDisplayString());
-                    sourceWriter.Write(">");
+                    sourceWriter.Write(">(");
                     sourceWriter.Write(GetReadMethodName(type));
                     sourceWriter.Write(",");
                     sourceWriter.Write(GetCreateReaderDescriptorsName(type));
@@ -179,7 +179,7 @@ public partial class Generator : IIncrementalGenerator
                         sourceWriter.Write(GetNullableReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
                         sourceWriter.Write(type.ToDisplayString());
-                        sourceWriter.Write("?>");
+                        sourceWriter.Write("?>(");
                         sourceWriter.Write(GetNullableReadMethodName(type));
                         sourceWriter.Write(",");
                         sourceWriter.Write(GetCreateReaderDescriptorsName(type));

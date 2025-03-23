@@ -1,6 +1,6 @@
 using Cooke.Gnissel;
 using Cooke.Gnissel.Mapping;
-using Cooke.Gnissel.SourceGeneration;
+using Cooke.Gnissel.Services.Implementations;
 
 namespace Gnissel.SourceGeneration;
 

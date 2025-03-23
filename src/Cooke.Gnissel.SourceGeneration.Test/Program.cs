@@ -14,7 +14,7 @@ dbContext.Query<Address?>($"");
 dbContext.Query<(int, string, int)>($"");
 dbContext.Query<(int, string?, int)>($"");
 dbContext.Query<string>($"");
-dbContext.Query<int>($"SELECT count(*) FROM users WHERE type={"Hello"}");
+dbContext.Query<int>($"SELECT count(*) FROM users WHERE type={"Hello"} AND created_at > {DateTime.Now}");
 dbContext.Query<int?>($"");
 
 dbContext.Query<DateTime>($"");

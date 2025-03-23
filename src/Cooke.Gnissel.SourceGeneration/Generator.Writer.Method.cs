@@ -5,11 +5,51 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public partial class Generator
 {
-    private static void GenerateWriterBody(
+    private static void WriteNullableWriteMethod(IndentedTextWriter sourceWriter,
+        ITypeSymbol type, MappersClass mappersClass)
+    {
+        sourceWriter.Write("private void ");
+        sourceWriter.Write(GetNullableWriteMethodName(type));
+        sourceWriter.Write("(");
+        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.WriteLine("? value, IParameterWriter parameterWriter) {");
+        sourceWriter.Indent++;
+
+        GenerateWriteMethodBody(type, mappersClass, sourceWriter);
+
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
+    }
+    
+    private static void GenerateWriteMethod(
         ITypeSymbol type,
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter
     )
+    {
+        sourceWriter.Write("private void ");
+        sourceWriter.Write(GetWriteMethodName(type));
+        sourceWriter.Write("(");
+        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.WriteLine(" value, IParameterWriter parameterWriter) {");
+        sourceWriter.Indent++;
+
+        if (type.IsValueType)
+        {
+            sourceWriter.Write(GetNullableWriterPropertyName(type));
+            sourceWriter.WriteLine(".Write(value, parameterWriter);");
+        }
+        else
+        {
+            GenerateWriteMethodBody(type, mappersClass, sourceWriter);
+        }
+        
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
+        sourceWriter.WriteLine();
+    }
+
+    private static void GenerateWriteMethodBody(ITypeSymbol type, MappersClass mappersClass, IndentedTextWriter sourceWriter)
     {
         if (IsBuildIn(type))
         {
@@ -55,6 +95,7 @@ public partial class Generator
                     sourceWriter.Write(prop.Type.ToDisplayString());
                     sourceWriter.WriteLine("?>(null);");
                 }
+
                 sourceWriter.WriteLine("return;");
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");

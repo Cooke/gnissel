@@ -6,26 +6,6 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public partial class Generator
 {
-    private static void GenerateWriteMappersClassStart(
-        MappersClass mappersClass,
-        IndentedTextWriter sourceWriter
-    )
-    {
-        WritePartialMappersClassStart(mappersClass, sourceWriter);
-        sourceWriter.WriteLine("public static partial class WriteMappers {");
-        sourceWriter.Indent++;
-    }
-
-    private static void GenerateWriteMappersClassEnd(
-        MappersClass mappersClass,
-        IndentedTextWriter sourceWriter
-    )
-    {
-        WritePartialMappersClassEnd(mappersClass, sourceWriter);
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("}");
-    }
-
     private static void GenerateWriteMappers(
         IncrementalGeneratorInitializationContext initContext,
         IncrementalValuesProvider<MappersClass> mappersPipeline
@@ -102,21 +82,7 @@ public partial class Generator
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
 
-                GenerateWriteMappersClassStart(mappersClass, sourceWriter);
-                sourceWriter.WriteLine();
-                //GenerateWriteMapperMetadata(sourceWriter, type);
-                GenerateWriteMapperDescriptorField(sourceWriter, type);
-
-                if (type.IsValueType)
-                {
-                    WriteNotNullableWriteMapperDescriptorField(sourceWriter, type);
-                    WriteNotNullableWriteMethod(sourceWriter, type);
-                }
-
-                GenerateCreateWriteMapperMethodStart(sourceWriter, type);
-                GenerateWriterBody(type, mappersClass, sourceWriter);
-                GenerateCreateWriteMapperMethodEnd(sourceWriter);
-                GenerateWriteMappersClassEnd(mappersClass, sourceWriter);
+                GenerateWriter(mappersClass, sourceWriter, type);
                 sourceWriter.Flush();
 
                 context.AddSource(
@@ -134,23 +100,58 @@ public partial class Generator
                 var mappersClass = mapperWithTypes.mappersClass;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                GenerateWriteMappersClassStart(mappersClass, sourceWriter);
+                WritePartialMappersClassStart(mappersClass, sourceWriter);
 
+                sourceWriter.WriteLine("public DbWriters Writers { get; init; } = new DbWriters();");
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public partial class DbWriters : IObjectWriterProvider {");
+                sourceWriter.Indent++;
+                
+                sourceWriter.WriteLine("private IObjectWriterProvider? _writerProvider;");
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public DbWriters() {");
+                sourceWriter.Indent++;
+
+                for (var index = 0; index < types.Length; index++)
+                {
+                    var type = types[index];
+                    sourceWriter.Write(GetWriterPropertyName(type));
+                    sourceWriter.Write(" = new ObjectWriter<");
+                    sourceWriter.Write(type.ToDisplayString());
+                    sourceWriter.Write(">(");
+                    sourceWriter.Write(GetReadMethodName(type));
+                    sourceWriter.WriteLine(");");
+                    
+                    if (type.IsValueType)
+                    {
+                        sourceWriter.Write(GetNullableWriterPropertyName(type));
+                        sourceWriter.Write(" = new ObjectWriter<");
+                        sourceWriter.Write(type.ToDisplayString());
+                        sourceWriter.Write("?>(");
+                        sourceWriter.Write(GetNullableReadMethodName(type));
+                        sourceWriter.WriteLine(");");
+                    }
+                }
+
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("}");
+                sourceWriter.WriteLine();
+                
                 sourceWriter.WriteLine(
-                    "public static ImmutableArray<IObjectWriterDescriptor> GetDescriptors() => ["
+                    "public ImmutableArray<IObjectWriter> GetAllWriters() => ["
                 );
                 sourceWriter.Indent++;
 
                 for (var index = 0; index < types.Length; index++)
                 {
                     var type = types[index];
-                    sourceWriter.Write("WriteMappers.");
-                    sourceWriter.Write(GetWriteMapperDescriptorFieldName(type));
+                    sourceWriter.Write(GetWriterPropertyName(type));
                     if (type.IsValueType)
                     {
                         sourceWriter.WriteLine(",");
-                        sourceWriter.Write("WriteMappers.");
-                        sourceWriter.Write(GetNotNullableWriteMapperDescriptorFieldName(type));
+                        sourceWriter.Write(GetNullableWriterPropertyName(type));
                     }
 
                     if (index < types.Length - 1)
@@ -158,10 +159,21 @@ public partial class Generator
                         sourceWriter.WriteLine(",");
                     }
                 }
-
+                
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("];");
-
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public ObjectWriter<TOut> Get<TOut>()");
+                sourceWriter.WriteLine("{");
+                sourceWriter.Indent++;
+                sourceWriter.WriteLine(
+                    "_writerProvider ??= DictionaryObjectWriterProvider.From(GetAllWriters());"
+                );
+                sourceWriter.WriteLine("return _writerProvider.Get<TOut>();");
+                sourceWriter.Indent--;
+                sourceWriter.WriteLine("}");
+                
                 GenerateWriteMappersClassEnd(mappersClass, sourceWriter);
                 sourceWriter.Flush();
 
@@ -173,137 +185,86 @@ public partial class Generator
         );
     }
 
-    private static void GenerateCreateWriteMapperMethodEnd(IndentedTextWriter sourceWriter)
+    private static void GenerateWriter(MappersClass mappersClass, IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("};");
-        sourceWriter.Indent--;
-        sourceWriter.WriteLine("}");
-        sourceWriter.WriteLine();
+        GenerateWriteMappersClassStart(mappersClass, sourceWriter);
+                
+        GenerateWriteMapperProperty(sourceWriter, type);
+
+        if (type.IsValueType)
+        {
+            GenerateNullableWriterProperty(sourceWriter, type);
+        }
+
+        GenerateWriteMethod(type, mappersClass, sourceWriter);
+                
+        if (type.IsValueType)
+        {
+            WriteNullableWriteMethod(sourceWriter, type, mappersClass);
+        }
+                
+        GenerateWriteMappersClassEnd(mappersClass, sourceWriter);
     }
 
-    private static void WriteNotNullableWriteMapperDescriptorField(
+    private static void GenerateNullableWriterProperty(
         IndentedTextWriter sourceWriter,
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public static readonly WriteMapperDescriptor<");
+        sourceWriter.Write("public ObjectWriter<");
+        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.Write("?> ");
+        sourceWriter.Write(GetNullableWriterPropertyName(type));
+        sourceWriter.WriteLine(" { get; init; }");
+        sourceWriter.WriteLine();
+    }
+
+    private static void GenerateWriteMapperProperty(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type
+    )
+    {
+        sourceWriter.Write("public ObjectWriter<");
         sourceWriter.Write(type.ToDisplayString());
         sourceWriter.Write("> ");
-        sourceWriter.Write(GetNotNullableWriteMapperDescriptorFieldName(type));
-        sourceWriter.Write(" = new(");
-        sourceWriter.Write(GetCreateNotNullableWriteMethodName(type));
-        // sourceWriter.Write(", ");
-        // sourceWriter.Write(GetReaderMetadataName(type));
-        sourceWriter.WriteLine(");");
+        sourceWriter.Write(GetWriterPropertyName(type));
+        sourceWriter.WriteLine(" { get; init; }");
         sourceWriter.WriteLine();
     }
 
-    private static void GenerateWriteMapperDescriptorField(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol type
+    
+    private static void GenerateWriteMappersClassStart(
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter
     )
     {
-        sourceWriter.Write("private static readonly WriteMapperDescriptor<");
-        WriteTypeNameEnsureNullable(sourceWriter, type);
-        sourceWriter.Write("> ");
-        sourceWriter.Write(GetWriteMapperDescriptorFieldName(type));
-        sourceWriter.Write(" = new(");
-        sourceWriter.Write(GetCreateWriteMapperMethodName(type));
-        // sourceWriter.Write(", ");
-        // sourceWriter.Write(GetReaderMetadataName(type));
-        sourceWriter.WriteLine(");");
-        sourceWriter.WriteLine();
-    }
-
-    private static void GenerateCreateWriteMapperMethodStart(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol type
-    )
-    {
-        sourceWriter.Write("private static ObjectWriterFunc<");
-        WriteTypeNameEnsureNullable(sourceWriter, type);
-        sourceWriter.Write("> ");
-        sourceWriter.Write(GetCreateWriteMapperMethodName(type));
-        sourceWriter.WriteLine("(ObjectWriterCreateContext context)");
-        sourceWriter.WriteLine("{");
-        sourceWriter.Indent++;
-
-        // if (!IsBuildIn(type))
-        // {
-        //     var ctor = GetCtor(type);
-        //     var typeSymbols = ctor
-        //         .Parameters.Select(x => x.Type)
-        //         .Where(x => !BuildInDirectlyMappedTypes.Contains(x.Name))
-        //         .Distinct(SymbolEqualityComparer.Default)
-        //         .OfType<ITypeSymbol>()
-        //         .ToArray();
-        //     foreach (var usedType in typeSymbols)
-        //     {
-        //         sourceWriter.Write("var ");
-        //         sourceWriter.Write(GetWriterVariableName(usedType));
-        //         sourceWriter.Write(" = context.ReaderProvider.Get<");
-        //         WriteTypeNameEnsureNullable(sourceWriter, usedType);
-        //         sourceWriter.WriteLine(">();");
-        //     }
-        //
-        //     if (typeSymbols.Any())
-        //     {
-        //         sourceWriter.WriteLine();
-        //     }
-        // }
-
-        sourceWriter.WriteLine("return (value, parameterWriter) =>");
-        sourceWriter.WriteLine("{");
+        WritePartialMappersClassStart(mappersClass, sourceWriter);
+        sourceWriter.WriteLine("public partial class DbWriters {");
         sourceWriter.Indent++;
     }
 
-    private static void WriteNotNullableWriteMethod(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol type
+    private static void GenerateWriteMappersClassEnd(
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter
     )
     {
-        sourceWriter.Write("private static ObjectWriterFunc<");
-        sourceWriter.Write(type.ToDisplayString());
-        sourceWriter.Write("> ");
-        sourceWriter.Write(GetCreateNotNullableWriteMethodName(type));
-        sourceWriter.WriteLine("(ObjectWriterCreateContext context)");
-        sourceWriter.WriteLine("{");
-        sourceWriter.Indent++;
-
-        sourceWriter.Write("var ");
-        sourceWriter.Write(GetWriterVariableName(type));
-        sourceWriter.Write(" = context.WriterProvider.Get<");
-        WriteTypeNameEnsureNullable(sourceWriter, type);
-        sourceWriter.WriteLine(">();");
-
-        sourceWriter.Write("return (value, parameterWriter) => ");
-        sourceWriter.Write(GetWriterVariableName(type));
-        sourceWriter.WriteLine(".Write(value, parameterWriter);");
-
+        WritePartialMappersClassEnd(mappersClass, sourceWriter);
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
-        sourceWriter.WriteLine();
     }
 
-    private static string GetWriterVariableName(ITypeSymbol usedType)
-    {
-        var typeIdentifierName = GetTypeIdentifierName(usedType);
-        return char.ToLower(typeIdentifierName[0]) + typeIdentifierName.Substring(1) + "Writer";
-    }
+    private static string GetNullableWriterPropertyName(ITypeSymbol type) =>
+        $"{GetTypeIdentifierName(type)}NullableWriter";
 
-    private static string GetCreateNotNullableWriteMethodName(ITypeSymbol type) =>
-        $"CreateNotNullable{GetTypeIdentifierName(type)}WriteFunc";
+    private static string GetWriterPropertyName(ITypeSymbol type) =>
+        GetWriterPropertyName(GetTypeIdentifierName(type));
 
-    private static string GetNotNullableWriteMapperDescriptorFieldName(ITypeSymbol type) =>
-        "NotNullable" + GetWriteMapperDescriptorFieldName(GetTypeIdentifierName(type));
+    private static string GetWriterPropertyName(string typeIdentifierName) =>
+        $"{typeIdentifierName}Writer";
 
-    private static string GetWriteMapperDescriptorFieldName(ITypeSymbol type) =>
-        GetWriteMapperDescriptorFieldName(GetTypeIdentifierName(type));
-
-    private static string GetWriteMapperDescriptorFieldName(string typeIdentifierName) =>
-        $"{typeIdentifierName}WriteMapperDescriptor";
-
-    private static string GetCreateWriteMapperMethodName(ITypeSymbol type) =>
-        $"Create{GetTypeIdentifierName(type)}WriteFunc";
+    private static string GetWriteMethodName(ITypeSymbol type) =>
+        $"Write{GetTypeIdentifierName(type)}";
+    
+    private static string GetNullableWriteMethodName(ITypeSymbol type) =>
+        $"Write{GetTypeIdentifierName(type)}Nullable";
 }
