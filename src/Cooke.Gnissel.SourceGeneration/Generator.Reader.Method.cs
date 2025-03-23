@@ -13,6 +13,11 @@ public partial class Generator
     {
         sourceWriter.Write("private ");
         sourceWriter.Write(type.ToDisplayString());
+        if (type.IsReferenceType)
+        {
+            sourceWriter.Write("?");
+        }
+        
         sourceWriter.Write(" ");
         sourceWriter.Write(GetReadMethodName(type));
         sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader) {");
@@ -205,6 +210,16 @@ public partial class Generator
         if (BuildInDirectlyMappedTypes.Contains(type.Name))
         {
             GenerateNativeReadCall(type, sourceWriter);
+        }
+        else if (type is INamedTypeSymbol { Name: "Nullable" } nullableType)
+        {
+            sourceWriter.Write(GetNullableReaderPropertyName(nullableType.TypeArguments[0]));
+            sourceWriter.Write(".Read(reader, ordinalReader)");
+        }
+        else if (type.IsValueType)
+        {
+            sourceWriter.Write(GetNullableReaderPropertyName(type));
+            sourceWriter.Write(".Read(reader, ordinalReader)");
         }
         else
         {

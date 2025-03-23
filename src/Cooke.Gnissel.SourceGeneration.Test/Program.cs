@@ -4,7 +4,7 @@ using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed;
 
 var adapter = new NpgsqlDbAdapter(null!);
-var dbContext = new MyDbContext(new DbOptions(adapter, Mappers.AllDescriptors));
+var dbContext = new MyDbContext(new DbOptions(adapter, new Mappers()));
 dbContext.Query<User>($"");
 dbContext.Query<User?>($"");
 dbContext.Query<(User, Device)>($"");
