@@ -13,7 +13,7 @@ public partial class Generator
     {
         sourceWriter.Write("private ");
         sourceWriter.Write(type.ToDisplayString());
-        if (type.IsReferenceType)
+        if (type.IsReferenceType && type.NullableAnnotation != NullableAnnotation.Annotated)
         {
             sourceWriter.Write("?");
         }
