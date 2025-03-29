@@ -1,7 +1,6 @@
 #region
 
 using System.Data.Common;
-using Cooke.Gnissel.Mapping;
 using Cooke.Gnissel.Services;
 
 #endregion

@@ -1,6 +1,5 @@
 using System.Text;
 using Cooke.Gnissel.AsyncEnumerable;
-using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Xunit.Abstractions;
@@ -18,7 +17,7 @@ public class BasicTests : IDisposable
         db = new TestDbContext(
             new(
                 new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
-                [new EnumStringDbConverter()]
+                new Mappers()
             )
         );
         db.NonQuery(
@@ -487,4 +486,7 @@ public class BasicTests : IDisposable
     private record User(int Id, string Name, int Age, int? OptionalWeight = null);
 
     private record PartialUser(int Id, string Name, int Age);
+
+    [DbMappers]
+    private partial class Mappers;
 }

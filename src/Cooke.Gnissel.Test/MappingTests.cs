@@ -19,9 +19,7 @@ public partial class MappingTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(
-            new DbOptions(new NpgsqlDbAdapter(_dataSource), Mappers.AllDescriptors)
-        );
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource), new Mappers()));
 
         await _dataSource
             .CreateCommand(
@@ -99,14 +97,6 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task ClassPropertyMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
-    }
-
-    [Test]
     public async Task TupleMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
@@ -168,15 +158,6 @@ public partial class MappingTests
     }
 
     [Test]
-    [Ignore("Should warn when over fetching")]
-    public async Task NotAllValuesMapped()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<string>($"SELECT name, id FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { "Bob" }, results);
-    }
-
-    [Test]
     public async Task ComplexTypeWithTypedPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
@@ -199,6 +180,18 @@ public partial class MappingTests
         await _db.NonQuery($"INSERT INTO users (name) VALUES ({UserName.Bob})");
         var results = await _db.Query<UserName>($"SELECT name FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
+    }
+
+    [Test]
+    public async Task MapPropertyInAdditionToConstructor()
+    {
+        var user = await _db.QuerySingle<UserWithProp>($"SELECT 1 as id, 'Bob' as desc");
+        Assert.That(user, Is.EqualTo(new UserWithProp(1) { Desc = "Bob" }));
+    }
+
+    private record UserWithProp(int Id)
+    {
+        public required string Desc { get; init; }
     }
 
     private enum UserName

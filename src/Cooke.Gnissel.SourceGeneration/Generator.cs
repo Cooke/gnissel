@@ -107,7 +107,7 @@ public partial class Generator : IIncrementalGenerator
                         mappersClass,
                         types: types
                             .Where(t => IsAccessibleDeep(t, mappersClass))
-                            .SelectMany(FindAllReadTypes)
+                            .SelectMany(FindAllTypes)
                             .Select(AdjustNulls)
                             .Distinct(SymbolEqualityComparer.Default)
                             .Cast<ITypeSymbol>()
@@ -154,7 +154,10 @@ public partial class Generator : IIncrementalGenerator
                 sourceWriter.WriteLine("public DbReaders Readers { get; init; } = new DbReaders();");
                 sourceWriter.WriteLine();
                 
-                sourceWriter.WriteLine("public partial class DbReaders {");
+                sourceWriter.WriteLine("public IObjectReaderProvider ReaderProvider => Readers;");
+                sourceWriter.WriteLine();
+                
+                sourceWriter.WriteLine("public partial class DbReaders : IObjectReaderProvider {");
                 sourceWriter.Indent++;
                 
                 sourceWriter.WriteLine("private IObjectReaderProvider? _readerProvider;");
@@ -191,7 +194,7 @@ public partial class Generator : IIncrementalGenerator
                 sourceWriter.WriteLine();
                 
                 sourceWriter.WriteLine(
-                    "public static ImmutableArray<IObjectReader> GetAllReaders() => ["
+                    "public ImmutableArray<IObjectReader> GetAllReaders() => ["
                 );
                 sourceWriter.Indent++;
 
@@ -278,7 +281,7 @@ public partial class Generator : IIncrementalGenerator
     
 
     private static bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
-        FindAllReadTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
+        FindAllTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
 
     private static bool IsAccessible(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass)
     {
@@ -318,7 +321,7 @@ public partial class Generator : IIncrementalGenerator
         };
     }
 
-    private static IEnumerable<ITypeSymbol> FindAllReadTypes(ITypeSymbol type)
+    private static IEnumerable<ITypeSymbol> FindAllTypes(ITypeSymbol type)
     {
         yield return type;
 
@@ -337,7 +340,7 @@ public partial class Generator : IIncrementalGenerator
         {
             if (!BuildInDirectlyMappedTypes.Contains(t.Type.Name))
             {
-                foreach (var innerType in FindAllReadTypes(t.Type))
+                foreach (var innerType in FindAllTypes(t.Type))
                 {
                     yield return innerType;
                 }

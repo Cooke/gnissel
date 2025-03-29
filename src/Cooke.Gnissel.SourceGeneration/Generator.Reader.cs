@@ -9,30 +9,30 @@ public partial class Generator
     {
         WritePartialReadMappersClassStart(mappersClass, sourceWriter);
         sourceWriter.WriteLine();
-                
+
         GenerateReaderMetadata(sourceWriter, type);
         GenerateReaderProperty(sourceWriter, type);
-                
+
         if (type.IsValueType)
         {
             GenerateNullableReaderProperty(sourceWriter, type);
         }
 
         GenerateReadMethod(type, mappersClass, sourceWriter);
-                
+
         if (type.IsValueType)
         {
             WriteNullableReadMethod(sourceWriter, type, mappersClass);
         }
-                
+
         WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
     }
-    
+
     private static void GenerateReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
         sourceWriter.Write("private ImmutableArray<ReadDescriptor> ");
         sourceWriter.Write(GetCreateReaderDescriptorsName(type));
-        sourceWriter.WriteLine(" => [");
+        sourceWriter.WriteLine("() => [");
         sourceWriter.Indent++;
         if (IsBuildIn(type) || type.TypeKind == TypeKind.Enum)
         {
@@ -65,7 +65,7 @@ public partial class Generator
                 )
             )
             {
-                sourceWriter.WriteLine("new NextOrdinalObjectReadeDescriptor()");
+                sourceWriter.WriteLine("new NextOrdinalReadDescriptor()");
             }
             else
             {
@@ -104,7 +104,13 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public ObjectReader<");
+        if (type.DeclaredAccessibility != Accessibility.Public)
+        {
+            sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
+            sourceWriter.Write(" ");
+        }
+        
+        sourceWriter.Write("ObjectReader<");
         sourceWriter.Write(type.ToDisplayString());
         sourceWriter.Write("> ");
         sourceWriter.Write(GetReaderPropertyName(type));
@@ -124,7 +130,7 @@ public partial class Generator
         sourceWriter.WriteLine(" { get; init; }");
         sourceWriter.WriteLine();
     }
-    
+
     private static void WriteNullableReadMethod(IndentedTextWriter sourceWriter,
         ITypeSymbol type, MappersClass mappersClass)
     {
@@ -134,7 +140,7 @@ public partial class Generator
         sourceWriter.Write(GetNullableReadMethodName(type));
         sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader) {");
         sourceWriter.Indent++;
-        
+
         GenerateReadMethodBody(type, mappersClass, sourceWriter);
 
         sourceWriter.Indent--;
@@ -212,27 +218,30 @@ public partial class Generator
         sourceWriter.WriteLine("using System.Collections.Immutable;");
         sourceWriter.WriteLine("using Cooke.Gnissel;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
+        sourceWriter.WriteLine("using Cooke.Gnissel.Services.Implementations;");
         sourceWriter.WriteLine();
         WriteNamespace(mappersClass.Symbol.ContainingNamespace, sourceWriter);
         WritePartialClassStart(sourceWriter, mappersClass.Symbol);
+        sourceWriter.Write(" : IMapperProvider ");
+        sourceWriter.WriteLine(" {");
+        sourceWriter.Indent++;
     }
 
     private static void WritePartialClassStart(
         IndentedTextWriter sourceWriter,
-        INamedTypeSymbol? cls
+        INamedTypeSymbol cls
     )
     {
-        if (cls == null)
+        if (cls.ContainingType != null)
         {
-            return;
+            WritePartialClassStart(sourceWriter, cls.ContainingType);
+            sourceWriter.WriteLine(" {");
+            sourceWriter.Indent++;
         }
 
-        WritePartialClassStart(sourceWriter, cls.ContainingType);
         sourceWriter.Write(AccessibilityToString(cls.DeclaredAccessibility));
         sourceWriter.Write(" partial class ");
         sourceWriter.Write(cls.Name);
-        sourceWriter.WriteLine(" {");
-        sourceWriter.Indent++;
     }
 
     private static void WriteNamespace(INamespaceSymbol? ns, IndentedTextWriter sourceWriter)
@@ -275,14 +284,14 @@ public partial class Generator
 
     private static string GetNullableReaderPropertyName(ITypeSymbol type) =>
         $"{GetTypeIdentifierName(type)}NullableReader";
-    
+
     private static string GetReaderPropertyName(ITypeSymbol type)
     {
         if (type is INamedTypeSymbol { Name: "Nullable" } nullableType)
         {
             return $"{GetTypeIdentifierName(nullableType.TypeArguments[0])}NullableReader";
         }
-        
+
         return $"{GetTypeIdentifierName(type)}Reader";
     }
 

@@ -1,5 +1,4 @@
 using Cooke.Gnissel;
-using Cooke.Gnissel.Mapping;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 

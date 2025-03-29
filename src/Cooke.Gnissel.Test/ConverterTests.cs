@@ -12,7 +12,7 @@ public partial class ConverterTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _dbContext = new DbContext(new NpgsqlDbAdapter(_dataSource), Mappers.AllDescriptors);
+        _dbContext = new DbContext(new NpgsqlDbAdapter(_dataSource), new Mappers());
         await _dataSource
             .CreateCommand(
                 """
@@ -75,5 +75,5 @@ public partial class ConverterTests
     private record Name(string Value);
 
     [DbMappers]
-    public static partial class Mappers;
+    public partial class Mappers;
 }

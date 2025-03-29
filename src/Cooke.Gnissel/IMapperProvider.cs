@@ -1,6 +1,6 @@
 ﻿using Cooke.Gnissel.Services;
 
-namespace Cooke.Gnissel.Mapping;
+namespace Cooke.Gnissel;
 
 public interface IMapperProvider
 {

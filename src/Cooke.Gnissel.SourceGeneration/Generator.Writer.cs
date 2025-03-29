@@ -62,7 +62,7 @@ public partial class Generator
                         mappersClass,
                         types: types
                             .Where(t => IsAccessibleDeep(t, mappersClass))
-                            .SelectMany(FindAllReadTypes)
+                            .SelectMany(FindAllTypes)
                             .Select(AdjustNulls)
                             .Distinct(SymbolEqualityComparer.Default)
                             .Cast<ITypeSymbol>()
@@ -105,6 +105,9 @@ public partial class Generator
                 sourceWriter.WriteLine("public DbWriters Writers { get; init; } = new DbWriters();");
                 sourceWriter.WriteLine();
                 
+                sourceWriter.WriteLine("IObjectWriterProvider IMapperProvider.WriterProvider => Writers;");
+                sourceWriter.WriteLine();
+                
                 sourceWriter.WriteLine("public partial class DbWriters : IObjectWriterProvider {");
                 sourceWriter.Indent++;
                 
@@ -121,7 +124,7 @@ public partial class Generator
                     sourceWriter.Write(" = new ObjectWriter<");
                     sourceWriter.Write(type.ToDisplayString());
                     sourceWriter.Write(">(");
-                    sourceWriter.Write(GetReadMethodName(type));
+                    sourceWriter.Write(GetWriteMethodName(type));
                     sourceWriter.WriteLine(");");
                     
                     if (type.IsValueType)
@@ -130,7 +133,7 @@ public partial class Generator
                         sourceWriter.Write(" = new ObjectWriter<");
                         sourceWriter.Write(type.ToDisplayString());
                         sourceWriter.Write("?>(");
-                        sourceWriter.Write(GetNullableReadMethodName(type));
+                        sourceWriter.Write(GetNullableWriteMethodName(type));
                         sourceWriter.WriteLine(");");
                     }
                 }
@@ -211,7 +214,13 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public ObjectWriter<");
+        if (type.DeclaredAccessibility != Accessibility.Public)
+        {
+            sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
+            sourceWriter.Write(" ");
+        }
+        
+        sourceWriter.Write("ObjectWriter<");
         sourceWriter.Write(type.ToDisplayString());
         sourceWriter.Write("?> ");
         sourceWriter.Write(GetNullableWriterPropertyName(type));
@@ -224,7 +233,13 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public ObjectWriter<");
+        if (type.DeclaredAccessibility != Accessibility.Public)
+        {
+            sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
+            sourceWriter.Write(" ");
+        }
+        
+        sourceWriter.Write("ObjectWriter<");
         sourceWriter.Write(type.ToDisplayString());
         sourceWriter.Write("> ");
         sourceWriter.Write(GetWriterPropertyName(type));
