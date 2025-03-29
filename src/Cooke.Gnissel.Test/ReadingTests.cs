@@ -1,5 +1,3 @@
-#region
-
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using Cooke.Gnissel.AsyncEnumerable;
@@ -7,7 +5,9 @@ using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
 using Npgsql;
 
-#endregion
+// ReSharper disable UnusedMember.Local
+// ReSharper disable NotAccessedPositionalProperty.Local
+
 
 namespace Cooke.Gnissel.Test;
 
@@ -57,15 +57,14 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task SelectSinglePrimitiveField()
+    public async Task ReadSinglePrimitiveField()
     {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<int>($"SELECT id FROM users").ToArrayAsync();
+        var results = await _db.Query<int>($"SELECT 1").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { 1 }, results);
     }
 
     [Test]
-    public async Task CustomMapping()
+    public async Task CustomReading()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query(
@@ -77,7 +76,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task ClassConstructorMapping()
+    public async Task ReadClassWithConstructor()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
@@ -85,7 +84,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task ClassConstructorWithParameterColumnOrderMissMatchMapping()
+    public async Task ReadClassWithConstructorParameterColumnOrderMismatch()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users")
@@ -97,7 +96,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task TupleMapping()
+    public async Task ReadTuple()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<(int, string, int)>($"SELECT * FROM users").ToArrayAsync();
@@ -105,15 +104,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task SingleValueMapping()
-    {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<string>($"SELECT name FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { "Bob" }, results);
-    }
-
-    [Test]
-    public async Task TimestampMapping()
+    public async Task ReadDateTimes()
     {
         DateTime withTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Utc);
         DateTime withoutTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Local);
@@ -128,9 +119,9 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task NullComplexType()
+    public async Task ReadNullClass()
     {
-        var results = await _db.Query<User>(
+        var results = await _db.Query<User?>(
                 $"SELECT null as id, null as name, null as age, null as description"
             )
             .ToArrayAsync();
@@ -138,7 +129,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task NullNullableStruct()
+    public async Task ReadNullValueType()
     {
         var results = await _db.Query<TimeSpan?>($"SELECT null::int").ToArrayAsync();
         CollectionAssert.AreEqual(new TimeSpan?[] { null }, results);
@@ -161,9 +152,9 @@ public partial class MappingTests
     public async Task ComplexTypeWithTypedPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<UserWithTypedName>($"SELECT name, age FROM users")
+        var results = await _db.Query<UserWithTypedPrimitives>($"SELECT name, age FROM users")
             .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new UserWithTypedName(new("Bob"), 25) }, results);
+        CollectionAssert.AreEqual(new[] { new UserWithTypedPrimitives(new("Bob"), 25) }, results);
     }
 
     [Test]
@@ -172,6 +163,13 @@ public partial class MappingTests
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<Name>($"SELECT name FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new Name("Bob") }, results);
+    }
+
+    [Test]
+    public async Task WrappedNullablePrimitiveMapping()
+    {
+        var results = await _db.Query<Name?>($"SELECT NULL").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { (Name?)null }, results);
     }
 
     [Test]
@@ -220,7 +218,7 @@ public partial class MappingTests
         string Name
     );
 
-    private record UserWithTypedName(Name Name, int Age);
+    private record UserWithTypedPrimitives(Name Name, int Age);
 
     private record Name(string Value);
 
