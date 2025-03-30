@@ -12,9 +12,6 @@ public static class DbDataReaderExtensions
         where T : class =>
         dbDataReader.IsDBNull(ordinal) ? null : dbDataReader.GetFieldValue<T>(ordinal);
 
-    public static string? GetStringOrNull(this DbDataReader dbDataReader, int ordinal) =>
-        dbDataReader.IsDBNull(ordinal) ? null : dbDataReader.GetString(ordinal);
-
-    public static Int32? GetInt32OrNull(this DbDataReader dbDataReader, int ordinal) =>
-        dbDataReader.IsDBNull(ordinal) ? null : dbDataReader.GetInt32(ordinal);
+    public static T? GetValueOrDefault<T>(this DbDataReader dbDataReader, int ordinal) =>
+        dbDataReader.IsDBNull(ordinal) ? default : dbDataReader.GetFieldValue<T>(ordinal);
 }

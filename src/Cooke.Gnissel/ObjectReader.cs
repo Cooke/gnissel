@@ -3,6 +3,26 @@ using System.Data.Common;
 
 namespace Cooke.Gnissel;
 
+public static class ObjectReaderUtils
+{
+    public static ObjectReader<T?> CreateDefault<T>() =>
+        new(
+            (reader, ordinalReader) => reader.GetValueOrDefault<T>(ordinalReader.Read()),
+            () => [new NextOrdinalReadDescriptor()]
+        );
+
+    public static ObjectReader<T> CreateNonNullableVariant<T>(
+        Func<ObjectReader<T?>> nullableReaderGetter
+    )
+        where T : struct =>
+        new(
+            (reader, ordinalReader) =>
+                nullableReaderGetter().Read(reader, ordinalReader)
+                ?? throw new InvalidOperationException("Expected non-null value"),
+            () => [new NextOrdinalReadDescriptor()]
+        );
+}
+
 public interface IObjectReader
 {
     Type ObjectType { get; }
@@ -30,7 +50,7 @@ public class ObjectReader<TOut>(
 ) : IObjectReader
 {
     private ImmutableArray<ReadDescriptor>? _readDescriptors;
-    
+
     public ObjectReaderFunc<TOut> Read { get; } = read;
 
     public ImmutableArray<ReadDescriptor> ReadDescriptors

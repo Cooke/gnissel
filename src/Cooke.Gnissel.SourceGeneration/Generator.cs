@@ -150,19 +150,21 @@ public partial class Generator : IIncrementalGenerator
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
                 WritePartialMappersClassStart(mappersClass, sourceWriter);
-                
-                sourceWriter.WriteLine("public DbReaders Readers { get; init; } = new DbReaders();");
+
+                sourceWriter.WriteLine(
+                    "public DbReaders Readers { get; init; } = new DbReaders();"
+                );
                 sourceWriter.WriteLine();
-                
+
                 sourceWriter.WriteLine("public IObjectReaderProvider ReaderProvider => Readers;");
                 sourceWriter.WriteLine();
-                
+
                 sourceWriter.WriteLine("public partial class DbReaders : IObjectReaderProvider {");
                 sourceWriter.Indent++;
-                
+
                 sourceWriter.WriteLine("private IObjectReaderProvider? _readerProvider;");
                 sourceWriter.WriteLine();
-                
+
                 sourceWriter.WriteLine("public DbReaders() { ");
                 sourceWriter.Indent++;
                 for (var index = 0; index < types.Length; index++)
@@ -176,7 +178,7 @@ public partial class Generator : IIncrementalGenerator
                     sourceWriter.Write(",");
                     sourceWriter.Write(GetCreateReaderDescriptorsName(type));
                     sourceWriter.WriteLine(");");
-                    
+
                     if (type.IsValueType)
                     {
                         sourceWriter.Write(GetNullableReaderPropertyName(type));
@@ -192,10 +194,8 @@ public partial class Generator : IIncrementalGenerator
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");
                 sourceWriter.WriteLine();
-                
-                sourceWriter.WriteLine(
-                    "public ImmutableArray<IObjectReader> GetAllReaders() => ["
-                );
+
+                sourceWriter.WriteLine("public ImmutableArray<IObjectReader> GetAllReaders() => [");
                 sourceWriter.Indent++;
 
                 for (var index = 0; index < types.Length; index++)
@@ -213,11 +213,11 @@ public partial class Generator : IIncrementalGenerator
                         sourceWriter.WriteLine(",");
                     }
                 }
-                
+
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("];");
                 sourceWriter.WriteLine();
-                
+
                 sourceWriter.WriteLine("public ObjectReader<TOut> Get<TOut>()");
                 sourceWriter.WriteLine("{");
                 sourceWriter.Indent++;
@@ -278,8 +278,6 @@ public partial class Generator : IIncrementalGenerator
         GenerateWriteMappers(initContext, mappersPipeline);
     }
 
-    
-
     private static bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
         FindAllTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
 
@@ -338,17 +336,15 @@ public partial class Generator : IIncrementalGenerator
 
         foreach (var t in ctor.Parameters)
         {
-            if (!BuildInDirectlyMappedTypes.Contains(t.Type.Name))
+            foreach (var innerType in FindAllTypes(t.Type))
             {
-                foreach (var innerType in FindAllTypes(t.Type))
-                {
-                    yield return innerType;
-                }
+                yield return innerType;
             }
         }
     }
 
-    private static string GetCreateReaderDescriptorsName(ITypeSymbol type) => $"Create{GetTypeIdentifierName(AdjustNulls(type))}Descriptors";
+    private static string GetCreateReaderDescriptorsName(ITypeSymbol type) =>
+        $"Create{GetTypeIdentifierName(AdjustNulls(type))}Descriptors";
 
     private static string? GetSourceName(ITypeSymbol? type)
     {

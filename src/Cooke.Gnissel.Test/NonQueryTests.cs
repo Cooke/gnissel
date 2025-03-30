@@ -1,7 +1,6 @@
 #region
 
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
 using Dapper;
 using Npgsql;
 
@@ -9,7 +8,7 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class NonQueryTests
+public partial class NonQueryTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private DbContext _db;
@@ -17,8 +16,7 @@ public class NonQueryTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new DbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new DbContext(new(new NpgsqlDbAdapter(_dataSource), new DbMappers()));
 
         await _dataSource
             .CreateCommand(
@@ -58,4 +56,7 @@ public class NonQueryTests
     }
 
     public record User(int Id, string Name, int Age);
+
+    [DbMappers]
+    private partial class DbMappers;
 }

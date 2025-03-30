@@ -11,7 +11,7 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Test;
 
-public class LongRunningTransactionTests
+public partial class LongRunningTransactionTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
@@ -20,7 +20,7 @@ public class LongRunningTransactionTests
     public async Task Setup()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new TestDbContext(new(adapter, new DbMappers()));
 
         await _dataSource
             .CreateCommand(
@@ -154,4 +154,7 @@ public class LongRunningTransactionTests
     }
 
     public record User(int Id, string Name, int Age);
+
+    [DbMappers]
+    private partial class DbMappers;
 }

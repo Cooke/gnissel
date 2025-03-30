@@ -18,7 +18,7 @@ internal partial class DbMappers
 
         private User? ReadUser(DbDataReader reader, OrdinalReader ordinalReader)
         {
-            var name = reader.GetStringOrNull(ordinalReader.Read());
+            var name = reader.GetValueOrNull<string>(ordinalReader.Read());
             var address = AddressReader.Read(reader, ordinalReader);
 
             if (name is null && address != null)
