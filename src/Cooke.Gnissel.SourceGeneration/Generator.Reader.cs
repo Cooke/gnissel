@@ -109,7 +109,7 @@ public partial class Generator
         sourceWriter.Write(" ");
         sourceWriter.Write("ObjectReader<");
         sourceWriter.Write(type.ToDisplayString());
-        if (type.IsReferenceType)
+        if (type is { IsReferenceType: true, NullableAnnotation: NullableAnnotation.NotAnnotated })
         {
             sourceWriter.Write("?");
         }
@@ -124,7 +124,8 @@ public partial class Generator
         ITypeSymbol type
     )
     {
-        sourceWriter.Write("public ObjectReader<");
+        sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
+        sourceWriter.Write(" ObjectReader<");
         WriteTypeNameEnsureNullable(sourceWriter, type);
         sourceWriter.Write("> ");
         sourceWriter.Write(GetNullableReaderPropertyName(type));

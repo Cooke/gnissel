@@ -202,7 +202,13 @@ public partial class Generator : IIncrementalGenerator
                         sourceWriter.Write(GetReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
                         sourceWriter.Write(type.ToDisplayString());
-                        if (type.IsReferenceType)
+                        if (
+                            type is
+                            {
+                                IsReferenceType: true,
+                                NullableAnnotation: NullableAnnotation.NotAnnotated
+                            }
+                        )
                         {
                             sourceWriter.Write("?");
                         }
