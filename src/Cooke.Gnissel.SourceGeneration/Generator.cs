@@ -202,6 +202,10 @@ public partial class Generator : IIncrementalGenerator
                         sourceWriter.Write(GetReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
                         sourceWriter.Write(type.ToDisplayString());
+                        if (type.IsReferenceType)
+                        {
+                            sourceWriter.Write("?");
+                        }
                         sourceWriter.Write(">(");
                         sourceWriter.Write(GetReadMethodName(type));
                         sourceWriter.Write(",");

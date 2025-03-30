@@ -20,13 +20,19 @@ internal partial class DbMappers
         {
             var name = reader.GetValueOrNull<string>(ordinalReader.Read());
             var address = AddressReader.Read(reader, ordinalReader);
+            var userType = UserTypeReader.Read(reader, ordinalReader);
 
             if (name is null && address != null)
             {
                 return null;
             }
 
-            return new User(default!, default!, address!.Value, default);
+            return new User(
+                default!,
+                default!,
+                address!.Value,
+                userType ?? throw new InvalidOperationException("Expected non-null value")
+            );
         }
     }
 }

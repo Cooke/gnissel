@@ -17,7 +17,7 @@ public partial class Generator
         {
             sourceWriter.Write("?");
         }
-        
+
         sourceWriter.Write(" ");
         sourceWriter.Write(GetReadMethodName(type));
         sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader) {");
@@ -27,7 +27,9 @@ public partial class Generator
         {
             sourceWriter.Write("return ");
             sourceWriter.Write(GetNullableReaderPropertyName(type));
-            sourceWriter.Write(".Read(reader, ordinalReader) ?? throw new InvalidOperationException(\"Expected non-null value\");");
+            sourceWriter.Write(
+                ".Read(reader, ordinalReader) ?? throw new InvalidOperationException(\"Expected non-null value\");"
+            );
             sourceWriter.WriteLine(";");
         }
         else
@@ -40,7 +42,11 @@ public partial class Generator
         sourceWriter.WriteLine();
     }
 
-    private static void GenerateReadMethodBody(ITypeSymbol type, MappersClass mappersClass, IndentedTextWriter sourceWriter)
+    private static void GenerateReadMethodBody(
+        ITypeSymbol type,
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter
+    )
     {
         if (IsBuildIn(type))
         {
@@ -163,7 +169,9 @@ public partial class Generator
                 }
                 else if (parameter.Type.IsValueType && !IsNullableValueType(parameter.Type))
                 {
-                    sourceWriter.Write(".Value");
+                    sourceWriter.Write(
+                        " ?? throw new InvalidOperationException(\"Expected non-null value\")"
+                    );
                 }
 
                 if (i < ctorParameters.Length - 1)
@@ -204,14 +212,9 @@ public partial class Generator
         }
     }
 
-
     private static void GenerateReadCall(ITypeSymbol type, IndentedTextWriter sourceWriter)
     {
-        if (BuildInDirectlyMappedTypes.Contains(type.Name))
-        {
-            GenerateNativeReadCall(type, sourceWriter);
-        }
-        else if (type is INamedTypeSymbol { Name: "Nullable" } nullableType)
+        if (type is INamedTypeSymbol { Name: "Nullable" } nullableType)
         {
             sourceWriter.Write(GetNullableReaderPropertyName(nullableType.TypeArguments[0]));
             sourceWriter.Write(".Read(reader, ordinalReader)");
@@ -232,13 +235,15 @@ public partial class Generator
     {
         if (IsNullableValueType(type) || type.IsValueType)
         {
-            sourceWriter.Write("reader.GetNullableValue<");    
+            sourceWriter.Write("reader.GetNullableValue<");
         }
         else
         {
             sourceWriter.Write("reader.GetValueOrNull<");
         }
-        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.Write(
+            type.WithNullableAnnotation(NullableAnnotation.NotAnnotated).ToDisplayString()
+        );
         sourceWriter.Write(">(ordinalReader.Read()");
         sourceWriter.Write(")");
     }

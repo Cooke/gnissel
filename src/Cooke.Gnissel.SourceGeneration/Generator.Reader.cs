@@ -5,7 +5,11 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public partial class Generator
 {
-    private void GenerateReader(MappersClass mappersClass, IndentedTextWriter sourceWriter, ITypeSymbol type)
+    private void GenerateReader(
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type
+    )
     {
         WritePartialReadMappersClassStart(mappersClass, sourceWriter);
         sourceWriter.WriteLine();
@@ -99,19 +103,16 @@ public partial class Generator
         }
     }
 
-    private static void GenerateReaderProperty(
-        IndentedTextWriter sourceWriter,
-        ITypeSymbol type
-    )
+    private static void GenerateReaderProperty(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
-        if (type.DeclaredAccessibility != Accessibility.Public)
-        {
-            sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
-            sourceWriter.Write(" ");
-        }
-        
+        sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
+        sourceWriter.Write(" ");
         sourceWriter.Write("ObjectReader<");
         sourceWriter.Write(type.ToDisplayString());
+        if (type.IsReferenceType)
+        {
+            sourceWriter.Write("?");
+        }
         sourceWriter.Write("> ");
         sourceWriter.Write(GetReaderPropertyName(type));
         sourceWriter.WriteLine(" { get; init; }");
@@ -131,8 +132,11 @@ public partial class Generator
         sourceWriter.WriteLine();
     }
 
-    private static void WriteNullableReadMethod(IndentedTextWriter sourceWriter,
-        ITypeSymbol type, MappersClass mappersClass)
+    private static void WriteNullableReadMethod(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type,
+        MappersClass mappersClass
+    )
     {
         sourceWriter.Write("private ");
         sourceWriter.Write(type.ToDisplayString());
@@ -147,7 +151,8 @@ public partial class Generator
         sourceWriter.WriteLine("}");
     }
 
-    private static string GetReadMethodName(ITypeSymbol type) => $"Read{GetTypeIdentifierName(type)}";
+    private static string GetReadMethodName(ITypeSymbol type) =>
+        $"Read{GetTypeIdentifierName(type)}";
 
     private static string GetNullableReadMethodName(ITypeSymbol type) =>
         $"Read{GetTypeIdentifierName(type)}Nullable";
