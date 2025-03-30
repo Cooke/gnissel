@@ -2,7 +2,6 @@
 using System.Collections.Immutable;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Operations;
 
 namespace Cooke.Gnissel.SourceGeneration;
 
@@ -11,39 +10,39 @@ public partial class Generator : IIncrementalGenerator
 {
     public void Initialize(IncrementalGeneratorInitializationContext initContext)
     {
-        var selectTypesPipeline = initContext
-            .SyntaxProvider.CreateSyntaxProvider(
-                (node, _) =>
-                    node
-                        is InvocationExpressionSyntax
-                        {
-                            Expression: MemberAccessExpressionSyntax
-                            {
-                                Name.Identifier.ValueText: "Select"
-                            },
-                            ArgumentList.Arguments.Count: 1
-                        },
-                (context, ct) =>
-                {
-                    var invocation = (InvocationExpressionSyntax)context.Node;
-                    var operation = context.SemanticModel.GetOperation(invocation, ct);
-                    if (
-                        operation
-                        is not IInvocationOperation
-                        {
-                            TargetMethod: { TypeArguments: { Length: 1 } typeArguments }
-                        }
-                    )
-                    {
-                        return null;
-                    }
-
-                    var typeArg = typeArguments[0];
-                    return typeArg;
-                }
-            )
-            .Where(x => x != null)
-            .Select((v, _) => v!);
+        // var selectTypesPipeline = initContext
+        //     .SyntaxProvider.CreateSyntaxProvider(
+        //         (node, _) =>
+        //             node
+        //                 is InvocationExpressionSyntax
+        //                 {
+        //                     Expression: MemberAccessExpressionSyntax
+        //                     {
+        //                         Name.Identifier.ValueText: "Select"
+        //                     },
+        //                     ArgumentList.Arguments.Count: 1
+        //                 },
+        //         (context, ct) =>
+        //         {
+        //             var invocation = (InvocationExpressionSyntax)context.Node;
+        //             var operation = context.SemanticModel.GetOperation(invocation, ct);
+        //             if (
+        //                 operation
+        //                 is not IInvocationOperation
+        //                 {
+        //                     TargetMethod: { TypeArguments: { Length: 1 } typeArguments }
+        //                 }
+        //             )
+        //             {
+        //                 return null;
+        //             }
+        //
+        //             var typeArg = typeArguments[0];
+        //             return typeArg;
+        //         }
+        //     )
+        //     .Where(x => x != null)
+        //     .Select((v, _) => v!);
 
         var mappersPipeline = initContext.SyntaxProvider.ForAttributeWithMetadataName(
             "Cooke.Gnissel.DbMappersAttribute",
@@ -119,10 +118,15 @@ public partial class Generator : IIncrementalGenerator
         initContext.RegisterImplementationSourceOutput(
             mapperClassesWithTypesPipeline.SelectMany(
                 (mappersClassWithTypes, _) =>
-                    mappersClassWithTypes.types.Select(t => new ReadTypeWithMappersClass(
-                        t,
-                        mappersClassWithTypes.mappersClass
-                    ))
+                    mappersClassWithTypes
+                        .types.Select(t => new ReadTypeWithMappersClass(
+                            t,
+                            mappersClassWithTypes.mappersClass
+                        ))
+                        .Where(
+                            (readTypeWithMappersClass, _) =>
+                                !IsBuildIn(readTypeWithMappersClass.Type)
+                        )
             ),
             (context, readTypeWithMappersClass) =>
             {
@@ -167,32 +171,88 @@ public partial class Generator : IIncrementalGenerator
 
                 sourceWriter.WriteLine("public DbReaders() { ");
                 sourceWriter.Indent++;
-                for (var index = 0; index < types.Length; index++)
+                foreach (var type in types)
                 {
-                    var type = types[index];
-                    sourceWriter.Write(GetReaderPropertyName(type));
-                    sourceWriter.Write(" = new ObjectReader<");
-                    sourceWriter.Write(type.ToDisplayString());
-                    sourceWriter.Write(">(");
-                    sourceWriter.Write(GetReadMethodName(type));
-                    sourceWriter.Write(",");
-                    sourceWriter.Write(GetCreateReaderDescriptorsName(type));
-                    sourceWriter.WriteLine(");");
-
-                    if (type.IsValueType)
+                    if (IsBuildIn(type))
                     {
-                        sourceWriter.Write(GetNullableReaderPropertyName(type));
+                        if (type.IsValueType)
+                        {
+                            sourceWriter.Write(GetNullableReaderPropertyName(type));
+                            sourceWriter.Write(" = ObjectReaderUtils.CreateDefault<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.WriteLine("?>();");
+
+                            sourceWriter.Write(GetReaderPropertyName(type));
+                            sourceWriter.Write(
+                                " = ObjectReaderUtils.CreateNonNullableVariant(() => "
+                            );
+                            sourceWriter.Write(GetNullableReaderPropertyName(type));
+                            sourceWriter.WriteLine(");");
+                        }
+                        else
+                        {
+                            sourceWriter.Write(GetReaderPropertyName(type));
+                            sourceWriter.Write(" = ObjectReaderUtils.CreateDefault<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.WriteLine(">();");
+                        }
+                    }
+                    else
+                    {
+                        sourceWriter.Write(GetReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
                         sourceWriter.Write(type.ToDisplayString());
-                        sourceWriter.Write("?>(");
-                        sourceWriter.Write(GetNullableReadMethodName(type));
+                        sourceWriter.Write(">(");
+                        sourceWriter.Write(GetReadMethodName(type));
                         sourceWriter.Write(",");
                         sourceWriter.Write(GetCreateReaderDescriptorsName(type));
                         sourceWriter.WriteLine(");");
+
+                        if (type.IsValueType)
+                        {
+                            sourceWriter.Write(GetNullableReaderPropertyName(type));
+                            sourceWriter.Write(" = new ObjectReader<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("?>(");
+                            sourceWriter.Write(GetNullableReadMethodName(type));
+                            sourceWriter.Write(",");
+                            sourceWriter.Write(GetCreateReaderDescriptorsName(type));
+                            sourceWriter.WriteLine(");");
+                        }
                     }
                 }
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");
+                sourceWriter.WriteLine();
+
+                foreach (var type in types)
+                {
+                    if (IsBuildIn(type))
+                    {
+                        if (type.IsValueType)
+                        {
+                            sourceWriter.Write("public ObjectReader<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("?> ");
+                            sourceWriter.Write(GetNullableReaderPropertyName(type));
+                            sourceWriter.WriteLine(" { get; init; }");
+
+                            sourceWriter.Write("public ObjectReader<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("> ");
+                            sourceWriter.Write(GetReaderPropertyName(type));
+                            sourceWriter.WriteLine(" { get; init; }");
+                        }
+                        else
+                        {
+                            sourceWriter.Write("public ObjectReader<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("> ");
+                            sourceWriter.Write(GetReaderPropertyName(type));
+                            sourceWriter.WriteLine(" { get; init; }");
+                        }
+                    }
+                }
                 sourceWriter.WriteLine();
 
                 sourceWriter.WriteLine("public ImmutableArray<IObjectReader> GetAllReaders() => [");
@@ -237,43 +297,6 @@ public partial class Generator : IIncrementalGenerator
                 );
             }
         );
-
-        // initContext.RegisterImplementationSourceOutput(
-        //     mappersPipeline,
-        //     (context, mappersClass) =>
-        //     {
-        //         var stringWriter = new StringWriter();
-        //         var sourceWriter = new IndentedTextWriter(stringWriter);
-        //         WritePartialMappersClassStart(mappersClass, sourceWriter);
-        //         sourceWriter.WriteLine();
-        //
-        //         sourceWriter.WriteLine(
-        //             "public static readonly ImmutableArray<IObjectMapperDescriptor> AllDescriptors;"
-        //         );
-        //         sourceWriter.WriteLine();
-        //         sourceWriter.WriteLine($"static {mappersClass.Symbol.Name}() {{");
-        //         sourceWriter.Indent++;
-        //         sourceWriter.WriteLine("AllDescriptors = [");
-        //         sourceWriter.Indent++;
-        //
-        //         sourceWriter.WriteLine("..ReadMappers.GetDescriptors(),");
-        //         sourceWriter.WriteLine("..WriteMappers.GetDescriptors()");
-        //
-        //         sourceWriter.Indent--;
-        //         sourceWriter.WriteLine("];");
-        //         sourceWriter.Indent--;
-        //         sourceWriter.WriteLine("}");
-        //         sourceWriter.WriteLine();
-        //
-        //         WritePartialMappersClassEnd(mappersClass, sourceWriter);
-        //         sourceWriter.Flush();
-        //
-        //         context.AddSource(
-        //             $"{GetSourceName(mappersClass.Symbol)}.cs",
-        //             stringWriter.ToString()
-        //         );
-        //     }
-        // );
 
         GenerateWriteMappers(initContext, mappersPipeline);
     }

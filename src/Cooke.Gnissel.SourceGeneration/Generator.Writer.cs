@@ -73,7 +73,10 @@ public partial class Generator
 
         initContext.RegisterImplementationSourceOutput(
             mappersClassWithQueryWriteTypesPipeline.SelectMany(
-                (x, _) => x.types.Select(t => (type: t, x.mappersClass))
+                (x, _) =>
+                    x
+                        .types.Select(t => (type: t, x.mappersClass))
+                        .Where((pair, _) => !IsBuildIn(pair.type))
             ),
             (context, mappersClassWithWriteType) =>
             {
@@ -121,24 +124,50 @@ public partial class Generator
                 sourceWriter.WriteLine("public DbWriters() {");
                 sourceWriter.Indent++;
 
-                for (var index = 0; index < types.Length; index++)
+                foreach (var type in types)
                 {
-                    var type = types[index];
-                    sourceWriter.Write(GetWriterPropertyName(type));
-                    sourceWriter.Write(" = new ObjectWriter<");
-                    sourceWriter.Write(type.ToDisplayString());
-                    sourceWriter.Write(">(");
-                    sourceWriter.Write(GetWriteMethodName(type));
-                    sourceWriter.WriteLine(");");
-
-                    if (type.IsValueType)
+                    if (IsBuildIn(type))
                     {
-                        sourceWriter.Write(GetNullableWriterPropertyName(type));
+                        if (type.IsValueType)
+                        {
+                            sourceWriter.Write(GetNullableWriterPropertyName(type));
+                            sourceWriter.Write(" = ObjectWriterUtils.CreateDefault<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.WriteLine("?>();");
+
+                            sourceWriter.Write(GetWriterPropertyName(type));
+                            sourceWriter.Write(
+                                " = ObjectWriterUtils.CreateNonNullableVariant(() => "
+                            );
+                            sourceWriter.Write(GetNullableWriterPropertyName(type));
+                            sourceWriter.WriteLine(");");
+                        }
+                        else
+                        {
+                            sourceWriter.Write(GetWriterPropertyName(type));
+                            sourceWriter.Write(" = ObjectWriterUtils.CreateDefault<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.WriteLine(">();");
+                        }
+                    }
+                    else
+                    {
+                        sourceWriter.Write(GetWriterPropertyName(type));
                         sourceWriter.Write(" = new ObjectWriter<");
                         sourceWriter.Write(type.ToDisplayString());
-                        sourceWriter.Write("?>(");
-                        sourceWriter.Write(GetNullableWriteMethodName(type));
+                        sourceWriter.Write(">(");
+                        sourceWriter.Write(GetWriteMethodName(type));
                         sourceWriter.WriteLine(");");
+
+                        if (type.IsValueType)
+                        {
+                            sourceWriter.Write(GetNullableWriterPropertyName(type));
+                            sourceWriter.Write(" = new ObjectWriter<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("?>(");
+                            sourceWriter.Write(GetNullableWriteMethodName(type));
+                            sourceWriter.WriteLine(");");
+                        }
                     }
                 }
 
@@ -167,6 +196,36 @@ public partial class Generator
 
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("];");
+                sourceWriter.WriteLine();
+
+                foreach (var type in types)
+                {
+                    if (IsBuildIn(type))
+                    {
+                        if (type.IsValueType)
+                        {
+                            sourceWriter.Write("public ObjectWriter<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("?> ");
+                            sourceWriter.Write(GetNullableWriterPropertyName(type));
+                            sourceWriter.WriteLine(" { get; init; }");
+
+                            sourceWriter.Write("public ObjectWriter<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("> ");
+                            sourceWriter.Write(GetWriterPropertyName(type));
+                            sourceWriter.WriteLine(" { get; init; }");
+                        }
+                        else
+                        {
+                            sourceWriter.Write("public ObjectWriter<");
+                            sourceWriter.Write(type.ToDisplayString());
+                            sourceWriter.Write("> ");
+                            sourceWriter.Write(GetWriterPropertyName(type));
+                            sourceWriter.WriteLine(" { get; init; }");
+                        }
+                    }
+                }
                 sourceWriter.WriteLine();
 
                 sourceWriter.WriteLine("public ObjectWriter<TOut> Get<TOut>()");
