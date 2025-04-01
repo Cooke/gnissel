@@ -118,15 +118,10 @@ public partial class Generator : IIncrementalGenerator
         initContext.RegisterImplementationSourceOutput(
             mapperClassesWithTypesPipeline.SelectMany(
                 (mappersClassWithTypes, _) =>
-                    mappersClassWithTypes
-                        .types.Select(t => new ReadTypeWithMappersClass(
-                            t,
-                            mappersClassWithTypes.mappersClass
-                        ))
-                        .Where(
-                            (readTypeWithMappersClass, _) =>
-                                !IsBuildIn(readTypeWithMappersClass.Type)
-                        )
+                    mappersClassWithTypes.types.Select(t => new ReadTypeWithMappersClass(
+                        t,
+                        mappersClassWithTypes.mappersClass
+                    ))
             ),
             (context, readTypeWithMappersClass) =>
             {
@@ -175,31 +170,7 @@ public partial class Generator : IIncrementalGenerator
                 sourceWriter.Indent++;
                 foreach (var type in types)
                 {
-                    if (IsBuildIn(type))
-                    {
-                        if (type.IsValueType)
-                        {
-                            sourceWriter.Write(GetNullableReaderPropertyName(type));
-                            sourceWriter.Write(" = ObjectReaderUtils.CreateDefault<");
-                            sourceWriter.Write(type.ToDisplayString());
-                            sourceWriter.WriteLine("?>();");
-
-                            sourceWriter.Write(GetReaderPropertyName(type));
-                            sourceWriter.Write(
-                                " = ObjectReaderUtils.CreateNonNullableVariant(() => "
-                            );
-                            sourceWriter.Write(GetNullableReaderPropertyName(type));
-                            sourceWriter.WriteLine(");");
-                        }
-                        else
-                        {
-                            sourceWriter.Write(GetReaderPropertyName(type));
-                            sourceWriter.Write(" = ObjectReaderUtils.CreateDefault<");
-                            sourceWriter.Write(type.ToDisplayString());
-                            sourceWriter.WriteLine(">();");
-                        }
-                    }
-                    else if (!NeedCustomReader(type))
+                    if (!NeedCustomReader(type))
                     {
                         sourceWriter.Write(GetReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
@@ -235,36 +206,6 @@ public partial class Generator : IIncrementalGenerator
                 }
                 sourceWriter.Indent--;
                 sourceWriter.WriteLine("}");
-                sourceWriter.WriteLine();
-
-                foreach (var type in types)
-                {
-                    if (IsBuildIn(type))
-                    {
-                        if (type.IsValueType)
-                        {
-                            sourceWriter.Write("public ObjectReader<");
-                            sourceWriter.Write(type.ToDisplayString());
-                            sourceWriter.Write("?> ");
-                            sourceWriter.Write(GetNullableReaderPropertyName(type));
-                            sourceWriter.WriteLine(" { get; init; }");
-
-                            sourceWriter.Write("public ObjectReader<");
-                            sourceWriter.Write(type.ToDisplayString());
-                            sourceWriter.Write("> ");
-                            sourceWriter.Write(GetReaderPropertyName(type));
-                            sourceWriter.WriteLine(" { get; init; }");
-                        }
-                        else
-                        {
-                            sourceWriter.Write("public ObjectReader<");
-                            sourceWriter.Write(type.ToDisplayString());
-                            sourceWriter.Write("> ");
-                            sourceWriter.Write(GetReaderPropertyName(type));
-                            sourceWriter.WriteLine(" { get; init; }");
-                        }
-                    }
-                }
                 sourceWriter.WriteLine();
 
                 sourceWriter.WriteLine("public ImmutableArray<IObjectReader> GetAllReaders() => [");
