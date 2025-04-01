@@ -125,7 +125,7 @@ public partial class MappingJsonTests
 
     // TODO move to JsonSerializerOptions when upgrading to npgsql 8
     [JsonConverter(typeof(GameClassConverter))]
-    public class GameClass
+    private class GameClass
     {
         public static readonly GameClass Warrior = new GameClass("Warrior");
         public static readonly GameClass Healer = new GameClass("Healer");
@@ -146,7 +146,7 @@ public partial class MappingJsonTests
             };
     }
 
-    public class GameClassConverter : JsonConverter<GameClass>
+    private class GameClassConverter : JsonConverter<GameClass>
     {
         public override GameClass? Read(
             ref Utf8JsonReader reader,
@@ -181,5 +181,5 @@ public partial class MappingJsonTests
     public record Device(string Id, string Name, int UserId);
 
     [DbMappers]
-    public partial class DbMappers;
+    private partial class DbMappers;
 }

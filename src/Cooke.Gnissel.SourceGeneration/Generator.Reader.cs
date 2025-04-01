@@ -124,7 +124,7 @@ public partial class Generator
         bool isRequired = false
     )
     {
-        sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
+        sourceWriter.Write("public");
         if (isRequired)
         {
             sourceWriter.Write(" required");
@@ -132,7 +132,13 @@ public partial class Generator
 
         sourceWriter.Write(" ObjectReader<");
         sourceWriter.Write(type.ToDisplayString());
-        if (type is { IsReferenceType: true, NullableAnnotation: NullableAnnotation.NotAnnotated })
+        if (
+            type is
+            {
+                IsReferenceType: true,
+                NullableAnnotation: NullableAnnotation.NotAnnotated or NullableAnnotation.None
+            }
+        )
         {
             sourceWriter.Write("?");
         }
