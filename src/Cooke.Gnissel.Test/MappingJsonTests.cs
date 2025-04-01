@@ -26,7 +26,24 @@ public partial class MappingJsonTests
             .EnableDynamicJson()
             .Build();
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(new(adapter, new DbMappers()));
+        _db = new TestDbContext(
+            new(
+                adapter,
+                new DbMappers()
+                {
+                    Readers = new DbMappers.DbReaders()
+                    {
+                        MappingJsonTestsGameClassReader = new ObjectReader<GameClass?>(
+                            (reader, ordinalReader) =>
+                                GameClass.TryParse(
+                                    reader.GetValueOrNull<string>(ordinalReader.Read())
+                                ),
+                            () => [new NextOrdinalReadDescriptor()]
+                        ),
+                    },
+                }
+            )
+        );
 
         await _dataSource
             .CreateCommand(
@@ -119,6 +136,14 @@ public partial class MappingJsonTests
         {
             Name = name;
         }
+
+        public static GameClass? TryParse(string? str) =>
+            str switch
+            {
+                "Warrior" => Warrior,
+                "Healer" => Healer,
+                _ => null,
+            };
     }
 
     public class GameClassConverter : JsonConverter<GameClass>

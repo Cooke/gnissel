@@ -14,8 +14,15 @@ public partial class Generator
         WritePartialReadMappersClassStart(mappersClass, sourceWriter);
         sourceWriter.WriteLine();
 
-        GenerateReaderMetadata(sourceWriter, type);
+        if (NeedCustomReader(type))
+        {
+            GenerateReaderProperty(sourceWriter, type, true);
+            WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
+            return;
+        }
+
         GenerateReaderProperty(sourceWriter, type);
+        GenerateReaderMetadata(sourceWriter, type);
 
         if (type.IsValueType)
         {
@@ -30,6 +37,14 @@ public partial class Generator
         }
 
         WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
+    }
+
+    private static bool NeedCustomReader(ITypeSymbol type)
+    {
+        return !IsBuildIn(type)
+            && !type.IsTupleType
+            && type.TypeKind != TypeKind.Enum
+            && GetCtorOrNull(type) == null;
     }
 
     private static void GenerateReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
@@ -103,11 +118,19 @@ public partial class Generator
         }
     }
 
-    private static void GenerateReaderProperty(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    private static void GenerateReaderProperty(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type,
+        bool isRequired = false
+    )
     {
         sourceWriter.Write(AccessibilityToString(type.DeclaredAccessibility));
-        sourceWriter.Write(" ");
-        sourceWriter.Write("ObjectReader<");
+        if (isRequired)
+        {
+            sourceWriter.Write(" required");
+        }
+
+        sourceWriter.Write(" ObjectReader<");
         sourceWriter.Write(type.ToDisplayString());
         if (type is { IsReferenceType: true, NullableAnnotation: NullableAnnotation.NotAnnotated })
         {
@@ -174,6 +197,7 @@ public partial class Generator
 
     private static IMethodSymbol? GetCtorOrNull(ITypeSymbol type) =>
         type.GetMembers(".ctor")
+            .Where(x => x.DeclaredAccessibility != Accessibility.Private)
             .Cast<IMethodSymbol>()
             .OrderByDescending(x => x.Parameters.Length)
             .FirstOrDefault();

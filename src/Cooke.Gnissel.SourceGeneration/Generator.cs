@@ -156,7 +156,9 @@ public partial class Generator : IIncrementalGenerator
                 WritePartialMappersClassStart(mappersClass, sourceWriter);
 
                 sourceWriter.WriteLine(
-                    "public DbReaders Readers { get; init; } = new DbReaders();"
+                    types.Any(NeedCustomReader)
+                        ? "public required DbReaders Readers { get; init; }"
+                        : "public DbReaders Readers { get; init; } = new DbReaders();"
                 );
                 sourceWriter.WriteLine();
 
@@ -197,7 +199,7 @@ public partial class Generator : IIncrementalGenerator
                             sourceWriter.WriteLine(">();");
                         }
                     }
-                    else
+                    else if (!NeedCustomReader(type))
                     {
                         sourceWriter.Write(GetReaderPropertyName(type));
                         sourceWriter.Write(" = new ObjectReader<");
