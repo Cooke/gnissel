@@ -37,7 +37,7 @@ public enum AnotherType
     Two,
 }
 
-[DbMap(Technique = MappingTechnique.String)]
+[DbMap(Technique = MappingTechnique.AsString)]
 public enum UserType
 {
     Admin,
@@ -47,7 +47,5 @@ public enum UserType
 namespace Gnissel.SourceGeneration
 {
     [DbMappers(EnumMappingTechnique = MappingTechnique.AsIs)]
-    [DbMap(typeof(AnotherType), Technique = MappingTechnique.AsIs)]
-    [DbMap(typeof(UserType))]
     internal partial class DbMappers { }
 }

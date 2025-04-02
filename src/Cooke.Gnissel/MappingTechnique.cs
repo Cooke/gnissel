@@ -2,6 +2,7 @@
 
 public enum MappingTechnique
 {
+    Default,
     AsIs,
     AsString,
     AsInteger,

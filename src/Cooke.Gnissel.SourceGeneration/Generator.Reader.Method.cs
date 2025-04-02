@@ -48,7 +48,7 @@ public partial class Generator
         IndentedTextWriter sourceWriter
     )
     {
-        if (IsBuildIn(type))
+        if (IsBuildIn(type) || GetMapTechnique(type) == MappingTechnique.AsIs)
         {
             sourceWriter.Write("return ");
             GenerateNativeReadCall(type, sourceWriter);

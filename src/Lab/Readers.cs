@@ -23,9 +23,6 @@ internal partial class DbMappers : IMapperProvider
             _additionalReaders = additionalReaders;
             UserReader = new ObjectReader<User?>(ReadUser, CreateReadUserDescriptors);
             AddressReader = new ObjectReader<Address?>(ReadAddress, CreateReadAddressDescriptors);
-            StringReader = ObjectReaderUtils.CreateDefault<string>();
-            Int32NullableReader = ObjectReaderUtils.CreateDefault<int?>();
-            Int32Reader = ObjectReaderUtils.CreateNonNullableVariant(() => Int32NullableReader);
         }
 
         public ObjectReader<string?> StringReader { get; }

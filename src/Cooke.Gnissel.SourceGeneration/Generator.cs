@@ -304,6 +304,11 @@ public partial class Generator : IIncrementalGenerator
             yield break;
         }
 
+        if (GetMapTechnique(type) != MappingTechnique.Default)
+        {
+            yield break;
+        }
+
         var ctor = GetCtorOrNull(type);
         if (ctor == null)
         {
@@ -317,6 +322,25 @@ public partial class Generator : IIncrementalGenerator
                 yield return innerType;
             }
         }
+    }
+
+    private static MappingTechnique GetMapTechnique(ITypeSymbol type)
+    {
+        var mapAttribute = type.GetAttributes()
+            .FirstOrDefault(x => x.AttributeClass?.Name == "DbMap");
+        if (mapAttribute != null)
+        {
+            foreach (var argument in mapAttribute.NamedArguments)
+            {
+                switch (argument.Key)
+                {
+                    case "Technique":
+                        return (MappingTechnique)argument.Value.Value!;
+                }
+            }
+        }
+
+        return MappingTechnique.Default;
     }
 
     private static string GetCreateReaderDescriptorsName(ITypeSymbol type) =>
@@ -381,6 +405,7 @@ public partial class Generator : IIncrementalGenerator
 
     private enum MappingTechnique
     {
+        Default,
         AsIs,
         AsString,
         AsInteger,

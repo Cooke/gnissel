@@ -44,7 +44,8 @@ public partial class Generator
         return !IsBuildIn(type)
             && !type.IsTupleType
             && type.TypeKind != TypeKind.Enum
-            && GetCtorOrNull(type) == null;
+            && GetCtorOrNull(type) == null
+            && GetMapTechnique(type) != MappingTechnique.Default;
     }
 
     private static void GenerateReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
@@ -53,7 +54,11 @@ public partial class Generator
         sourceWriter.Write(GetCreateReaderDescriptorsName(type));
         sourceWriter.WriteLine("() => [");
         sourceWriter.Indent++;
-        if (IsBuildIn(type) || type.TypeKind == TypeKind.Enum)
+        if (
+            IsBuildIn(type)
+            || type.TypeKind == TypeKind.Enum
+            || GetMapTechnique(type) != MappingTechnique.Default
+        )
         {
             sourceWriter.WriteLine("new NextOrdinalReadDescriptor()");
         }

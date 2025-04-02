@@ -26,24 +26,7 @@ public partial class MappingJsonTests
             .EnableDynamicJson()
             .Build();
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(
-            new(
-                adapter,
-                new DbMappers()
-                {
-                    Readers = new DbMappers.DbReaders()
-                    {
-                        MappingJsonTestsGameClassReader = new ObjectReader<GameClass?>(
-                            (reader, ordinalReader) =>
-                                GameClass.TryParse(
-                                    reader.GetValueOrNull<string>(ordinalReader.Read())
-                                ),
-                            () => [new NextOrdinalReadDescriptor()]
-                        ),
-                    },
-                }
-            )
-        );
+        _db = new TestDbContext(new(adapter, new DbMappers()));
 
         await _dataSource
             .CreateCommand(
@@ -108,13 +91,11 @@ public partial class MappingJsonTests
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
-
-        public Table<Device> Devices { get; } = new(options);
     }
 
     private record User(int Id, string Name, int Age, UserData Data);
 
-    [DbType("jsonb")]
+    [DbMap(Technique = MappingTechnique.AsIs)]
     private record UserData(
         string Username,
         int Level,
@@ -177,8 +158,6 @@ public partial class MappingJsonTests
         Admin,
         User,
     }
-
-    public record Device(string Id, string Name, int UserId);
 
     [DbMappers]
     private partial class DbMappers;
