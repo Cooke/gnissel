@@ -13,8 +13,8 @@ public partial class Generator : IIncrementalGenerator
             (context, _) => new MappersClass((INamedTypeSymbol)context.TargetSymbol)
         );
 
-        GenerateReadMappers(initContext, mappersPipeline);
+        GenerateDbReaders(initContext, mappersPipeline);
 
-        GenerateWriteMappers(initContext, mappersPipeline);
+        GenerateDbWriters(initContext, mappersPipeline);
     }
 }

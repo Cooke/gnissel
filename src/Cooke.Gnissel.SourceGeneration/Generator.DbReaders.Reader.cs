@@ -14,7 +14,7 @@ public partial class Generator
         WritePartialReadMappersClassStart(mappersClass, sourceWriter);
         sourceWriter.WriteLine();
 
-        if (NeedCustomReader(type))
+        if (IsCustomMapped(type))
         {
             GenerateReaderProperty(sourceWriter, type, true);
             WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
@@ -48,11 +48,8 @@ public partial class Generator
         WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
     }
 
-    private static bool NeedCustomReader(ITypeSymbol type) =>
-        !IsBuildIn(type)
-        && !type.IsTupleType
-        && type.TypeKind != TypeKind.Enum
-        && GetCtorOrNull(type) == null;
+    private static bool IsCustomMapped(ITypeSymbol type) =>
+        GetMapTechnique(type) == MappingTechnique.Custom;
 
     private static void GenerateReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {
@@ -63,7 +60,8 @@ public partial class Generator
         if (
             IsBuildIn(type)
             || type.TypeKind == TypeKind.Enum
-            || GetMapTechnique(type) != MappingTechnique.Default
+            || IsCustomMapped(type)
+            || GetMapTechnique(type) == MappingTechnique.AsIs
         )
         {
             sourceWriter.WriteLine("new NextOrdinalReadDescriptor()");

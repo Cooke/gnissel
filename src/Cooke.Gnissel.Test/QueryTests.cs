@@ -1,30 +1,25 @@
-#region
-
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Text.Json;
+using System.Data;
 using Cooke.Gnissel.AsyncEnumerable;
-using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
 using Npgsql;
 
-#endregion
+// ReSharper disable UnusedMember.Local
+// ReSharper disable NotAccessedPositionalProperty.Local
+
 
 namespace Cooke.Gnissel.Test;
 
-public class QueryTests
+public partial class MappingTests
 {
-    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
-    // .EnableDynamicJsonMappings()
-    .Build();
+    private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private TestDbContext _db;
 
     [OneTimeSetUp]
     public async Task Setup()
     {
-        var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource), new Mappers()));
 
         await _dataSource
             .CreateCommand(
@@ -32,15 +27,15 @@ public class QueryTests
                     create table users
                     (
                         id   integer primary key generated always as identity,
-                        name text,
-                        age  integer
+                        name text NOT NULL,
+                        age  integer,
+                        description text
                     );
 
-                    create table devices
+                    create table dates
                     (
-                        id   text primary key,
-                        name text,
-                        user_id  integer
+                        timestamp_with_timezone timestamp with time zone,
+                        timestamp_without_timezone timestamp without time zone
                     );
                 """
             )
@@ -51,138 +46,187 @@ public class QueryTests
     public void OneTimeTearDown()
     {
         _dataSource.CreateCommand("DROP TABLE users").ExecuteNonQuery();
+        _dataSource.CreateCommand("DROP TABLE dates").ExecuteNonQuery();
     }
 
     [TearDown]
     public void TearDown()
     {
         _dataSource.CreateCommand("TRUNCATE users RESTART IDENTITY CASCADE").ExecuteNonQuery();
-        _dataSource.CreateCommand("TRUNCATE devices RESTART IDENTITY CASCADE").ExecuteNonQuery();
+        _dataSource.CreateCommand("TRUNCATE dates RESTART IDENTITY CASCADE").ExecuteNonQuery();
     }
 
     [Test]
-    public async Task QueryParameters()
+    public async Task ReadSinglePrimitiveField()
     {
-        const string name = "Bob";
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<User>($"SELECT * FROM users WHERE name={name}")
-            .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+        var results = await _db.Query<int>($"SELECT 1").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { 1 }, results);
     }
 
     [Test]
-    public async Task QueryParametersWithType()
+    public async Task CustomReading()
     {
-        const string name = "Bob";
         await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<User>(
-                $"SELECT * FROM users WHERE to_jsonb(name) = {JsonSerializer.Serialize(name):jsonb}"
+        var results = await _db.Query(
+                $"SELECT * FROM users",
+                x => new User(x.GetInt32(0), x.GetString(x.GetOrdinal("name")), x.GetInt32("age"))
             )
             .ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
     }
 
     [Test]
-    public async Task QueryInject()
+    public async Task ReadClassWithConstructor()
     {
-        const string name = "Bob";
         await _db.Users.Insert(new User(0, "Bob", 25));
-        var results = await _db.Query<User>(
-                $"SELECT * FROM {Sql.Inject("users")} WHERE name={name}"
-            )
-            .ToArrayAsync();
+        var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
     }
 
     [Test]
-    public async Task QueryJoin()
+    public async Task ReadClassWithConstructorParameterColumnOrderMismatch()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Devices.Insert(new Device(new DeviceId("my-device"), "IPhone", 1));
-        var results = await _db.Query<(User, Device)>(
-                $"SELECT * FROM users JOIN devices ON users.id=devices.user_id"
-            )
+        var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users")
             .ToArrayAsync();
         CollectionAssert.AreEqual(
-            new[] { (new User(1, "Bob", 25), new Device(new DeviceId("my-device"), "IPhone", 1)) },
+            new[] { new UserWithParametersInDifferentOrder(25, 1, "Bob") },
             results
         );
     }
 
     [Test]
-    public async Task QuerySingle()
+    public async Task ReadTuple()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Users.Insert(new User(0, "Sara", 25));
-
-        var user = await _db.QuerySingle<User>($"SELECT * FROM users WHERE name='Sara'");
-
-        Assert.That(user, Is.EqualTo(new User(2, "Sara", 25)));
+        var results = await _db.Query<(int, string, int)>($"SELECT * FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { (1, "Bob", 25) }, results);
     }
 
     [Test]
-    public void QuerySingleButMatchZero()
+    public async Task ReadDateTimes()
     {
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _db.QuerySingle<User>($"SELECT * FROM users WHERE name='Sara'")
+        DateTime withTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Utc);
+        DateTime withoutTimeZone = new DateTime(2023, 11, 7, 19, 4, 01, DateTimeKind.Local);
+        await _db.NonQuery(
+            $"INSERT INTO dates (timestamp_with_timezone, timestamp_without_timezone) VALUES ({withTimeZone}, {withoutTimeZone})"
+        );
+        var results = await _db.Query<(DateTime WithTimezone, DateTime WithoutTimezone)>(
+                $"SELECT timestamp_with_timezone, timestamp_without_timezone FROM dates"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { (withTimeZone, withoutTimeZone) }, results);
+    }
+
+    [Test]
+    public async Task ReadNullClass()
+    {
+        var results = await _db.Query<User?>(
+                $"SELECT null as id, null as name, null as age, null as description"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new User?[] { null }, results);
+    }
+
+    [Test]
+    public async Task ReadNullValueType()
+    {
+        var results = await _db.Query<TimeSpan?>($"SELECT null::int").ToArrayAsync();
+        CollectionAssert.AreEqual(new TimeSpan?[] { null }, results);
+    }
+
+    [Test]
+    public async Task NullComplexInPositionalType()
+    {
+        var results = await _db.Query<(User, User, User?)>(
+                $"SELECT 1 as id, 'Bob' as name, 30 as age, NULL as description, 2 as id, 'Sara' as name, 25 as age, NULL as description, null as id, null as name, null as age, null as description"
+            )
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(
+            new (User, User, User?)[] { (new User(1, "Bob", 30), new User(2, "Sara", 25), null) },
+            results
         );
     }
 
     [Test]
-    public async Task QuerySingleButMatchSeveral()
+    public async Task ComplexTypeWithTypedPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Users.Insert(new User(0, "Sara", 25));
-
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _db.QuerySingle<User>($"SELECT * FROM users")
-        );
+        var results = await _db.Query<UserWithTypedPrimitives>($"SELECT name, age FROM users")
+            .ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new UserWithTypedPrimitives(new("Bob"), 25) }, results);
     }
 
     [Test]
-    public async Task QuerySingleOrDefault()
+    public async Task WrappedPrimitiveMapping()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Users.Insert(new User(0, "Sara", 25));
-
-        var user = await _db.QuerySingleOrDefault<User>($"SELECT * FROM users WHERE name='Sara'");
-
-        Assert.That(user, Is.EqualTo(new User(2, "Sara", 25)));
+        var results = await _db.Query<Name>($"SELECT name FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { new Name("Bob") }, results);
     }
 
     [Test]
-    public async Task QuerySingleOrDefaultAndMatchZero()
+    public async Task WrappedNullablePrimitiveMapping()
     {
-        var result = await _db.QuerySingleOrDefault<User>($"SELECT * FROM users WHERE name='Sara'");
-        Assert.That(result, Is.Null);
+        var results = await _db.Query<Name?>($"SELECT NULL").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { (Name?)null }, results);
     }
 
     [Test]
-    public async Task QuerySingleOrDefaultButMatchSeveral()
+    public async Task EnumMapping()
     {
-        await _db.Users.Insert(new User(0, "Bob", 25));
-        await _db.Users.Insert(new User(0, "Sara", 25));
-
-        Assert.ThrowsAsync<InvalidOperationException>(
-            async () => await _db.QuerySingleOrDefault<User>($"SELECT * FROM users")
-        );
+        await _db.NonQuery($"INSERT INTO users (name) VALUES ({UserName.Bob})");
+        var results = await _db.Query<UserName>($"SELECT name FROM users").ToArrayAsync();
+        CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
     }
 
-    private class TestDbContext(DbOptions options) : DbContext(options)
+    [Test]
+    public async Task MapPropertyInAdditionToConstructor()
     {
-        public Table<User> Users { get; } = new(options);
+        var user = await _db.QuerySingle<UserWithProp>($"SELECT 1 as id, 'Bob' as desc");
+        Assert.That(user, Is.EqualTo(new UserWithProp(1) { Desc = "Bob" }));
+    }
 
-        public Table<Device> Devices { get; } = new(options);
+    private record UserWithProp(int Id)
+    {
+        public required string Desc { get; init; }
+    }
+
+    private enum UserName
+    {
+        Bob,
     }
 
     private record User(
         [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
         string Name,
-        int Age
+        int Age,
+        string? Description = null
+    )
+    {
+        // This constructor should be ignored when mapping, longest constructor is used
+        public User(int id)
+            : this(id, "Default", 12) { }
+
+        // Should be ignored when mapping since private setter
+        public string DescriptionOrName { get; private init; } = Description ?? Name;
+    };
+
+    private record UserWithParametersInDifferentOrder(
+        int Age,
+        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
+        string Name
     );
 
-    public record Device(DeviceId Id, string Name, int UserId);
+    private record UserWithTypedPrimitives(Name Name, int Age);
 
-    [DbConverter(typeof(NestedValueDbConverter))]
-    public record DeviceId(string Value);
+    private record Name(string Value);
+
+    private class TestDbContext(DbOptions options) : DbContext(options)
+    {
+        public Table<User> Users { get; } = new(options);
+    }
+
+    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
+    private partial class Mappers;
 }

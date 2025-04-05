@@ -6,4 +6,5 @@ public enum MappingTechnique
     AsIs,
     AsString,
     AsInteger,
+    Custom,
 }
