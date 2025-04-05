@@ -139,6 +139,16 @@ public partial class Generator
             }
         }
 
+        if (
+            !IsBuildIn(type)
+            && !type.IsTupleType
+            && type.TypeKind != TypeKind.Enum
+            && GetCtorOrNull(type) == null
+        )
+        {
+            return MappingTechnique.Custom;
+        }
+
         return MappingTechnique.Default;
     }
 
@@ -208,5 +218,6 @@ public partial class Generator
         AsIs,
         AsString,
         AsInteger,
+        Custom,
     }
 }

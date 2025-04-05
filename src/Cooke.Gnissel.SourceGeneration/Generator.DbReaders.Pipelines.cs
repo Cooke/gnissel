@@ -91,9 +91,10 @@ public partial class Generator
 
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                GenerateReader(mappersClass, sourceWriter, type);
-                sourceWriter.Flush();
 
+                GenerateReader(mappersClass, sourceWriter, type);
+
+                sourceWriter.Flush();
                 context.AddSource(
                     $"{GetSourceName(mappersClass.Symbol)}.ReadMappers.{GetTypeIdentifierName(type)}.cs",
                     stringWriter.ToString()
@@ -109,104 +110,10 @@ public partial class Generator
                 var mappersClass = mapperWithTypes.mappersClass;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
-                WritePartialMappersClassStart(mappersClass, sourceWriter);
 
-                sourceWriter.WriteLine(
-                    types.Any(NeedCustomReader)
-                        ? "public required DbReaders Readers { get; init; }"
-                        : "public DbReaders Readers { get; init; } = new DbReaders();"
-                );
-                sourceWriter.WriteLine();
+                GenerateDbReaders(mappersClass, sourceWriter, types);
 
-                sourceWriter.WriteLine("public IObjectReaderProvider ReaderProvider => Readers;");
-                sourceWriter.WriteLine();
-
-                sourceWriter.WriteLine("public partial class DbReaders : IObjectReaderProvider {");
-                sourceWriter.Indent++;
-
-                sourceWriter.WriteLine("private IObjectReaderProvider? _readerProvider;");
-                sourceWriter.WriteLine();
-
-                sourceWriter.WriteLine("public DbReaders() { ");
-                sourceWriter.Indent++;
-                foreach (var type in types)
-                {
-                    if (!NeedCustomReader(type))
-                    {
-                        sourceWriter.Write(GetReaderPropertyName(type));
-                        sourceWriter.Write(" = new ObjectReader<");
-                        sourceWriter.Write(type.ToDisplayString());
-                        if (
-                            type is
-                            {
-                                IsReferenceType: true,
-                                NullableAnnotation: NullableAnnotation.NotAnnotated
-                            }
-                        )
-                        {
-                            sourceWriter.Write("?");
-                        }
-
-                        sourceWriter.Write(">(");
-                        sourceWriter.Write(GetReadMethodName(type));
-                        sourceWriter.Write(",");
-                        sourceWriter.Write(GetCreateReaderDescriptorsName(type));
-                        sourceWriter.WriteLine(");");
-
-                        if (type.IsValueType)
-                        {
-                            sourceWriter.Write(GetNullableReaderPropertyName(type));
-                            sourceWriter.Write(" = new ObjectReader<");
-                            sourceWriter.Write(type.ToDisplayString());
-                            sourceWriter.Write("?>(");
-                            sourceWriter.Write(GetNullableReadMethodName(type));
-                            sourceWriter.Write(",");
-                            sourceWriter.Write(GetCreateReaderDescriptorsName(type));
-                            sourceWriter.WriteLine(");");
-                        }
-                    }
-                }
-
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("}");
-                sourceWriter.WriteLine();
-
-                sourceWriter.WriteLine("public ImmutableArray<IObjectReader> GetAllReaders() => [");
-                sourceWriter.Indent++;
-
-                for (var index = 0; index < types.Length; index++)
-                {
-                    var type = types[index];
-                    sourceWriter.Write(GetReaderPropertyName(type));
-                    if (type.IsValueType)
-                    {
-                        sourceWriter.WriteLine(",");
-                        sourceWriter.Write(GetNullableReaderPropertyName(type));
-                    }
-
-                    if (index < types.Length - 1)
-                    {
-                        sourceWriter.WriteLine(",");
-                    }
-                }
-
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("];");
-                sourceWriter.WriteLine();
-
-                sourceWriter.WriteLine("public ObjectReader<TOut> Get<TOut>()");
-                sourceWriter.WriteLine("{");
-                sourceWriter.Indent++;
-                sourceWriter.WriteLine(
-                    "_readerProvider ??= DictionaryObjectReaderProvider.From(GetAllReaders());"
-                );
-                sourceWriter.WriteLine("return _readerProvider.Get<TOut>();");
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("}");
-
-                WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
                 sourceWriter.Flush();
-
                 context.AddSource(
                     $"{GetSourceName(mappersClass.Symbol)}.ReadMappers.cs",
                     stringWriter.ToString()
