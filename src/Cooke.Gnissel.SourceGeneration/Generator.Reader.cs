@@ -153,6 +153,7 @@ public partial class Generator
         {
             sourceWriter.Write("?");
         }
+
         sourceWriter.Write("> ");
         sourceWriter.Write(GetReaderPropertyName(type));
         sourceWriter.WriteLine(" { get; init; }");
