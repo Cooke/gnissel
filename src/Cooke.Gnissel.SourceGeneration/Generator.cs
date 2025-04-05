@@ -327,7 +327,7 @@ public partial class Generator : IIncrementalGenerator
     private static MappingTechnique GetMapTechnique(ITypeSymbol type)
     {
         var mapAttribute = type.GetAttributes()
-            .FirstOrDefault(x => x.AttributeClass?.Name == "DbMap");
+            .FirstOrDefault(x => x.AttributeClass?.Name == "DbMapAttribute");
         if (mapAttribute != null)
         {
             foreach (var argument in mapAttribute.NamedArguments)

@@ -21,6 +21,15 @@ public partial class Generator
             return;
         }
 
+        if (GetMapTechnique(type) == MappingTechnique.AsIs)
+        {
+            GenerateReaderProperty(sourceWriter, type);
+            GenerateReaderMetadata(sourceWriter, type);
+            GenerateReadMethod(type, mappersClass, sourceWriter);
+            WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
+            return;
+        }
+
         GenerateReaderProperty(sourceWriter, type);
         GenerateReaderMetadata(sourceWriter, type);
 
@@ -39,14 +48,11 @@ public partial class Generator
         WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
     }
 
-    private static bool NeedCustomReader(ITypeSymbol type)
-    {
-        return !IsBuildIn(type)
-            && !type.IsTupleType
-            && type.TypeKind != TypeKind.Enum
-            && GetCtorOrNull(type) == null
-            && GetMapTechnique(type) != MappingTechnique.Default;
-    }
+    private static bool NeedCustomReader(ITypeSymbol type) =>
+        !IsBuildIn(type)
+        && !type.IsTupleType
+        && type.TypeKind != TypeKind.Enum
+        && GetCtorOrNull(type) == null;
 
     private static void GenerateReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
     {

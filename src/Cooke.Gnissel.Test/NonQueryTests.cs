@@ -55,7 +55,7 @@ public partial class NonQueryTests
         Assert.That(fetched, Is.EqualTo(new User(1, "Bob", 25)));
     }
 
-    public record User(int Id, string Name, int Age);
+    private record User(int Id, string Name, int Age);
 
     [DbMappers]
     private partial class DbMappers;
