@@ -1,5 +1,6 @@
 ﻿using System.CodeDom.Compiler;
 using System.Collections.Immutable;
+using System.Text;
 using Microsoft.CodeAnalysis;
 
 namespace Cooke.Gnissel.SourceGeneration;
@@ -210,6 +211,13 @@ public partial class Generator
         public INamedTypeSymbol Symbol { get; }
 
         public MappingTechnique EnumMappingTechnique { get; } = MappingTechnique.AsIs;
+
+        public NamingConvention NamingConvention { get; } = NamingConvention.SnakeCase;
+    }
+
+    private enum NamingConvention
+    {
+        SnakeCase,
     }
 
     private enum MappingTechnique
@@ -219,5 +227,39 @@ public partial class Generator
         AsString,
         AsInteger,
         Custom,
+    }
+
+    private static string GetColumnName(MappersClass mappersClass, string name)
+    {
+        switch (mappersClass.NamingConvention)
+        {
+            case NamingConvention.SnakeCase:
+                return GetSnakeCaseName(name);
+            default:
+                throw new ArgumentOutOfRangeException();
+        }
+    }
+
+    private static string GetSnakeCaseName(string name)
+    {
+        var sb = new StringBuilder();
+        foreach (var c in name)
+        {
+            if (char.IsUpper(c))
+            {
+                if (sb.Length > 0)
+                {
+                    sb.Append('_');
+                }
+
+                sb.Append(char.ToLower(c));
+            }
+            else
+            {
+                sb.Append(c);
+            }
+        }
+
+        return sb.ToString();
     }
 }

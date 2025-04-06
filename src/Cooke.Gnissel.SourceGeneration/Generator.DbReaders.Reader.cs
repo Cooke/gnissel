@@ -24,14 +24,14 @@ public partial class Generator
         if (GetMapTechnique(type) == MappingTechnique.AsIs)
         {
             GenerateReaderProperty(sourceWriter, type);
-            GenerateReaderMetadata(sourceWriter, type);
+            GenerateReaderMetadata(sourceWriter, type, mappersClass);
             GenerateReadMethod(type, mappersClass, sourceWriter);
             WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
             return;
         }
 
         GenerateReaderProperty(sourceWriter, type);
-        GenerateReaderMetadata(sourceWriter, type);
+        GenerateReaderMetadata(sourceWriter, type, mappersClass);
 
         if (type.IsValueType)
         {
@@ -51,7 +51,11 @@ public partial class Generator
     private static bool IsCustomMapped(ITypeSymbol type) =>
         GetMapTechnique(type) == MappingTechnique.Custom;
 
-    private static void GenerateReaderMetadata(IndentedTextWriter sourceWriter, ITypeSymbol type)
+    private static void GenerateReaderMetadata(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type,
+        MappersClass mappersClass
+    )
     {
         sourceWriter.Write("private ImmutableArray<ReadDescriptor> ");
         sourceWriter.Write(GetCreateReaderDescriptorsName(type));
@@ -104,7 +108,7 @@ public partial class Generator
 
                 for (int i = 0; i < newArgs.Length; i++)
                 {
-                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name);
+                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name, mappersClass);
                     if (i < newArgs.Length - 1)
                     {
                         sourceWriter.WriteLine(",");
@@ -117,12 +121,16 @@ public partial class Generator
         sourceWriter.WriteLine("];");
         sourceWriter.WriteLine();
 
-        void WriteSubReaderDescriptor(ITypeSymbol typeSymbol, string name)
+        void WriteSubReaderDescriptor(
+            ITypeSymbol typeSymbol,
+            string name,
+            MappersClass mappersClass
+        )
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetReaderPropertyName(typeSymbol));
             sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(\"");
-            sourceWriter.Write(name);
+            sourceWriter.Write(GetColumnName(mappersClass, name));
             sourceWriter.Write("\"))");
         }
     }
