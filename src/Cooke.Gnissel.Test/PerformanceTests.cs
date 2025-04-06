@@ -3,7 +3,6 @@
 using System.ComponentModel.DataAnnotations.Schema;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
 using Cooke.Gnissel.Typed;
 using Dapper;
 using Npgsql;
@@ -13,7 +12,7 @@ using Npgsql;
 namespace Cooke.Gnissel.Test;
 
 [Explicit]
-public class PerformanceTests
+public partial class PerformanceTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder
     // .EnableDynamicJsonMappings()
@@ -24,7 +23,7 @@ public class PerformanceTests
     public async Task Setup()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new TestDbContext(new(adapter, new DbMappers()));
 
         await _dataSource
             .CreateCommand(
@@ -121,9 +120,7 @@ public class PerformanceTests
     public async Task QueryGnisselTyped()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        var table = new Table<User>(
-            new DbOptions(adapter, new ExpressionObjectReaderProvider(adapter))
-        );
+        var table = new Table<User>(new DbOptions(adapter, new DbMappers()));
         await table.ToArrayAsync();
     }
 
@@ -153,4 +150,7 @@ public class PerformanceTests
         int Int7,
         int Int8
     );
+
+    [DbMappers]
+    private partial class DbMappers;
 }

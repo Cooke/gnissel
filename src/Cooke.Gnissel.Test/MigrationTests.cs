@@ -2,14 +2,13 @@
 
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
-using Cooke.Gnissel.Services.Implementations;
 using Npgsql;
 
 #endregion
 
 namespace Cooke.Gnissel.Test;
 
-public class MigrationTests
+public partial class MigrationTests
 {
     private readonly NpgsqlDataSource _dataSource = Fixture.DataSourceBuilder.Build();
     private DbContext _db;
@@ -18,7 +17,7 @@ public class MigrationTests
     public void Setup()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new DbContext(new(adapter, new ExpressionObjectReaderProvider(adapter)));
+        _db = new DbContext(new(adapter, new DbMappers()));
     }
 
     [OneTimeTearDown]
@@ -68,4 +67,7 @@ public class MigrationTests
             async () => await _db.Query<string>($"SELECT name FROM users").ToArrayAsync()
         );
     }
+
+    [DbMappers]
+    private partial class DbMappers;
 }
