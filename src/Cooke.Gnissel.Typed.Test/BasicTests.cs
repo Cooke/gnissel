@@ -7,7 +7,7 @@ using Xunit.Abstractions;
 namespace Cooke.Gnissel.Typed.Test;
 
 [Collection("Database collection")]
-public class BasicTests : IDisposable
+public partial class BasicTests : IDisposable
 {
     private readonly TestDbContext db;
 
@@ -15,10 +15,7 @@ public class BasicTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new(
-                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
-                new Mappers()
-            )
+            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()), new DbMappers())
         );
         db.NonQuery(
                 $"""
@@ -488,5 +485,5 @@ public class BasicTests : IDisposable
     private record PartialUser(int Id, string Name, int Age);
 
     [DbMappers]
-    private partial class Mappers;
+    private partial class DbMappers;
 }
