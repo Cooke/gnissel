@@ -17,13 +17,13 @@ public partial class Generator
                 (node, _) =>
                     node
                         is InvocationExpressionSyntax
+                    {
+                        Expression: MemberAccessExpressionSyntax
                         {
-                            Expression: MemberAccessExpressionSyntax
-                            {
-                                Name.Identifier.ValueText: "Select"
-                            },
-                            ArgumentList.Arguments.Count: 1
+                            Name.Identifier.ValueText: "Select"
                         },
+                        ArgumentList.Arguments.Count: 1
+                    },
                 (context, ct) =>
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
@@ -51,18 +51,18 @@ public partial class Generator
                 (node, _) =>
                     node
                         is InvocationExpressionSyntax
+                    {
+                        Expression: MemberAccessExpressionSyntax
                         {
-                            Expression: MemberAccessExpressionSyntax
+                            Name: GenericNameSyntax
                             {
-                                Name: GenericNameSyntax
-                                {
-                                    Identifier.ValueText: "Query"
+                                Identifier.ValueText: "Query"
                                         or "QuerySingle"
                                         or "QuerySingleOrDefault",
-                                    TypeArgumentList.Arguments.Count: 1
-                                }
+                                TypeArgumentList.Arguments.Count: 1
                             }
-                        },
+                        }
+                    },
                 (context, _) =>
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
