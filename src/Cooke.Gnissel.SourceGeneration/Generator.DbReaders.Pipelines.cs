@@ -12,73 +12,81 @@ public partial class Generator
         IncrementalValuesProvider<MappersClass> mappersPipeline
     )
     {
-        var selectTypesPipeline = initContext
-            .SyntaxProvider.CreateSyntaxProvider(
-                (node, _) =>
-                    node
-                        is InvocationExpressionSyntax
-                    {
-                        Expression: MemberAccessExpressionSyntax
-                        {
-                            Name.Identifier.ValueText: "Select"
-                        },
-                        ArgumentList.Arguments.Count: 1
-                    },
-                (context, ct) =>
-                {
-                    var invocation = (InvocationExpressionSyntax)context.Node;
-                    var operation = context.SemanticModel.GetOperation(invocation, ct);
-                    if (
-                        operation
-                        is not IInvocationOperation
-                        {
-                            TargetMethod.TypeArguments: { Length: 1 } typeArguments
-                        }
-                    )
-                    {
-                        return null;
-                    }
+        GenerateAnonymous(initContext, mappersPipeline);
+        GenerateRegular(initContext, mappersPipeline);
+    }
 
-                    var typeArg = typeArguments[0];
-                    return typeArg;
-                }
-            )
-            .Where(x => x != null)
-            .Select((v, _) => v!);
-
+    private void GenerateRegular(
+        IncrementalGeneratorInitializationContext initContext,
+        IncrementalValuesProvider<MappersClass> mappersPipeline
+    )
+    {
         var queryTypesPipeline = initContext
             .SyntaxProvider.CreateSyntaxProvider(
                 (node, _) =>
                     node
                         is InvocationExpressionSyntax
-                    {
-                        Expression: MemberAccessExpressionSyntax
                         {
-                            Name: GenericNameSyntax
-                            {
-                                Identifier.ValueText: "Query"
-                                        or "QuerySingle"
-                                        or "QuerySingleOrDefault",
-                                TypeArgumentList.Arguments.Count: 1
-                            }
-                        }
-                    },
-                (context, _) =>
+                            Expression: MemberAccessExpressionSyntax
+                                {
+                                    Name: GenericNameSyntax
+                                    {
+                                        Identifier.ValueText: "Query"
+                                            or "QuerySingle"
+                                            or "QuerySingleOrDefault"
+                                            or "Select",
+                                        TypeArgumentList.Arguments.Count: 1
+                                    }
+                                }
+                                or MemberAccessExpressionSyntax
+                                {
+                                    Name.Identifier.ValueText: "Select",
+                                    Name: not GenericNameSyntax
+                                },
+                            ArgumentList.Arguments.Count: 1
+                        },
+                (context, ct) =>
                 {
                     var invocation = (InvocationExpressionSyntax)context.Node;
                     var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
-                    var genericName = (GenericNameSyntax)memberAccess.Name;
-                    var typeArg = genericName.TypeArgumentList.Arguments[0];
-                    var typeArgInfo = context.SemanticModel.GetTypeInfo(typeArg);
-                    return typeArgInfo.Type ?? null;
+
+                    // Query
+                    if (memberAccess.Name is GenericNameSyntax genericName)
+                    {
+                        var typeArg = genericName.TypeArgumentList.Arguments[0];
+                        var typeArgInfo = context.SemanticModel.GetTypeInfo(typeArg);
+                        return typeArgInfo.Type ?? null;
+                    }
+                    // Select
+                    else
+                    {
+                        var operation = context.SemanticModel.GetOperation(invocation, ct);
+                        if (
+                            operation
+                            is not IInvocationOperation
+                            {
+                                TargetMethod.TypeArguments: { Length: 1 } typeArguments
+                            }
+                        )
+                        {
+                            return null;
+                        }
+
+                        var typeArg = typeArguments[0];
+                        if (typeArg.IsAnonymousType)
+                        {
+                            return null;
+                        }
+
+                        return typeArg;
+                    }
                 }
             )
             .Where(type => type != null)
             .Select((input, _) => input!)
             // Currently indirect usage is not supported (unbound type parameters)
-            .Where(type => type is not ITypeParameterSymbol);
-
-        var readTypePipelines = queryTypesPipeline.Combine(selectTypesPipeline).Collect();
+            .Where(type => type is not ITypeParameterSymbol)
+            .Collect();
 
         var mapperClassesWithTypesPipeline = mappersPipeline
             .Combine(queryTypesPipeline)
@@ -140,6 +148,91 @@ public partial class Generator
                 sourceWriter.Flush();
                 context.AddSource(
                     $"{GetSourceName(mappersClass.Symbol)}.ReadMappers.cs",
+                    stringWriter.ToString()
+                );
+            }
+        );
+    }
+
+    private void GenerateAnonymous(
+        IncrementalGeneratorInitializationContext initContext,
+        IncrementalValuesProvider<MappersClass> mappersPipeline
+    )
+    {
+        var anonymousTypesPipeline = initContext
+            .SyntaxProvider.CreateSyntaxProvider(
+                (node, _) =>
+                    node
+                        is InvocationExpressionSyntax
+                        {
+                            Expression: MemberAccessExpressionSyntax
+                            {
+                                Name.Identifier.ValueText: "Select",
+                                Name: not GenericNameSyntax
+                            },
+                            ArgumentList.Arguments.Count: 1
+                        },
+                (context, ct) =>
+                {
+                    var invocation = (InvocationExpressionSyntax)context.Node;
+                    var operation = context.SemanticModel.GetOperation(invocation, ct);
+                    if (
+                        operation
+                        is not IInvocationOperation
+                        {
+                            TargetMethod.TypeArguments: { Length: 1 } typeArguments
+                        }
+                    )
+                    {
+                        return null;
+                    }
+
+                    var typeArg = typeArguments[0];
+                    if (!typeArg.IsAnonymousType)
+                    {
+                        return null;
+                    }
+
+                    return typeArg;
+                }
+            )
+            .Where(x => x != null)
+            .Select((v, _) => v!);
+
+        var mapperClassesWithAnonymousPipeline = mappersPipeline
+            .Combine(anonymousTypesPipeline.Collect())
+            .Select(
+                (pair, _) =>
+                {
+                    var mappersClass = pair.Left;
+                    var types = pair.Right;
+                    return (
+                        mappersClass,
+                        types: types
+                            .Where(t => IsAccessibleDeep(t, mappersClass))
+                            .Select(AdjustNulls)
+                            .Distinct(SymbolEqualityComparer.Default)
+                            .Cast<ITypeSymbol>()
+                            .ToArray()
+                    );
+                }
+            );
+
+        initContext.RegisterImplementationSourceOutput(
+            mapperClassesWithAnonymousPipeline,
+            (context, readTypeWithMappersClass) =>
+            {
+                var mappersClass = readTypeWithMappersClass.mappersClass;
+                var anonymousTypes = readTypeWithMappersClass.types;
+
+                var stringWriter = new StringWriter();
+                var sourceWriter = new IndentedTextWriter(stringWriter);
+
+                GenerateAnonymousReaders(mappersClass, sourceWriter, anonymousTypes);
+
+                sourceWriter.Flush();
+                context.AddSource(
+                    $"{GetSourceName(mappersClass.Symbol)}.ReadMappers.Anonymous.cs",
                     stringWriter.ToString()
                 );
             }

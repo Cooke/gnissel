@@ -28,9 +28,10 @@ internal partial class DbMappers : IMapperProvider
         public ObjectReader<string?> StringReader { get; }
         public ObjectReader<int> Int32Reader { get; }
         public ObjectReader<int?> Int32NullableReader { get; }
+        public IObjectReader Anonymous1Reader { get; }
 
         private IEnumerable<IObjectReader> GetAllReaders() =>
-            [UserReader, AddressReader, .. _additionalReaders];
+            [UserReader, AddressReader, .. CreateAnonymousReaders()];
 
         public ObjectReader<TOut> Get<TOut>()
         {

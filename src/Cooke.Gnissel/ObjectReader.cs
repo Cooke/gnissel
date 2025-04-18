@@ -5,6 +5,11 @@ namespace Cooke.Gnissel;
 
 public interface IObjectReader
 {
+    public static IObjectReader Create<T>(
+        ObjectReaderFunc<T> read,
+        Func<ImmutableArray<ReadDescriptor>> readDescriptorsFunc
+    ) => new ObjectReader<T>(read, readDescriptorsFunc);
+
     Type ObjectType { get; }
 
     ImmutableArray<ReadDescriptor> ReadDescriptors { get; }

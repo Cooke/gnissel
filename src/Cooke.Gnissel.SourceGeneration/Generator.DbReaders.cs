@@ -69,6 +69,7 @@ public partial class Generator
 
         sourceWriter.WriteLine("public ImmutableArray<IObjectReader> GetAllReaders() => [");
         sourceWriter.Indent++;
+        sourceWriter.WriteLine(".. CreateAnonymousReaders(),");
 
         for (var index = 0; index < types.Length; index++)
         {
