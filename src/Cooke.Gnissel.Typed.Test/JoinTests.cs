@@ -6,14 +6,16 @@ using Xunit.Abstractions;
 namespace Cooke.Gnissel.Typed.Test;
 
 [Collection("Database collection")]
-public class JoinTests : IDisposable
+public partial class JoinTests : IDisposable
 {
     private readonly TestDbContext db;
 
     public JoinTests(DatabaseFixture databaseFixture, ITestOutputHelper testOutputHelper)
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
-        db = new TestDbContext(new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build())));
+        db = new TestDbContext(
+            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()), new DbMappers())
+        );
         db.NonQuery(
                 $"""
                     create table users
@@ -121,7 +123,7 @@ public class JoinTests : IDisposable
             .Users.FullJoin(db.Devices, (u, d) => u.Id == d.UserId)
             .ToArrayAsync();
 
-        Assert.Equal([(bob, bobsDevice), (null, aliceDevice), (sara, null),], usersDevices);
+        Assert.Equal([(bob, bobsDevice), (null, aliceDevice), (sara, null)], usersDevices);
     }
 
     [Fact]
@@ -333,4 +335,7 @@ public class JoinTests : IDisposable
     private record Device(string Id, string Name, int UserId);
 
     private record DeviceKey(string DeviceId, string Key);
+
+    [DbMappers]
+    private partial class DbMappers;
 }

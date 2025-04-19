@@ -28,22 +28,14 @@ public partial class Generator
                         is InvocationExpressionSyntax
                             {
                                 Expression: MemberAccessExpressionSyntax
-                                    {
-                                        Name: GenericNameSyntax
-                                        {
-                                            Identifier.ValueText: "Query"
-                                                or "QuerySingle"
-                                                or "QuerySingleOrDefault"
-                                                or "Select",
-                                            TypeArgumentList.Arguments.Count: 1
-                                        }
-                                    }
-                                    or MemberAccessExpressionSyntax
-                                    {
-                                        Name.Identifier.ValueText: "Select",
-                                        Name: not GenericNameSyntax
-                                    },
-                                ArgumentList.Arguments.Count: 1
+                                {
+                                    Name.Identifier.ValueText: "ToArrayAsync"
+                                        or "ToListAsync"
+                                        or "Query"
+                                        or "QuerySingle"
+                                        or "QuerySingleOrDefault"
+                                        or "Select"
+                                },
                             }
                             or PropertyDeclarationSyntax
                             {
@@ -57,6 +49,24 @@ public partial class Generator
                 {
                     switch (context.Node)
                     {
+                        case InvocationExpressionSyntax invocation:
+                        {
+                            var operation = context.SemanticModel.GetOperation(invocation, ct);
+                            if (
+                                operation
+                                is not IInvocationOperation
+                                {
+                                    TargetMethod.TypeArguments: { Length: 1 } typeArguments
+                                }
+                            )
+                            {
+                                return null;
+                            }
+
+                            var typeArg = typeArguments[0];
+                            return typeArg.IsAnonymousType ? null : typeArg;
+                        }
+
                         case PropertyDeclarationSyntax
                         {
                             Type: GenericNameSyntax genericNameSyntax
@@ -68,41 +78,7 @@ public partial class Generator
                             );
                             return typeInfo.Type ?? null;
                         }
-                        case InvocationExpressionSyntax invocation:
-                        {
-                            var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
 
-                            // Query
-                            if (memberAccess.Name is GenericNameSyntax genericName)
-                            {
-                                var typeArg = genericName.TypeArgumentList.Arguments[0];
-                                var typeArgInfo = context.SemanticModel.GetTypeInfo(typeArg);
-                                return typeArgInfo.Type ?? null;
-                            }
-                            // Select
-                            else
-                            {
-                                var operation = context.SemanticModel.GetOperation(invocation, ct);
-                                if (
-                                    operation
-                                    is not IInvocationOperation
-                                    {
-                                        TargetMethod.TypeArguments: { Length: 1 } typeArguments
-                                    }
-                                )
-                                {
-                                    return null;
-                                }
-
-                                var typeArg = typeArguments[0];
-                                if (typeArg.IsAnonymousType)
-                                {
-                                    return null;
-                                }
-
-                                return typeArg;
-                            }
-                        }
                         default:
                             throw new InvalidOperationException("Unexpected node type");
                     }
