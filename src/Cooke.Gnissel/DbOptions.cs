@@ -15,11 +15,7 @@ public partial class DbOptions(
 )
 {
     public DbOptions(IDbAdapter adapter, IMapperProvider mapperProvider)
-        : this(
-            adapter,
-            mapperProvider.ReaderProvider,
-            mapperProvider.WriterProvider
-        ) { }
+        : this(adapter, mapperProvider.ReaderProvider, mapperProvider.WriterProvider) { }
 
     public DbOptions(
         IDbAdapter adapter,
@@ -43,6 +39,8 @@ public partial class DbOptions(
     public ObjectReader<T> GetReader<T>() => objectReaderProvider.Get<T>();
 
     public ObjectWriter<T> GetWriter<T>() => objectWriterProvider.Get<T>();
+
+    public IObjectWriter GetWriter(Type type) => objectWriterProvider.Get(type);
 
     public bool IsDbMapped(Type type) => DbAdapter.IsDbMapped(type);
 }

@@ -5,7 +5,11 @@ namespace Cooke.Gnissel.SourceGeneration;
 public static class Extensions
 {
     public static string ToNullableDisplayString(this ITypeSymbol type) =>
-        type.IsReferenceType && type.NullableAnnotation != NullableAnnotation.Annotated
-            ? type.ToDisplayString() + "?"
-            : type.ToDisplayString();
+        type switch
+        {
+            { IsReferenceType: true, NullableAnnotation: not NullableAnnotation.Annotated } =>
+                type.ToDisplayString() + "?",
+            { IsValueType: true, Name: not "Nullable" } => type.ToDisplayString() + "?",
+            _ => type.ToDisplayString(),
+        };
 }

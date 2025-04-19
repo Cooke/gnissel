@@ -1,5 +1,4 @@
 ﻿using Cooke.Gnissel.AsyncEnumerable;
-using Cooke.Gnissel.Converters;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Xunit.Abstractions;
@@ -7,7 +6,7 @@ using Xunit.Abstractions;
 namespace Cooke.Gnissel.Typed.Test;
 
 [Collection("Database collection")]
-public class EnumTests : IDisposable
+public partial class EnumTests : IDisposable
 {
     private readonly TestDbContext db;
 
@@ -15,10 +14,7 @@ public class EnumTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new(
-                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
-                [new EnumStringDbConverter()]
-            )
+            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()), new DbMappers())
         );
         db.NonQuery(
                 $"""
@@ -84,6 +80,9 @@ public class EnumTests : IDisposable
     private enum Role
     {
         Admin,
-        User
+        User,
     }
+
+    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
+    private partial class DbMappers;
 }

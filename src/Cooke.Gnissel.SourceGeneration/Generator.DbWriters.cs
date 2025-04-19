@@ -86,6 +86,16 @@ public partial class Generator
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
 
+        sourceWriter.WriteLine("public IObjectWriter Get(Type type)");
+        sourceWriter.WriteLine("{");
+        sourceWriter.Indent++;
+        sourceWriter.WriteLine(
+            "_writerProvider ??= DictionaryObjectWriterProvider.From(GetAllWriters());"
+        );
+        sourceWriter.WriteLine("return _writerProvider.Get(type);");
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
+
         GenerateWriteMappersClassEnd(mappersClass, sourceWriter);
     }
 }

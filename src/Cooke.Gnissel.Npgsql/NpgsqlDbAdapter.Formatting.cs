@@ -96,9 +96,12 @@ public partial class NpgsqlDbAdapter
     }
 
     private class MappingParameterWriter(IParameterWriter parameterWriter, DbOptions dbOptions)
-        : IParameterWriter
+        : ISqlParameterWriter
     {
         public void Write<T>(T value, string? dbType = null) =>
             dbOptions.GetWriter<T>().Write(value, parameterWriter);
+
+        public void Write(Type type, object? value, string? dbType = null) =>
+            dbOptions.GetWriter(type).Write(value, parameterWriter);
     }
 }

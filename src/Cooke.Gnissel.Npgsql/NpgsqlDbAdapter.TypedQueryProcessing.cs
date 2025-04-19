@@ -290,9 +290,12 @@ public partial class NpgsqlDbAdapter
                 return;
 
             case ConstantExpression constExp:
-                if (options.ConstantsAsParameters)
+                if (
+                    options.ConstantsAsParameters
+                    || constExp.Value is not (string or int or float or double or long or bool)
+                )
                 {
-                    sql.AppendParameter(constExp.Value);
+                    sql.AppendParameter(constExp.Type, constExp.Value);
                 }
                 else
                 {
@@ -317,7 +320,7 @@ public partial class NpgsqlDbAdapter
                 }
                 else if (TryEvaluateExpression(methodCallExpression, out var value))
                 {
-                    sql.AppendParameter(value);
+                    sql.AppendParameter(methodCallExpression.Type, value);
                 }
                 else
                 {
@@ -368,7 +371,7 @@ public partial class NpgsqlDbAdapter
             {
                 if (TryEvaluateExpression(memberExpression, out var value))
                 {
-                    sql.AppendParameter(value);
+                    sql.AppendParameter(memberExpression.Type, value);
                 }
                 else
                 {
@@ -431,6 +434,7 @@ public partial class NpgsqlDbAdapter
         }
     }
 
+    // TODO remove this dynamic code
     private static bool TryEvaluateExpression(Expression methodCallExpression, out object? result)
     {
         try

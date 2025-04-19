@@ -12,7 +12,11 @@ public partial class Generator
     )
     {
         sourceWriter.Write("private ");
-        sourceWriter.Write(type.ToNullableDisplayString());
+        sourceWriter.Write(
+            type.IsReferenceType && type.NullableAnnotation != NullableAnnotation.Annotated
+                ? type.ToDisplayString() + "?"
+                : type.ToDisplayString()
+        );
         sourceWriter.Write(" ");
         sourceWriter.Write(GetReadMethodName(type));
         sourceWriter.WriteLine("(DbDataReader reader, OrdinalReader ordinalReader) {");

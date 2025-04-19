@@ -26,59 +26,85 @@ public partial class Generator
                 (node, _) =>
                     node
                         is InvocationExpressionSyntax
-                        {
-                            Expression: MemberAccessExpressionSyntax
-                                {
-                                    Name: GenericNameSyntax
+                            {
+                                Expression: MemberAccessExpressionSyntax
                                     {
-                                        Identifier.ValueText: "Query"
-                                            or "QuerySingle"
-                                            or "QuerySingleOrDefault"
-                                            or "Select",
-                                        TypeArgumentList.Arguments.Count: 1
+                                        Name: GenericNameSyntax
+                                        {
+                                            Identifier.ValueText: "Query"
+                                                or "QuerySingle"
+                                                or "QuerySingleOrDefault"
+                                                or "Select",
+                                            TypeArgumentList.Arguments.Count: 1
+                                        }
                                     }
-                                }
-                                or MemberAccessExpressionSyntax
+                                    or MemberAccessExpressionSyntax
+                                    {
+                                        Name.Identifier.ValueText: "Select",
+                                        Name: not GenericNameSyntax
+                                    },
+                                ArgumentList.Arguments.Count: 1
+                            }
+                            or PropertyDeclarationSyntax
+                            {
+                                Type: GenericNameSyntax
                                 {
-                                    Name.Identifier.ValueText: "Select",
-                                    Name: not GenericNameSyntax
-                                },
-                            ArgumentList.Arguments.Count: 1
-                        },
+                                    Identifier.ValueText: "Table",
+                                    TypeArgumentList.Arguments.Count: 1
+                                }
+                            },
                 (context, ct) =>
                 {
-                    var invocation = (InvocationExpressionSyntax)context.Node;
-                    var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
+                    switch (context.Node)
+                    {
+                        case PropertyDeclarationSyntax
+                        {
+                            Type: GenericNameSyntax genericNameSyntax
+                        }:
+                        {
+                            var typeInfo = context.SemanticModel.GetTypeInfo(
+                                genericNameSyntax.TypeArgumentList.Arguments[0],
+                                ct
+                            );
+                            return typeInfo.Type ?? null;
+                        }
+                        case InvocationExpressionSyntax invocation:
+                        {
+                            var memberAccess = (MemberAccessExpressionSyntax)invocation.Expression;
 
-                    // Query
-                    if (memberAccess.Name is GenericNameSyntax genericName)
-                    {
-                        var typeArg = genericName.TypeArgumentList.Arguments[0];
-                        var typeArgInfo = context.SemanticModel.GetTypeInfo(typeArg);
-                        return typeArgInfo.Type ?? null;
-                    }
-                    // Select
-                    else
-                    {
-                        var operation = context.SemanticModel.GetOperation(invocation, ct);
-                        if (
-                            operation
-                            is not IInvocationOperation
+                            // Query
+                            if (memberAccess.Name is GenericNameSyntax genericName)
                             {
-                                TargetMethod.TypeArguments: { Length: 1 } typeArguments
+                                var typeArg = genericName.TypeArgumentList.Arguments[0];
+                                var typeArgInfo = context.SemanticModel.GetTypeInfo(typeArg);
+                                return typeArgInfo.Type ?? null;
                             }
-                        )
-                        {
-                            return null;
-                        }
+                            // Select
+                            else
+                            {
+                                var operation = context.SemanticModel.GetOperation(invocation, ct);
+                                if (
+                                    operation
+                                    is not IInvocationOperation
+                                    {
+                                        TargetMethod.TypeArguments: { Length: 1 } typeArguments
+                                    }
+                                )
+                                {
+                                    return null;
+                                }
 
-                        var typeArg = typeArguments[0];
-                        if (typeArg.IsAnonymousType)
-                        {
-                            return null;
-                        }
+                                var typeArg = typeArguments[0];
+                                if (typeArg.IsAnonymousType)
+                                {
+                                    return null;
+                                }
 
-                        return typeArg;
+                                return typeArg;
+                            }
+                        }
+                        default:
+                            throw new InvalidOperationException("Unexpected node type");
                     }
                 }
             )

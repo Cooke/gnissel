@@ -44,6 +44,9 @@ public class Sql
 
     public void AppendParameter<T>(T t) => _fragments.Add(new Parameter<T>(t, null));
 
+    public void AppendParameter(Type type, object? value) =>
+        _fragments.Add(new RuntimeTypedParameter(type, value, null));
+
     public void AppendParameter(Parameter parameter) => _fragments.Add(parameter);
 
     public void AppendFormatted<T>(T t, string? format) =>
@@ -57,13 +60,27 @@ public class Sql
 
     public abstract record Parameter : Fragment
     {
-        public abstract void WriteParameter(IParameterWriter writer);
+        public abstract void WriteParameter(ISqlParameterWriter writer);
     }
 
     public record Parameter<T>(T Value, string? Format) : Parameter
     {
-        public override void WriteParameter(IParameterWriter writer) => writer.Write(Value, Format);
+        public override void WriteParameter(ISqlParameterWriter writer) =>
+            writer.Write(Value, Format);
+    }
+
+    public record RuntimeTypedParameter(Type Type, object? Value, string? Format) : Parameter
+    {
+        public override void WriteParameter(ISqlParameterWriter writer) =>
+            writer.Write(Type, Value, Format);
     }
 
     public record LiteralValue(object? Value) : Fragment;
+}
+
+public interface ISqlParameterWriter
+{
+    void Write<T>(T value, string? dbType = null);
+
+    void Write(Type type, object? value, string? dbType = null);
 }

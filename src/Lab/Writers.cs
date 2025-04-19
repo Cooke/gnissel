@@ -8,11 +8,11 @@ internal partial class DbMappers
     public ObjectWriters Writers { get; init; } = new ObjectWriters();
 
     IObjectWriterProvider IMapperProvider.WriterProvider => Writers;
-    
+
     internal partial class ObjectWriters : IObjectWriterProvider
     {
-        private  DictionaryObjectWriterProvider? _provider;
-        
+        private DictionaryObjectWriterProvider? _provider;
+
         public ObjectWriters()
         {
             UserIdWriter = new ObjectWriter<UserId?>(WriteUserId);
@@ -23,12 +23,16 @@ internal partial class DbMappers
 
         private IEnumerable<IObjectWriter> GetAll() =>
             [UserIdWriter, UserWriter, UserTypeWriter, NonNullableUserTypeWriter];
-        
+
         public ObjectWriter<T> Get<T>()
         {
             _provider ??= DictionaryObjectWriterProvider.From(GetAll());
             return _provider.Get<T>();
         }
-    }
 
+        public IObjectWriter Get(Type type)
+        {
+            throw new NotImplementedException();
+        }
+    }
 }

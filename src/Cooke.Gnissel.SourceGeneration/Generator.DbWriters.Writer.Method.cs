@@ -5,8 +5,11 @@ namespace Cooke.Gnissel.SourceGeneration;
 
 public partial class Generator
 {
-    private static void WriteNullableWriteMethod(IndentedTextWriter sourceWriter,
-        ITypeSymbol type, MappersClass mappersClass)
+    private static void WriteNullableWriteMethod(
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type,
+        MappersClass mappersClass
+    )
     {
         sourceWriter.Write("private void ");
         sourceWriter.Write(GetNullableWriteMethodName(type));
@@ -20,7 +23,7 @@ public partial class Generator
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
     }
-    
+
     private static void GenerateWriteMethod(
         ITypeSymbol type,
         MappersClass mappersClass,
@@ -43,13 +46,17 @@ public partial class Generator
         {
             GenerateWriteMethodBody(type, mappersClass, sourceWriter);
         }
-        
+
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
         sourceWriter.WriteLine();
     }
 
-    private static void GenerateWriteMethodBody(ITypeSymbol type, MappersClass mappersClass, IndentedTextWriter sourceWriter)
+    private static void GenerateWriteMethodBody(
+        ITypeSymbol type,
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter
+    )
     {
         if (IsBuildIn(type))
         {
@@ -92,8 +99,8 @@ public partial class Generator
                 foreach (var prop in props)
                 {
                     sourceWriter.Write("parameterWriter.Write<");
-                    sourceWriter.Write(prop.Type.ToDisplayString());
-                    sourceWriter.WriteLine("?>(null);");
+                    sourceWriter.Write(prop.Type.ToNullableDisplayString());
+                    sourceWriter.WriteLine(">(null);");
                 }
 
                 sourceWriter.WriteLine("return;");

@@ -16,37 +16,60 @@ public partial class Generator
                 (x, _) =>
                     x
                         is InvocationExpressionSyntax
-                        {
-                            Expression: MemberAccessExpressionSyntax
                             {
-                                Name: GenericNameSyntax
-                                    {
-                                        Identifier.ValueText: "Query"
-                                            or "QuerySingle"
-                                            or "QuerySingleOrDefault",
-                                        TypeArgumentList.Arguments.Count: 1
-                                    }
-                                    or { Identifier.ValueText: "NonQuery" }
+                                Expression: MemberAccessExpressionSyntax
+                                {
+                                    Name: GenericNameSyntax
+                                        {
+                                            Identifier.ValueText: "Query"
+                                                or "QuerySingle"
+                                                or "QuerySingleOrDefault",
+                                            TypeArgumentList.Arguments.Count: 1
+                                        }
+                                        or { Identifier.ValueText: "NonQuery" }
+                                }
                             }
-                        },
+                            or PropertyDeclarationSyntax
+                            {
+                                Type: GenericNameSyntax
+                                {
+                                    Identifier.ValueText: "Table",
+                                    TypeArgumentList.Arguments.Count: 1
+                                }
+                            },
                 (context, ct) =>
                 {
-                    var invocation = (InvocationExpressionSyntax)context.Node;
-
-                    if (
-                        invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression
-                        is not InterpolatedStringExpressionSyntax interpolatedString
-                    )
+                    switch (context.Node)
                     {
-                        return [];
-                    }
+                        case PropertyDeclarationSyntax
+                        {
+                            Type: GenericNameSyntax genericNameSyntax
+                        }:
+                            var typeInfo = context.SemanticModel.GetTypeInfo(
+                                genericNameSyntax.TypeArgumentList.Arguments[0]
+                            );
+                            return typeInfo.Type is null ? [] : [typeInfo.Type];
 
-                    return interpolatedString
-                        .Contents.OfType<InterpolationSyntax>()
-                        .Select(x => context.SemanticModel.GetTypeInfo(x.Expression))
-                        .Where(writeTypeInfo => writeTypeInfo.Type != null)
-                        .Select(x => x.Type!)
-                        .ToArray();
+                        case InvocationExpressionSyntax invocation:
+                        {
+                            if (
+                                invocation.ArgumentList.Arguments.FirstOrDefault()?.Expression
+                                is not InterpolatedStringExpressionSyntax interpolatedString
+                            )
+                            {
+                                return [];
+                            }
+
+                            return interpolatedString
+                                .Contents.OfType<InterpolationSyntax>()
+                                .Select(x => context.SemanticModel.GetTypeInfo(x.Expression))
+                                .Where(writeTypeInfo => writeTypeInfo.Type != null)
+                                .Select(x => x.Type!)
+                                .ToArray();
+                        }
+                        default:
+                            throw new InvalidOperationException("Unexpected node type");
+                    }
                 }
             )
             .SelectMany((x, _) => x);

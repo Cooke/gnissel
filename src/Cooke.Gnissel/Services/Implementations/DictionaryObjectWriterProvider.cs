@@ -5,17 +5,12 @@ namespace Cooke.Gnissel.Services.Implementations;
 public class DictionaryObjectWriterProvider(IImmutableDictionary<Type, IObjectWriter> writers)
     : IObjectWriterProvider
 {
-    public ObjectWriter<T> Get<T>() =>
-        writers.TryGetValue(typeof(T), out var writer)
-            ? (ObjectWriter<T>)writer
-            : DefaultObjectWriter<T>.Instance;
+    public ObjectWriter<T> Get<T>() => (ObjectWriter<T>)Get(typeof(T));
 
-    private static class DefaultObjectWriter<T>
-    {
-        public static readonly ObjectWriter<T> Instance = new(
-            (value, parameterWriter) => parameterWriter.Write(value)
-        );
-    }
+    public IObjectWriter Get(Type type) =>
+        writers.TryGetValue(type, out var writer)
+            ? writer
+            : throw new InvalidOperationException("No writer found for type " + type.Name);
 
     public static DictionaryObjectWriterProvider From(IEnumerable<IObjectWriter> writers)
     {

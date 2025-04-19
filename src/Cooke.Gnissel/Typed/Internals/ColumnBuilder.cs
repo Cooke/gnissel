@@ -58,6 +58,10 @@ internal static class ColumnBuilder
         {
             yield return CreateColumn<T>(options, memberChain);
         }
+        else if (memberType.IsEnum)
+        {
+            yield return CreateColumn<T>(options, memberChain);
+        }
         else
         {
             throw new Exception($"Not supported column type: {memberType}.");
