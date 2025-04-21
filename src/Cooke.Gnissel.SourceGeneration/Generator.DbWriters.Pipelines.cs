@@ -36,6 +36,14 @@ public partial class Generator
                                     Identifier.ValueText: "Table",
                                     TypeArgumentList.Arguments.Count: 1
                                 }
+                            }
+                            or ObjectCreationExpressionSyntax
+                            {
+                                Type: GenericNameSyntax
+                                {
+                                    Identifier.ValueText: "Table",
+                                    TypeArgumentList.Arguments.Count: 1
+                                }
                             },
                 (context, ct) =>
                 {
@@ -45,10 +53,23 @@ public partial class Generator
                         {
                             Type: GenericNameSyntax genericNameSyntax
                         }:
+                        {
                             var typeInfo = context.SemanticModel.GetTypeInfo(
                                 genericNameSyntax.TypeArgumentList.Arguments[0]
                             );
                             return typeInfo.Type is null ? [] : [typeInfo.Type];
+                        }
+
+                        case ObjectCreationExpressionSyntax
+                        {
+                            Type: GenericNameSyntax genericNameSyntax
+                        }:
+                        {
+                            var typeInfo = context.SemanticModel.GetTypeInfo(
+                                genericNameSyntax.TypeArgumentList.Arguments[0]
+                            );
+                            return typeInfo.Type is null ? [] : [typeInfo.Type];
+                        }
 
                         case InvocationExpressionSyntax invocation:
                         {
