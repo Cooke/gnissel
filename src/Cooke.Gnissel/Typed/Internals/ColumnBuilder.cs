@@ -37,7 +37,10 @@ internal static class ColumnBuilder
         if (options.Ignores.Any(x => x.SequenceEqual(memberChain)))
             yield break;
 
-        if (options.DbOptions.IsDbMapped(memberType))
+        if (
+            options.DbOptions.IsDbMapped(memberType)
+            || GetMapAttributes(memberType) is { Technique: MappingTechnique.AsIs } mapAttribute
+        )
         {
             yield return CreateColumn<T>(options, memberChain);
         }
@@ -68,6 +71,9 @@ internal static class ColumnBuilder
         }
     }
 
+    private static DbMapAttribute GetMapAttributes(Type memberType) =>
+        memberType.GetCustomAttribute<DbMapAttribute>() ?? new DbMapAttribute();
+
     private static Column<T> CreateColumn<T>(
         TableOptions options,
         IReadOnlyList<PropertyInfo> memberChain
@@ -80,6 +86,7 @@ internal static class ColumnBuilder
         return new Column<T>(
             columnOptions?.Name
                 ?? property.GetDbName()
+                ?? GetMapAttributes(typeof(T)).DbTypeName
                 ?? options.DbOptions.DbAdapter.ToColumnName(memberChain.Select(x => x.Name)),
             memberChain,
             CreateParameterFactory<T>(memberChain),
@@ -110,4 +117,6 @@ internal static class ColumnBuilder
             )
             .Compile();
     }
+
+    private record MappingOptions(MappingTechnique Technique, string? DbDataType);
 }

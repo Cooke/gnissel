@@ -20,7 +20,7 @@ public record UserId(string Value);
 
 public record User(UserId Id, string Name, Address Address, UserType Type);
 
-public struct Address;
+public record Address(string Street);
 
 [DbMap(Technique = MappingTechnique.AsIs)]
 public record GeoLocation(double Latitude, double Longitude);

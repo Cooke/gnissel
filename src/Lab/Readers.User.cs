@@ -30,7 +30,7 @@ internal partial class DbMappers
             return new User(
                 default!,
                 default!,
-                address!.Value,
+                address!,
                 userType ?? throw new InvalidOperationException("Expected non-null value")
             );
         }

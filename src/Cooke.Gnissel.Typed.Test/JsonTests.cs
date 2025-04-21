@@ -5,7 +5,7 @@ using Xunit.Abstractions;
 namespace Cooke.Gnissel.Typed.Test;
 
 [Collection("Database collection")]
-public class JsonTests : IDisposable
+public partial class JsonTests : IDisposable
 {
     private readonly TestDbContext db;
 
@@ -13,7 +13,10 @@ public class JsonTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.EnableDynamicJson().Build()))
+            new(
+                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.EnableDynamicJson().Build()),
+                new DbMappers()
+            )
         );
         db.NonQuery(
                 $"""
@@ -52,6 +55,9 @@ public class JsonTests : IDisposable
 
     private record User(int Id, UserData Data);
 
-    [DbType("jsonb")]
+    [DbMap(Technique = MappingTechnique.AsIs, DbTypeName = "jsonb")]
     private record UserData(string Username, int Level);
+
+    [DbMappers]
+    private partial class DbMappers;
 }

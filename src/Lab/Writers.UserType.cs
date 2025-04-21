@@ -4,10 +4,10 @@ namespace Gnissel.SourceGeneration;
 
 internal partial class DbMappers
 {
-    internal partial class ObjectWriters
+    internal partial class DbWriters
     {
         public ObjectWriter<UserType> NonNullableUserTypeWriter { get; init; }
-        
+
         public ObjectWriter<UserType?> UserTypeWriter { get; init; }
 
         private void WriteUserType(UserType value, IParameterWriter parameterWriter) =>

@@ -4,13 +4,11 @@ namespace Gnissel.SourceGeneration;
 
 internal partial class DbMappers
 {
-    internal partial class ObjectWriters
+    internal partial class DbWriters
     {
         public ObjectWriter<User?> UserWriter { get; init; }
-        
-        public void WriteUser(
-            User? user, IParameterWriter parameterWriter
-        )
+
+        public void WriteUser(User? user, IParameterWriter parameterWriter)
         {
             UserIdWriter.Write(user?.Id, parameterWriter);
             parameterWriter.Write(user?.Name);

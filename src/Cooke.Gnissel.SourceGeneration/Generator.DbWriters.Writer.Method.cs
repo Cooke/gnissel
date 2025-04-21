@@ -33,7 +33,9 @@ public partial class Generator
         sourceWriter.Write("private void ");
         sourceWriter.Write(GetWriteMethodName(type));
         sourceWriter.Write("(");
-        sourceWriter.Write(type.ToDisplayString());
+        sourceWriter.Write(
+            type.IsReferenceType ? type.ToNullableDisplayString() : type.ToDisplayString()
+        );
         sourceWriter.WriteLine(" value, IParameterWriter parameterWriter) {");
         sourceWriter.Indent++;
 
@@ -60,7 +62,16 @@ public partial class Generator
     {
         if (IsBuildIn(type))
         {
-            sourceWriter.WriteLine("parameterWriter.Write(value);");
+            sourceWriter.Write("parameterWriter.Write(value");
+            sourceWriter.WriteLine(");");
+        }
+        else if (
+            GetMapOptions(type) is { Technique: MappingTechnique.AsIs, DbDataType: var dbDataType }
+        )
+        {
+            sourceWriter.Write("parameterWriter.Write(value");
+            sourceWriter.Write(dbDataType is not null ? $", \"{dbDataType}\"" : string.Empty);
+            sourceWriter.WriteLine(");");
         }
         else if (
             type is INamedTypeSymbol { EnumUnderlyingType: not null and var underlyingEnumType }
@@ -91,29 +102,16 @@ public partial class Generator
                 .Where(x => x.DeclaredAccessibility == Accessibility.Public && !x.IsStatic)
                 .ToArray();
 
-            if (type.IsReferenceType)
-            {
-                sourceWriter.WriteLine("if (value is null)");
-                sourceWriter.WriteLine("{");
-                sourceWriter.Indent++;
-                foreach (var prop in props)
-                {
-                    sourceWriter.Write("parameterWriter.Write<");
-                    sourceWriter.Write(prop.Type.ToNullableDisplayString());
-                    sourceWriter.WriteLine(">(null);");
-                }
-
-                sourceWriter.WriteLine("return;");
-                sourceWriter.Indent--;
-                sourceWriter.WriteLine("}");
-                sourceWriter.WriteLine();
-            }
-
             foreach (var prop in props)
             {
-                sourceWriter.Write("parameterWriter.Write(value.");
+                sourceWriter.Write(
+                    prop.Type.IsValueType && !IsNullableValueType(prop.Type)
+                        ? GetNullableWriterPropertyName(prop.Type)
+                        : GetWriterPropertyName(prop.Type)
+                );
+                sourceWriter.Write(".Write(value?.");
                 sourceWriter.Write(prop.Name);
-                sourceWriter.WriteLine(");");
+                sourceWriter.WriteLine(", parameterWriter);");
             }
         }
     }

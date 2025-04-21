@@ -21,8 +21,9 @@ public partial class Generator
         static string GetBaseName(ITypeSymbol type) =>
             type switch
             {
-                INamedTypeSymbol { Name: "Nullable" } nullableType => "Nullable"
-                    + GetBaseName(nullableType.TypeArguments[0]),
+                INamedTypeSymbol { Name: "Nullable" } nullableType => GetBaseName(
+                    nullableType.TypeArguments[0]
+                ) + "Nullable",
 
                 INamedTypeSymbol { IsTupleType: true } tupleType => string.Join(
                     "",
@@ -124,8 +125,14 @@ public partial class Generator
         }
     }
 
-    private static MappingTechnique GetMapTechnique(ITypeSymbol type)
+    private static MappingTechnique GetMapTechnique(ITypeSymbol type) =>
+        GetMapOptions(type).Technique;
+
+    private static MappingOptions GetMapOptions(ITypeSymbol type)
     {
+        MappingTechnique technique = MappingTechnique.Default;
+        string? dbDataType = null;
+
         var mapAttribute = type.GetAttributes()
             .FirstOrDefault(x => x.AttributeClass?.Name == "DbMapAttribute");
         if (mapAttribute != null)
@@ -135,22 +142,30 @@ public partial class Generator
                 switch (argument.Key)
                 {
                     case "Technique":
-                        return (MappingTechnique)argument.Value.Value!;
+                        technique = (MappingTechnique)argument.Value.Value!;
+                        break;
+
+                    case "DbTypeName":
+                        dbDataType = (string?)argument.Value.Value;
+                        break;
                 }
             }
         }
-
-        if (
+        else if (
             !IsBuildIn(type)
             && !type.IsTupleType
             && type.TypeKind != TypeKind.Enum
             && GetCtorOrNull(type) == null
         )
         {
-            return MappingTechnique.Custom;
+            technique = MappingTechnique.Custom;
+        }
+        else
+        {
+            technique = MappingTechnique.Default;
         }
 
-        return MappingTechnique.Default;
+        return new MappingOptions(technique, dbDataType);
     }
 
     private static string GetCreateReaderDescriptorsName(ITypeSymbol type) =>
@@ -218,6 +233,13 @@ public partial class Generator
     private enum NamingConvention
     {
         SnakeCase,
+    }
+
+    private record MappingOptions(MappingTechnique Technique, string? DbDataType)
+    {
+        public MappingTechnique Technique { get; } = Technique;
+
+        public string? DbDataType { get; } = DbDataType;
     }
 
     private enum MappingTechnique
