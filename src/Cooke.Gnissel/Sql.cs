@@ -1,3 +1,4 @@
+using System.Data.Common;
 using System.Runtime.CompilerServices;
 
 namespace Cooke.Gnissel;
@@ -44,6 +45,8 @@ public class Sql
 
     public void AppendParameter<T>(T t) => _fragments.Add(new Parameter<T>(t, null));
 
+    public void AppendParameter(DbParameter parameter) => _fragments.Add(new Parameter<T>(t, null));
+
     public void AppendParameter(Type type, object? value) =>
         _fragments.Add(new RuntimeTypedParameter(type, value, null));
 
@@ -74,6 +77,8 @@ public class Sql
         public override void WriteParameter(ISqlParameterWriter writer) =>
             writer.Write(Type, Value, Format);
     }
+
+    public record DbParameterContainer(DbParameter Value) : Fragment;
 
     public record LiteralValue(object? Value) : Fragment;
 }

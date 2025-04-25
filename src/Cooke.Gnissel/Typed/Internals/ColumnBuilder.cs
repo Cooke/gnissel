@@ -32,6 +32,20 @@ internal static class ColumnBuilder
         IReadOnlyList<PropertyInfo> memberChain
     )
     {
+        var reader = options.DbOptions.GetReader<T>();
+        foreach (var readDescriptor in reader.ReadDescriptors)
+        {
+            var name = readDescriptor switch
+            {
+                // TODO collect member name
+                NameReadDescriptor nameReadDescriptor => nameReadDescriptor.Name,
+                NextOrdinalReadDescriptor nextOrdinalReadDescriptor =>
+                    throw new NotSupportedException(),
+            };
+            var member = typeof(T).GetMember(name).Single();
+            yield return new Column<T>(name, [..memberChain, member], );
+        }
+
         var member = memberChain[^1];
         var memberType = member.PropertyType;
         if (options.Ignores.Any(x => x.SequenceEqual(memberChain)))

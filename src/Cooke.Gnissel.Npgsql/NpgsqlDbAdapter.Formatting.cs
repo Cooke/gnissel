@@ -56,6 +56,12 @@ public partial class NpgsqlDbAdapter
                 case Sql.LiteralValue { Value: var value }:
                     sb.Append(FormatLiteralValue(value, options));
                     break;
+
+                case Sql.DbParameterContainer p:
+                    sb.Append('$');
+                    sb.Append(parameterWriter.Parameters.Count + 1);
+                    parameterWriter.Parameters.Add(p.Value);
+                    break;
             }
         }
 

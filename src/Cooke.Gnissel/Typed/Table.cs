@@ -1,4 +1,5 @@
-﻿using System.Linq.Expressions;
+﻿using System.Data.Common;
+using System.Linq.Expressions;
 using System.Reflection;
 using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Queries;
@@ -20,8 +21,6 @@ public record TableOptions(DbOptions DbOptions)
 {
     public string? Name { get; init; }
 
-    public IReadOnlyCollection<ColumnOptions> Columns { get; init; } = [];
-
     public IReadOnlyCollection<IReadOnlyCollection<MemberInfo>> Ignores { get; init; } = [];
 };
 
@@ -30,6 +29,7 @@ public class Table<T> : ITable, IQuery<T>
     private readonly DbOptions _options;
     private readonly Column<T>[] _insertColumns;
     private readonly Query<T> _query;
+    private readonly ObjectWriter<T> _writer;
 
     public Table(Table<T> copy, DbOptions options)
         : this(options)
@@ -141,13 +141,20 @@ public class Table<T> : ITable, IQuery<T>
     private ExpressionQuery CreateExpressionQuery() =>
         new(_options, new TableSource(this), null, [], [], [], []);
 
-    private RowParameters CreateRowParameters(T instance) =>
-        new(
-            Columns
-                .Where(x => !x.IsDatabaseGenerated)
-                .Select(c => c.CreateParameter(instance))
-                .ToArray()
-        );
+    private RowParameters CreateRowParameters(T instance)
+    {
+        var parameterWriter = new ListParameterWriter(_options, Columns.Count);
+        _writer.Write(instance, parameterWriter);
+        return new(parameterWriter.Parameters);
+    }
+
+    private class ListParameterWriter(DbOptions options, int numParameters) : IParameterWriter
+    {
+        public List<DbParameter> Parameters { get; } = new(numParameters);
+
+        public void Write<T>(T value, string? dbType = null) =>
+            Parameters.Add(options.CreateParameter(value, dbType));
+    }
 
     public RenderedSql RenderedSql => _query.RenderedSql;
 

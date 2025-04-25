@@ -9,7 +9,7 @@ internal partial class DbMappers
     internal partial class DbReaders
     {
         private ImmutableArray<ReadDescriptor> CreateReadAddressDescriptors() =>
-            [new NameReadDescriptor("city")];
+            [new NameReadDescriptor("street")];
 
         public ObjectReader<Address?> AddressReader { get; init; }
 

@@ -1,4 +1,5 @@
-﻿using Cooke.Gnissel;
+﻿using System.Linq.Expressions;
+using Cooke.Gnissel;
 using Cooke.Gnissel.Typed;
 using Gnissel.SourceGeneration;
 
