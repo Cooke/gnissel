@@ -40,15 +40,7 @@ public partial class MappingTests : IDisposable
     [Fact]
     public async Task Insert()
     {
-        var options = new TableOptionsBuilder<User>(new(_npgsqlDbAdapter, new DbMappers()))
-            .Name("accounts")
-            .Column(x => x.Id, x => x.Name("identifier"))
-            .Column(x => x.Name, "UserName")
-            .Column(x => x.Address.Street, x => x.Name("Street"))
-            .Column(x => x.Address.City, x => x.Name("the_city"))
-            .Ignore(x => x.UnmappedAge)
-            .Build();
-        var usersTable = new Table<User>(options);
+        var usersTable = new Table<User>(new DbOptions(_npgsqlDbAdapter, new DbMappers()));
         await usersTable.Insert(
             new User(1, "Bob", 25, new UserAddress("bob's street", "Bob town"))
         );

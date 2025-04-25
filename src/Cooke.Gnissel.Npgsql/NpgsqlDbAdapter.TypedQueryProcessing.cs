@@ -42,7 +42,7 @@ public partial class NpgsqlDbAdapter
                     sql.AppendLiteral(", ");
                 }
 
-                sql.AppendParameter(par);
+                sql.AppendDbParameter(par);
                 firstParam = false;
             }
 

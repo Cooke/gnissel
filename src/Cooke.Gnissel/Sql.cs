@@ -45,12 +45,13 @@ public class Sql
 
     public void AppendParameter<T>(T t) => _fragments.Add(new Parameter<T>(t, null));
 
-    public void AppendParameter(DbParameter parameter) => _fragments.Add(new Parameter<T>(t, null));
-
     public void AppendParameter(Type type, object? value) =>
         _fragments.Add(new RuntimeTypedParameter(type, value, null));
 
     public void AppendParameter(Parameter parameter) => _fragments.Add(parameter);
+
+    public void AppendDbParameter(DbParameter dbParameter) =>
+        _fragments.Add(new DbParameterContainer(dbParameter));
 
     public void AppendFormatted<T>(T t, string? format) =>
         _fragments.Add(new Parameter<T>(t, format));

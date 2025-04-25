@@ -36,6 +36,8 @@ public partial class Generator
             sourceWriter.Write(type.ToDisplayString());
             sourceWriter.Write(">(");
             sourceWriter.Write(GetWriteMethodName(type));
+            sourceWriter.Write(", ");
+            sourceWriter.Write(GetCreateWriterDescriptorsName(type));
             sourceWriter.WriteLine(");");
 
             if (type.IsValueType)
@@ -45,6 +47,8 @@ public partial class Generator
                 sourceWriter.Write(type.ToDisplayString());
                 sourceWriter.Write("?>(");
                 sourceWriter.Write(GetNullableWriteMethodName(type));
+                sourceWriter.Write(", ");
+                sourceWriter.Write(GetCreateWriterDescriptorsName(type));
                 sourceWriter.WriteLine(");");
             }
         }

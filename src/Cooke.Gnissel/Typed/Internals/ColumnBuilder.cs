@@ -1,136 +1,28 @@
-using System.Collections.Immutable;
-using System.ComponentModel.DataAnnotations.Schema;
-using System.Linq.Expressions;
 using System.Reflection;
-using Cooke.Gnissel.Internals;
 
 namespace Cooke.Gnissel.Typed.Internals;
 
 internal static class ColumnBuilder
 {
-    public static ImmutableArray<Column<T>> CreateColumns<T>(TableOptions options) =>
-        [
-            .. typeof(T)
-                .GetProperties()
-                .Where(x =>
-                    // Only pick public properties that can be read back via a constructor
-                    x.SetMethod?.IsPublic == true
-                    || GetReaderConstructor(typeof(T))
-                        .GetParameters()
-                        .Select(p => p.Name)
-                        .Contains(x.Name, StringComparer.InvariantCultureIgnoreCase)
-                )
-                .SelectMany(p => CreateColumns<T>(options, [p])),
-        ];
-
-    private static ConstructorInfo GetReaderConstructor(Type type) =>
-        type.GetConstructors().OrderByDescending(x => x.GetParameters().Length).FirstOrDefault()
-        ?? throw new ArgumentException($"No valid constructor found for type {type}");
-
-    private static IEnumerable<Column<T>> CreateColumns<T>(
-        TableOptions options,
-        IReadOnlyList<PropertyInfo> memberChain
-    )
+    public static IEnumerable<Column<T>> CreateColumns<T>(TableOptions options)
     {
-        var reader = options.DbOptions.GetReader<T>();
-        foreach (var readDescriptor in reader.ReadDescriptors)
+        var writer = options.DbOptions.GetWriter<T>();
+        foreach (var writeDescriptor in writer.WriteDescriptors)
         {
-            var name = readDescriptor switch
+            if (writeDescriptor is not ColumnWriteDescriptor columnDescriptor)
             {
-                // TODO collect member name
-                NameReadDescriptor nameReadDescriptor => nameReadDescriptor.Name,
-                NextOrdinalReadDescriptor nextOrdinalReadDescriptor =>
-                    throw new NotSupportedException(),
-            };
-            var member = typeof(T).GetMember(name).Single();
-            yield return new Column<T>(name, [..memberChain, member], );
-        }
-
-        var member = memberChain[^1];
-        var memberType = member.PropertyType;
-        if (options.Ignores.Any(x => x.SequenceEqual(memberChain)))
-            yield break;
-
-        if (
-            options.DbOptions.IsDbMapped(memberType)
-            || GetMapAttributes(memberType) is { Technique: MappingTechnique.AsIs } mapAttribute
-        )
-        {
-            yield return CreateColumn<T>(options, memberChain);
-        }
-        else if (memberType.IsClass)
-        {
-            foreach (
-                var column in memberType
-                    .GetProperties()
-                    .SelectMany<PropertyInfo, Column<T>>(innerProperty =>
-                        CreateColumns<T>(options, [.. memberChain, innerProperty])
-                    )
-            )
-            {
-                yield return column;
+                throw new NotSupportedException();
             }
-        }
-        else if (memberType.IsValueType && Nullable.GetUnderlyingType(memberType) != null)
-        {
-            yield return CreateColumn<T>(options, memberChain);
-        }
-        else if (memberType.IsEnum)
-        {
-            yield return CreateColumn<T>(options, memberChain);
-        }
-        else
-        {
-            throw new Exception($"Not supported column type: {memberType}.");
+
+            var memberChain = new List<PropertyInfo>(columnDescriptor.PropertyChain.Length);
+            var type = typeof(T);
+            foreach (var property in columnDescriptor.PropertyChain)
+            {
+                var propertyInfo = type.GetProperty(property);
+                memberChain.Add(propertyInfo ?? throw new InvalidOperationException());
+                type = propertyInfo.PropertyType;
+            }
+            yield return new Column<T>(columnDescriptor.Name, memberChain);
         }
     }
-
-    private static DbMapAttribute GetMapAttributes(Type memberType) =>
-        memberType.GetCustomAttribute<DbMapAttribute>() ?? new DbMapAttribute();
-
-    private static Column<T> CreateColumn<T>(
-        TableOptions options,
-        IReadOnlyList<PropertyInfo> memberChain
-    )
-    {
-        var property = memberChain[^1];
-        var columnOptions = options.Columns.FirstOrDefault(x =>
-            x.MemberChain.SequenceEqual(memberChain)
-        );
-        return new Column<T>(
-            columnOptions?.Name
-                ?? property.GetDbName()
-                ?? GetMapAttributes(typeof(T)).DbTypeName
-                ?? options.DbOptions.DbAdapter.ToColumnName(memberChain.Select(x => x.Name)),
-            memberChain,
-            CreateParameterFactory<T>(memberChain),
-            property.GetCustomAttribute<DatabaseGeneratedAttribute>() != null
-        );
-    }
-
-    private static Func<T, Sql.Parameter> CreateParameterFactory<T>(
-        IReadOnlyList<PropertyInfo> memberChain
-    )
-    {
-        var propertyInfo = memberChain[^1];
-        var objectExpression = Expression.Parameter(typeof(T));
-        return Expression
-            .Lambda<Func<T, Sql.Parameter>>(
-                Expression.Convert(
-                    Expression.New(
-                        typeof(Sql.Parameter<>)
-                            .MakeGenericType(propertyInfo.PropertyType)
-                            .GetConstructors()
-                            .Single(),
-                        objectExpression.ToMemberExpression(memberChain),
-                        Expression.Constant(propertyInfo.GetDbType(), typeof(string))
-                    ),
-                    typeof(Sql.Parameter)
-                ),
-                objectExpression
-            )
-            .Compile();
-    }
-
-    private record MappingOptions(MappingTechnique Technique, string? DbDataType);
 }

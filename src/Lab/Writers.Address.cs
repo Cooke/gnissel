@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Cooke.Gnissel;
 
 namespace Gnissel.SourceGeneration;
@@ -8,15 +9,12 @@ internal partial class DbMappers
     {
         public ObjectWriter<Address?> AddressWriter { get; init; }
 
+        private ImmutableArray<WriteDescriptor> CreateWriteAddressDescriptors() =>
+            [.. StringWriter.WriteDescriptors.Select(x => x.WithParent("street", "Street"))];
+
         private void WriteAddress(Address? value, IParameterWriter parameterWriter)
         {
-            if (value is null)
-            {
-                parameterWriter.Write<string?>(null);
-                return;
-            }
-
-            parameterWriter.Write(value.Street);
+            StringWriter.Write(value?.Street, parameterWriter);
         }
     }
 }

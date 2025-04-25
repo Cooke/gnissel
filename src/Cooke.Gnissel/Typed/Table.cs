@@ -1,6 +1,6 @@
-﻿using System.Data.Common;
+﻿using System.Collections.Immutable;
+using System.Data.Common;
 using System.Linq.Expressions;
-using System.Reflection;
 using Cooke.Gnissel.Internals;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Internals;
@@ -20,14 +20,11 @@ public interface ITable
 public record TableOptions(DbOptions DbOptions)
 {
     public string? Name { get; init; }
-
-    public IReadOnlyCollection<IReadOnlyCollection<MemberInfo>> Ignores { get; init; } = [];
 };
 
 public class Table<T> : ITable, IQuery<T>
 {
     private readonly DbOptions _options;
-    private readonly Column<T>[] _insertColumns;
     private readonly Query<T> _query;
     private readonly ObjectWriter<T> _writer;
 
@@ -36,8 +33,7 @@ public class Table<T> : ITable, IQuery<T>
     {
         Columns = copy.Columns;
         Name = copy.Name;
-        this._options = options;
-        _insertColumns = copy._insertColumns;
+        _options = options;
     }
 
     public Table(DbOptions options)
@@ -46,10 +42,10 @@ public class Table<T> : ITable, IQuery<T>
     public Table(TableOptions options)
     {
         var dbOptions = options.DbOptions;
-        Columns = ColumnBuilder.CreateColumns<T>(options);
+        _writer = dbOptions.GetWriter<T>();
+        Columns = ColumnBuilder.CreateColumns<T>(options).ToImmutableArray();
         Name = options.Name ?? dbOptions.DbAdapter.ToTableName(typeof(T));
-        this._options = dbOptions;
-        _insertColumns = Columns.Where(x => !x.IsDatabaseGenerated).ToArray();
+        _options = dbOptions;
         var objectReader = dbOptions.GetReader<T>();
 
         _query = new Query<T>(
@@ -68,13 +64,13 @@ public class Table<T> : ITable, IQuery<T>
     public Type Type => typeof(T);
 
     public InsertQuery<T> Insert(T instance) =>
-        new(this, _insertColumns, _options, [CreateRowParameters(instance)]);
+        new(this, Columns, _options, [CreateRowParameters(instance)]);
 
     public InsertQuery<T> Insert(params T[] instances) =>
-        new(this, _insertColumns, _options, instances.Select(CreateRowParameters).ToArray());
+        new(this, Columns, _options, instances.Select(CreateRowParameters).ToArray());
 
     public InsertQuery<T> Insert(IEnumerable<T> instances) =>
-        new(this, _insertColumns, _options, instances.Select(CreateRowParameters).ToArray());
+        new(this, Columns, _options, instances.Select(CreateRowParameters).ToArray());
 
     public DeleteQueryWithoutWhere<T> Delete() => new(this, _options);
 

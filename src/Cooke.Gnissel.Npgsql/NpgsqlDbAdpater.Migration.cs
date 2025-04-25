@@ -93,7 +93,11 @@ public partial class NpgsqlDbAdapter
 
     private class FieldValueObjectWriterProvider : IObjectWriterProvider
     {
-        public ObjectWriter<TOut> Get<TOut>() => new((value, writer) => writer.Write(value));
+        public ObjectWriter<TOut> Get<TOut>() =>
+            new(
+                (value, writer) => writer.Write(value),
+                () => [new UnspecifiedColumnWriteDescriptor()]
+            );
 
         public IObjectWriter Get(Type type) => throw new NotSupportedException();
     }

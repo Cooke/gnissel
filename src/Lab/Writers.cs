@@ -15,10 +15,17 @@ internal partial class DbMappers
 
         public DbWriters()
         {
-            UserIdWriter = new ObjectWriter<UserId?>(WriteUserId);
-            UserWriter = new ObjectWriter<User?>(WriteUser);
-            UserTypeWriter = new ObjectWriter<UserType?>(WriteUserType);
-            NonNullableUserTypeWriter = new ObjectWriter<UserType>(WriteUserType);
+            UserIdWriter = new ObjectWriter<UserId?>(WriteUserId, CreateWriteUserIdDescriptors);
+            UserWriter = new ObjectWriter<User?>(WriteUser, CreateWriteUserDescriptors);
+            UserTypeWriter = new ObjectWriter<UserType?>(
+                WriteUserType,
+                CreateWriteUserTypeDescriptors
+            );
+            NonNullableUserTypeWriter = new ObjectWriter<UserType>(
+                WriteUserType,
+                CreateWriteUserTypeDescriptors
+            );
+            AddressWriter = new ObjectWriter<Address?>(WriteAddress, CreateWriteAddressDescriptors);
         }
 
         private IEnumerable<IObjectWriter> GetAll() =>

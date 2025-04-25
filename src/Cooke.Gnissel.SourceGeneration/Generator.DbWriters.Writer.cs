@@ -20,6 +20,8 @@ public partial class Generator
             GenerateNullableWriterProperty(sourceWriter, type);
         }
 
+        GenerateWriterDescriptors(mappersClass, sourceWriter, type);
+
         GenerateWriteMethod(type, mappersClass, sourceWriter);
 
         if (type.IsValueType)
@@ -29,6 +31,100 @@ public partial class Generator
 
         GenerateWriteMappersClassEnd(mappersClass, sourceWriter);
     }
+
+    private static void GenerateWriterDescriptors(
+        MappersClass mappersClass,
+        IndentedTextWriter sourceWriter,
+        ITypeSymbol type
+    )
+    {
+        sourceWriter.Write("private ImmutableArray<WriteDescriptor> ");
+        sourceWriter.Write(GetCreateWriterDescriptorsName(type));
+        sourceWriter.WriteLine("() => [");
+        sourceWriter.Indent++;
+        if (
+            IsBuildIn(type)
+            || type.TypeKind == TypeKind.Enum
+            || IsCustomMapped(type)
+            || GetMapTechnique(type) == MappingTechnique.AsIs
+        )
+        {
+            sourceWriter.WriteLine("new UnspecifiedColumnWriteDescriptor()");
+        }
+        else if (type.IsTupleType)
+        {
+            var ctor = GetCtor(type);
+            for (var i = 0; i < ctor.Parameters.Length; i++)
+            {
+                sourceWriter.Write("..");
+                sourceWriter.Write(GetWriterPropertyName(ctor.Parameters[i].Type));
+                sourceWriter.Write(".WriteDescriptors");
+                if (i < ctor.Parameters.Length - 1)
+                {
+                    sourceWriter.WriteLine(",");
+                }
+            }
+        }
+        else
+        {
+            var props = GetWriteProperties(type);
+
+            if (props.Length == 1 && IsBuildIn(props.First().Type))
+            {
+                sourceWriter.WriteLine("new UnspecifiedColumnWriteDescriptor()");
+            }
+            else
+            {
+                for (int i = 0; i < props.Length; i++)
+                {
+                    WriteSubWriterDescriptor(props[i].Type, props[i].Name, mappersClass);
+                    if (i < props.Length - 1)
+                    {
+                        sourceWriter.WriteLine(",");
+                    }
+                }
+            }
+        }
+
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("];");
+        sourceWriter.WriteLine();
+
+        void WriteSubWriterDescriptor(
+            ITypeSymbol typeSymbol,
+            string name,
+            MappersClass mappersClass
+        )
+        {
+            sourceWriter.Write("..");
+            sourceWriter.Write(GetWriterPropertyName(typeSymbol));
+            sourceWriter.Write(".WriteDescriptors.Select(d => d.WithParent(\"");
+            sourceWriter.Write(GetColumnName(mappersClass, name));
+            sourceWriter.Write("\", \"");
+            sourceWriter.Write(name);
+            sourceWriter.Write("\"))");
+        }
+    }
+
+    private static IPropertySymbol[] GetWriteProperties(ITypeSymbol type)
+    {
+        var props = type.GetMembers()
+            .OfType<IPropertySymbol>()
+            .Where(x =>
+                x.DeclaredAccessibility == Accessibility.Public
+                && x
+                    is {
+                        IsStatic: false,
+                        IsReadOnly: false,
+                        SetMethod.DeclaredAccessibility: Accessibility.Public
+                    }
+            )
+            .ToArray();
+        return props;
+    }
+
+    private static string GetCreateWriterDescriptorsName(ITypeSymbol type) =>
+        $"Create{GetTypeIdentifierName(AdjustNulls(type))}Descriptors";
 
     private static void GenerateNullableWriterProperty(
         IndentedTextWriter sourceWriter,

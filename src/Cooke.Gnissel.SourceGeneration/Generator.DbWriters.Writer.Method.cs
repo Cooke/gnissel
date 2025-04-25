@@ -97,10 +97,7 @@ public partial class Generator
         }
         else
         {
-            var props = type.GetMembers()
-                .OfType<IPropertySymbol>()
-                .Where(x => x.DeclaredAccessibility == Accessibility.Public && !x.IsStatic)
-                .ToArray();
+            var props = GetWriteProperties(type);
 
             foreach (var prop in props)
             {
