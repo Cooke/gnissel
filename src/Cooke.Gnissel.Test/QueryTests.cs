@@ -26,7 +26,7 @@ public partial class MappingTests
                 """
                     create table users
                     (
-                        id   integer primary key generated always as identity,
+                        id   integer primary key,
                         name text NOT NULL,
                         age  integer,
                         description text
@@ -72,7 +72,7 @@ public partial class MappingTests
                 x => new User(x.GetInt32(0), x.GetString(x.GetOrdinal("name")), x.GetInt32("age"))
             )
             .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+        CollectionAssert.AreEqual(new[] { new User(0, "Bob", 25) }, results);
     }
 
     [Test]
@@ -80,13 +80,13 @@ public partial class MappingTests
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new User(1, "Bob", 25) }, results);
+        CollectionAssert.AreEqual(new[] { new User(0, "Bob", 25) }, results);
     }
 
     [Test]
     public async Task ReadClassWithConstructorParameterColumnOrderMismatch()
     {
-        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(1, "Bob", 25));
         var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users")
             .ToArrayAsync();
         CollectionAssert.AreEqual(
@@ -98,7 +98,7 @@ public partial class MappingTests
     [Test]
     public async Task ReadTuple()
     {
-        await _db.Users.Insert(new User(0, "Bob", 25));
+        await _db.Users.Insert(new User(1, "Bob", 25));
         var results = await _db.Query<(int, string, int)>($"SELECT * FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { (1, "Bob", 25) }, results);
     }
@@ -175,7 +175,7 @@ public partial class MappingTests
     [Test]
     public async Task EnumMapping()
     {
-        await _db.NonQuery($"INSERT INTO users (name) VALUES ({UserName.Bob})");
+        await _db.NonQuery($"INSERT INTO users (id, name) VALUES (0, {UserName.Bob})");
         var results = await _db.Query<UserName>($"SELECT name FROM users").ToArrayAsync();
         CollectionAssert.AreEqual(new[] { UserName.Bob }, results);
     }
@@ -197,12 +197,7 @@ public partial class MappingTests
         Bob,
     }
 
-    private record User(
-        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
-        string Name,
-        int Age,
-        string? Description = null
-    )
+    private record User(int Id, string Name, int Age, string? Description = null)
     {
         // This constructor should be ignored when mapping, longest constructor is used
         public User(int id)
@@ -212,11 +207,7 @@ public partial class MappingTests
         public string DescriptionOrName { get; private init; } = Description ?? Name;
     };
 
-    private record UserWithParametersInDifferentOrder(
-        int Age,
-        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
-        string Name
-    );
+    private record UserWithParametersInDifferentOrder(int Age, int Id, string Name);
 
     private record UserWithTypedPrimitives(Name Name, int Age);
 

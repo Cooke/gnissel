@@ -63,6 +63,6 @@ public record NextOrdinalReadDescriptor : ReadDescriptor
 
 public record NameReadDescriptor(string Name) : ReadDescriptor
 {
-    public override ReadDescriptor WithParent(string parent) =>
-        new NameReadDescriptor(parent + "_" + Name);
+    public override ReadDescriptor WithParent(string? parent) =>
+        string.IsNullOrEmpty(parent) ? this : new NameReadDescriptor(parent + "_" + Name);
 }

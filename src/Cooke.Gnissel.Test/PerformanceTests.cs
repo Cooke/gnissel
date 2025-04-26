@@ -130,7 +130,7 @@ public partial class PerformanceTests
     }
 
     private record User(
-        [property: DatabaseGenerated(DatabaseGeneratedOption.Identity)] int Id,
+        int Id,
         string Name,
         int Age,
         string Str1,

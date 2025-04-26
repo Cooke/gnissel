@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿using System.CodeDom.Compiler;
+using Microsoft.CodeAnalysis;
 
 namespace Cooke.Gnissel.SourceGeneration;
 
@@ -12,4 +13,18 @@ public static class Extensions
             { IsValueType: true, Name: not "Nullable" } => type.ToDisplayString() + "?",
             _ => type.ToDisplayString(),
         };
+
+    public static void WriteStringOrNull(this IndentedTextWriter sourceWriter, string? value)
+    {
+        if (value is null)
+        {
+            sourceWriter.Write("null");
+        }
+        else
+        {
+            sourceWriter.Write("\"");
+            sourceWriter.Write(value.Replace("\"", "\"\""));
+            sourceWriter.Write("\"");
+        }
+    }
 }

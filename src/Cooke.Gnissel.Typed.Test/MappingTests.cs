@@ -19,7 +19,7 @@ public partial class MappingTests : IDisposable
                 $"""
                     create table accounts
                     (
-                        identifier   integer primary key,
+                        identifier integer primary key,
                         "UserName" text,
                         age  integer,
                         "Street" text,
@@ -40,7 +40,9 @@ public partial class MappingTests : IDisposable
     [Fact]
     public async Task Insert()
     {
-        var usersTable = new Table<User>(new DbOptions(_npgsqlDbAdapter, new DbMappers()));
+        var usersTable = new Table<User>(
+            new TableOptions(new DbOptions(_npgsqlDbAdapter, new DbMappers())) { Name = "accounts" }
+        );
         await usersTable.Insert(
             new User(1, "Bob", 25, new UserAddress("bob's street", "Bob town"))
         );
@@ -53,12 +55,20 @@ public partial class MappingTests : IDisposable
         Assert.Equal(new[] { (1, "Bob"), (2, "Sara") }, users.Select(x => (x.Id, x.Name)));
     }
 
-    private record User(int Id, string Name, int Age, UserAddress Address)
+    private record User(
+        [property: DbName("identifier")] int Id,
+        [property: DbName("UserName")] string Name,
+        int Age,
+        [property: DbName(null)] UserAddress Address
+    )
     {
         public int UnmappedAge => Age;
     }
 
-    private record UserAddress(string Street, string City);
+    private record UserAddress(
+        [property: DbName("Street")] string Street,
+        [property: DbName("the_city")] string City
+    );
 
     [DbMappers]
     private partial class DbMappers;

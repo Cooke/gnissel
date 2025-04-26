@@ -59,6 +59,9 @@ public record UnspecifiedColumnWriteDescriptor : WriteDescriptor
 public record ColumnWriteDescriptor(string Name, ImmutableArray<string> PropertyChain)
     : WriteDescriptor
 {
-    public override WriteDescriptor WithParent(string parent, string property) =>
-        new ColumnWriteDescriptor(parent + "_" + Name, [property, .. PropertyChain]);
+    public override WriteDescriptor WithParent(string? parent, string property) =>
+        new ColumnWriteDescriptor(
+            string.IsNullOrEmpty(parent) ? Name : parent + "_" + Name,
+            [property, .. PropertyChain]
+        );
 }

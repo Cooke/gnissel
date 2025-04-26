@@ -77,7 +77,7 @@ public partial class Generator
             {
                 for (int i = 0; i < props.Length; i++)
                 {
-                    WriteSubWriterDescriptor(props[i].Type, props[i].Name, mappersClass);
+                    WriteSubWriterDescriptor(props[i].Type, props[i]);
                     if (i < props.Length - 1)
                     {
                         sourceWriter.WriteLine(",");
@@ -90,18 +90,14 @@ public partial class Generator
         sourceWriter.WriteLine("];");
         sourceWriter.WriteLine();
 
-        void WriteSubWriterDescriptor(
-            ITypeSymbol typeSymbol,
-            string name,
-            MappersClass mappersClass
-        )
+        void WriteSubWriterDescriptor(ITypeSymbol typeSymbol, IPropertySymbol property)
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetWriterPropertyName(typeSymbol));
-            sourceWriter.Write(".WriteDescriptors.Select(d => d.WithParent(\"");
-            sourceWriter.Write(GetColumnName(mappersClass, name));
-            sourceWriter.Write("\", \"");
-            sourceWriter.Write(name);
+            sourceWriter.Write(".WriteDescriptors.Select(d => d.WithParent(");
+            sourceWriter.WriteStringOrNull(GetColumnName(mappersClass, property));
+            sourceWriter.Write(", \"");
+            sourceWriter.Write(property.Name);
             sourceWriter.Write("\"))");
         }
     }

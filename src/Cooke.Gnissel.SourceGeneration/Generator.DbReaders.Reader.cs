@@ -102,13 +102,19 @@ public partial class Generator
             else
             {
                 var newArgs = ctor
-                    .Parameters.Select(x => new { x.Name, x.Type })
-                    .Concat(initializeProperties.Select(x => new { x.Name, x.Type }))
+                    .Parameters.Select(x => new { Name = GetColumnName(mappersClass, x), x.Type })
+                    .Concat(
+                        initializeProperties.Select(x => new
+                        {
+                            Name = GetColumnName(mappersClass, x),
+                            x.Type,
+                        })
+                    )
                     .ToArray();
 
                 for (int i = 0; i < newArgs.Length; i++)
                 {
-                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name, mappersClass);
+                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name);
                     if (i < newArgs.Length - 1)
                     {
                         sourceWriter.WriteLine(",");
@@ -121,17 +127,13 @@ public partial class Generator
         sourceWriter.WriteLine("];");
         sourceWriter.WriteLine();
 
-        void WriteSubReaderDescriptor(
-            ITypeSymbol typeSymbol,
-            string name,
-            MappersClass mappersClass
-        )
+        void WriteSubReaderDescriptor(ITypeSymbol typeSymbol, string name)
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetReaderPropertyName(typeSymbol));
-            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(\"");
-            sourceWriter.Write(GetColumnName(mappersClass, name));
-            sourceWriter.Write("\"))");
+            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(");
+            sourceWriter.WriteStringOrNull(name);
+            sourceWriter.Write("))");
         }
     }
 

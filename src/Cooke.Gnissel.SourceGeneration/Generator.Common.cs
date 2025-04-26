@@ -251,12 +251,20 @@ public partial class Generator
         Custom,
     }
 
-    private static string GetColumnName(MappersClass mappersClass, string name)
+    private static string? GetColumnName(MappersClass mappersClass, ISymbol symbol)
     {
+        var nameAttribute = symbol
+            .GetAttributes()
+            .FirstOrDefault(x => x.AttributeClass?.Name == "DbNameAttribute");
+        if (nameAttribute != null)
+        {
+            return nameAttribute.ConstructorArguments.First().Value as string;
+        }
+
         switch (mappersClass.NamingConvention)
         {
             case NamingConvention.SnakeCase:
-                return GetSnakeCaseName(name);
+                return GetSnakeCaseName(symbol.Name);
             default:
                 throw new ArgumentOutOfRangeException();
         }

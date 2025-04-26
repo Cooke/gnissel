@@ -57,9 +57,9 @@ public partial class Generator
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetReaderPropertyName(props[i].Type));
-            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(\"");
-            sourceWriter.Write(GetColumnName(mappersClass, props[i].Name));
-            sourceWriter.Write("\"))");
+            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(");
+            sourceWriter.WriteStringOrNull(GetColumnName(mappersClass, props[i]));
+            sourceWriter.Write("))");
             if (i < props.Length - 1)
             {
                 sourceWriter.WriteLine(",");
