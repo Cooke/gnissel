@@ -53,13 +53,13 @@ public partial class Generator
         }
         else if (type.IsTupleType)
         {
-            var ctor = GetCtor(type);
-            for (var i = 0; i < ctor.Parameters.Length; i++)
+            var ctorParameters = GetCtorParameters(type);
+            for (var i = 0; i < ctorParameters.Length; i++)
             {
                 sourceWriter.Write("..");
-                sourceWriter.Write(GetWriterPropertyName(ctor.Parameters[i].Type));
+                sourceWriter.Write(GetWriterPropertyName(ctorParameters[i].Parameter.Type));
                 sourceWriter.Write(".WriteDescriptors");
-                if (i < ctor.Parameters.Length - 1)
+                if (i < ctorParameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
                 }
@@ -68,6 +68,7 @@ public partial class Generator
         else
         {
             var props = GetWriteProperties(type);
+            var ctorParameters = GetCtorParametersOrNull(type);
 
             if (props.Length == 1 && IsBuildIn(props.First().Type))
             {
@@ -77,7 +78,15 @@ public partial class Generator
             {
                 for (int i = 0; i < props.Length; i++)
                 {
-                    WriteSubWriterDescriptor(props[i].Type, props[i]);
+                    var property = props[i];
+                    var parameter = ctorParameters?.FirstOrDefault(x =>
+                        x.Parameter.Name.Equals(
+                            property.Name,
+                            StringComparison.InvariantCultureIgnoreCase
+                        )
+                    );
+
+                    WriteSubWriterDescriptor(property.Type, property, parameter?.Parameter);
                     if (i < props.Length - 1)
                     {
                         sourceWriter.WriteLine(",");
@@ -90,12 +99,16 @@ public partial class Generator
         sourceWriter.WriteLine("];");
         sourceWriter.WriteLine();
 
-        void WriteSubWriterDescriptor(ITypeSymbol typeSymbol, IPropertySymbol property)
+        void WriteSubWriterDescriptor(
+            ITypeSymbol typeSymbol,
+            IPropertySymbol property,
+            IParameterSymbol? parameter
+        )
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetWriterPropertyName(typeSymbol));
             sourceWriter.Write(".WriteDescriptors.Select(d => d.WithParent(");
-            sourceWriter.WriteStringOrNull(GetColumnName(mappersClass, property));
+            sourceWriter.WriteStringOrNull(GetColumnName(mappersClass, property, parameter));
             sourceWriter.Write(", \"");
             sourceWriter.Write(property.Name);
             sourceWriter.Write("\"))");

@@ -56,7 +56,7 @@ public partial class MappingTests : IDisposable
     }
 
     private record User(
-        [property: DbName("identifier")] int Id,
+        [DbName("identifier")] int Id,
         [property: DbName("UserName")] string Name,
         int Age,
         [property: DbName(null)] UserAddress Address
@@ -66,7 +66,7 @@ public partial class MappingTests : IDisposable
     }
 
     private record UserAddress(
-        [property: DbName("Street")] string Street,
+        [DbName("Street")] string Street,
         [property: DbName("the_city")] string City
     );
 

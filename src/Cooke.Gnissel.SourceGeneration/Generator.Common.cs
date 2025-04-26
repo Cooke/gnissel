@@ -110,15 +110,15 @@ public partial class Generator
             yield break;
         }
 
-        var ctor = GetCtorOrNull(type);
-        if (ctor == null)
+        var ctorParameters = GetCtorParametersOrNull(type);
+        if (ctorParameters == null)
         {
             yield break;
         }
 
-        foreach (var t in ctor.Parameters)
+        foreach (var t in ctorParameters)
         {
-            foreach (var innerType in FindAllTypes(t.Type))
+            foreach (var innerType in FindAllTypes(t.Parameter.Type))
             {
                 yield return innerType;
             }
@@ -155,7 +155,7 @@ public partial class Generator
             !IsBuildIn(type)
             && !type.IsTupleType
             && type.TypeKind != TypeKind.Enum
-            && GetCtorOrNull(type) == null
+            && GetCtorParametersOrNull(type) == null
         )
         {
             technique = MappingTechnique.Custom;
@@ -251,11 +251,17 @@ public partial class Generator
         Custom,
     }
 
-    private static string? GetColumnName(MappersClass mappersClass, ISymbol symbol)
+    private static string? GetColumnName(
+        MappersClass mappersClass,
+        ISymbol symbol1,
+        ISymbol? symbol2 = null
+    )
     {
-        var nameAttribute = symbol
-            .GetAttributes()
-            .FirstOrDefault(x => x.AttributeClass?.Name == "DbNameAttribute");
+        var nameAttribute =
+            symbol1.GetAttributes().FirstOrDefault(x => x.AttributeClass?.Name == "DbNameAttribute")
+            ?? symbol2
+                ?.GetAttributes()
+                .FirstOrDefault(x => x.AttributeClass?.Name == "DbNameAttribute");
         if (nameAttribute != null)
         {
             return nameAttribute.ConstructorArguments.First().Value as string;
@@ -264,7 +270,7 @@ public partial class Generator
         switch (mappersClass.NamingConvention)
         {
             case NamingConvention.SnakeCase:
-                return GetSnakeCaseName(symbol.Name);
+                return GetSnakeCaseName(symbol1.Name);
             default:
                 throw new ArgumentOutOfRangeException();
         }

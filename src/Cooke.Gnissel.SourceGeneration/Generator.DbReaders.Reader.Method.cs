@@ -91,16 +91,15 @@ public partial class Generator
         }
         else
         {
-            var ctor = GetCtor(type);
-            var ctorParameters = ctor.Parameters;
-            var initializeProperties = GetInitializeProperties(type, ctor);
+            var ctorParameters = GetCtorParameters(type);
+            var initializeProperties = GetInitializeProperties(type, ctorParameters);
 
             foreach (var parameter in ctorParameters)
             {
                 sourceWriter.Write("var ");
-                sourceWriter.Write(parameter.Name);
+                sourceWriter.Write(parameter.Parameter.Name);
                 sourceWriter.Write(" = ");
-                GenerateReadCall(parameter.Type, sourceWriter);
+                GenerateReadCall(parameter.Parameter.Type, sourceWriter);
                 sourceWriter.WriteLine(";");
             }
 
@@ -119,7 +118,7 @@ public partial class Generator
             {
                 sourceWriter.Write("if (");
                 var paramsAndProps = ctorParameters
-                    .Select(x => x.Name)
+                    .Select(x => x.Parameter.Name)
                     .Concat(initializeProperties.Select(x => x.Name))
                     .ToArray();
                 for (var i = 0; i < paramsAndProps.Length; i++)
@@ -154,7 +153,7 @@ public partial class Generator
             sourceWriter.Indent++;
             for (var i = 0; i < ctorParameters.Length; i++)
             {
-                var parameter = ctorParameters[i];
+                var parameter = ctorParameters[i].Parameter;
                 sourceWriter.Write(parameter.Name);
 
                 if (

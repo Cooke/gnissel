@@ -72,13 +72,13 @@ public partial class Generator
         }
         else if (type.IsTupleType)
         {
-            var ctor = GetCtor(type);
-            for (var i = 0; i < ctor.Parameters.Length; i++)
+            var ctorParameters = GetCtorParameters(type);
+            for (var i = 0; i < ctorParameters.Length; i++)
             {
                 sourceWriter.Write("..");
-                sourceWriter.Write(GetReaderPropertyName(ctor.Parameters[i].Type));
+                sourceWriter.Write(GetReaderPropertyName(ctorParameters[i].Parameter.Type));
                 sourceWriter.Write(".ReadDescriptors");
-                if (i < ctor.Parameters.Length - 1)
+                if (i < ctorParameters.Length - 1)
                 {
                     sourceWriter.WriteLine(",");
                 }
@@ -86,14 +86,15 @@ public partial class Generator
         }
         else
         {
-            var ctor = GetCtor(type);
-            var initializeProperties = GetInitializeProperties(type, ctor);
+            var ctorParameters = GetCtorParameters(type);
+            var initializeProperties = GetInitializeProperties(type, ctorParameters);
 
             // Support "next reading" any type (not only build-in) which can be read by one read
             if (
-                initializeProperties.Length + ctor.Parameters.Length == 1
+                initializeProperties.Length + ctorParameters.Length == 1
                 && IsBuildIn(
-                    initializeProperties.FirstOrDefault()?.Type ?? ctor.Parameters.First().Type
+                    initializeProperties.FirstOrDefault()?.Type
+                        ?? ctorParameters.First().Parameter.Type
                 )
             )
             {
@@ -101,8 +102,12 @@ public partial class Generator
             }
             else
             {
-                var newArgs = ctor
-                    .Parameters.Select(x => new { Name = GetColumnName(mappersClass, x), x.Type })
+                var newArgs = ctorParameters
+                    .Select(x => new
+                    {
+                        Name = GetColumnName(mappersClass, x.Parameter, x.Property),
+                        x.Parameter.Type,
+                    })
                     .Concat(
                         initializeProperties.Select(x => new
                         {
@@ -209,27 +214,50 @@ public partial class Generator
 
     private static IPropertySymbol[] GetInitializeProperties(
         ITypeSymbol type,
-        IMethodSymbol ctor
+        MappedParameter[]? ctorParameters
     ) =>
         type.GetMembers()
             .OfType<IPropertySymbol>()
             .Where(x =>
                 x.SetMethod is { DeclaredAccessibility: Accessibility.Public }
-                && !ctor
-                    .Parameters.Select(p => p.Name)
-                    .Contains(x.Name, StringComparer.InvariantCultureIgnoreCase)
+                && ctorParameters
+                    ?.Select(p => p.Parameter.Name)
+                    .Contains(x.Name, StringComparer.InvariantCultureIgnoreCase) != true
             )
             .ToArray();
 
-    private static IMethodSymbol? GetCtorOrNull(ITypeSymbol type) =>
+    private record MappedProperty(IPropertySymbol Property, IParameterSymbol? Parameter)
+    {
+        public IPropertySymbol Property { get; } = Property;
+
+        public IParameterSymbol? Parameter { get; } = Parameter;
+    }
+
+    private record MappedParameter(IParameterSymbol Parameter, IPropertySymbol? Property)
+    {
+        public IParameterSymbol Parameter { get; } = Parameter;
+
+        public IPropertySymbol? Property { get; } = Property;
+    }
+
+    private static MappedParameter[]? GetCtorParametersOrNull(ITypeSymbol type) =>
         type.GetMembers(".ctor")
             .Where(x => x.DeclaredAccessibility != Accessibility.Private)
             .Cast<IMethodSymbol>()
             .OrderByDescending(x => x.Parameters.Length)
-            .FirstOrDefault();
+            .FirstOrDefault()
+            ?.Parameters.Select(p => new MappedParameter(
+                p,
+                type.GetMembers()
+                    .OfType<IPropertySymbol>()
+                    .FirstOrDefault(x =>
+                        x.Name.Equals(p.Name, StringComparison.InvariantCultureIgnoreCase)
+                    )
+            ))
+            .ToArray();
 
-    private static IMethodSymbol GetCtor(ITypeSymbol type) =>
-        GetCtorOrNull(type) ?? throw new InvalidOperationException();
+    private static MappedParameter[] GetCtorParameters(ITypeSymbol type) =>
+        GetCtorParametersOrNull(type) ?? throw new InvalidOperationException();
 
     private static void WritePartialReadMappersClassStart(
         MappersClass mappersClass,
