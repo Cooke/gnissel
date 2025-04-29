@@ -58,6 +58,6 @@ public partial class JsonTests : IDisposable
     [DbMap(Technique = MappingTechnique.AsIs, DbTypeName = "jsonb")]
     private record UserData(string Username, int Level);
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

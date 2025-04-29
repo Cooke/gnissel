@@ -66,6 +66,6 @@ public partial class CustomRequiredReaderTest
             };
     }
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

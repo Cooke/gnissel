@@ -63,5 +63,5 @@ public class MyDbContext(DbOptions dbOptions) : DbContext(dbOptions)
     public Table<User> Users { get; } = new(dbOptions);
 }
 
-[DbMappers]
+[DbMappers(NamingConvention = NamingConvention.SnakeCase)]
 public partial class Mappers;

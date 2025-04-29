@@ -1,6 +1,5 @@
 #region
 
-using System.ComponentModel.DataAnnotations.Schema;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Typed;
@@ -151,6 +150,6 @@ public partial class PerformanceTests
         int Int8
     );
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

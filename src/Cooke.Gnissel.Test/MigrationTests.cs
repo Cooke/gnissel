@@ -68,6 +68,6 @@ public partial class MigrationTests
         );
     }
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

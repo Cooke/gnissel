@@ -81,6 +81,6 @@ public partial class TransactionTests
 
     public record User(int Id, string Name, int Age);
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     public partial class DbMappers;
 }

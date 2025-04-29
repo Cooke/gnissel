@@ -68,6 +68,6 @@ public partial class DateTimeTests : IDisposable
 
     private record User(int Id, DateTime timestampTz, DateTime timestamp);
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

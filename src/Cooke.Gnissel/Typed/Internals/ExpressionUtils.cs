@@ -5,6 +5,7 @@ namespace Cooke.Gnissel.Typed.Internals;
 
 public static class ExpressionUtils
 {
+    // TODO replace with a comparison algorithm
     public static IReadOnlyCollection<MemberInfo> GetMemberChain(Expression outerMemberExpression)
     {
         return GetMemberInfoChain(outerMemberExpression).ToArray();
@@ -27,9 +28,4 @@ public static class ExpressionUtils
             }
         }
     }
-
-    public static Expression ToMemberExpression(
-        this Expression instance,
-        IReadOnlyCollection<PropertyInfo> memberChain
-    ) => memberChain.Aggregate(instance, Expression.Property);
 }

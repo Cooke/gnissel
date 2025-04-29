@@ -1,4 +1,3 @@
-using System.ComponentModel.DataAnnotations.Schema;
 using System.Data;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
@@ -218,6 +217,9 @@ public partial class MappingTests
         public Table<User> Users { get; } = new(options);
     }
 
-    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
+    [DbMappers(
+        EnumMappingTechnique = MappingTechnique.AsString,
+        NamingConvention = NamingConvention.SnakeCase
+    )]
     private partial class Mappers;
 }

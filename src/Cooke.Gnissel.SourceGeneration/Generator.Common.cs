@@ -219,6 +219,10 @@ public partial class Generator
                     case "EnumMappingTechnique":
                         EnumMappingTechnique = (MappingTechnique)argument.Value.Value!;
                         break;
+
+                    case "NamingConvention":
+                        NamingConvention = (NamingConvention)argument.Value.Value!;
+                        break;
                 }
             }
         }
@@ -227,11 +231,12 @@ public partial class Generator
 
         public MappingTechnique EnumMappingTechnique { get; } = MappingTechnique.AsIs;
 
-        public NamingConvention NamingConvention { get; } = NamingConvention.SnakeCase;
+        public NamingConvention NamingConvention { get; } = NamingConvention.AsIs;
     }
 
     private enum NamingConvention
     {
+        AsIs,
         SnakeCase,
     }
 
@@ -271,6 +276,8 @@ public partial class Generator
         {
             case NamingConvention.SnakeCase:
                 return GetSnakeCaseName(symbol1.Name);
+            case NamingConvention.AsIs:
+                return symbol1.Name;
             default:
                 throw new ArgumentOutOfRangeException();
         }

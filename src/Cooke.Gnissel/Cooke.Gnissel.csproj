@@ -4,7 +4,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Henrik Cooke</Authors>
-        <Version>0.11.0</Version>
+        <Version>0.12.0-beta-0</Version>
         <Description>An alternative database mapper for .NET, instead of Dapper or Entity Framework.</Description>
         <Copyright>Cooke Software Solutions AB</Copyright>
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
@@ -25,7 +25,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Cooke.Gnissel.SourceGeneration\Cooke.Gnissel.SourceGeneration.csproj" ReferenceOutputAssembly="false" />
-      <None Include="..\Cooke.Gnissel.SourceGeneration\bin\Release\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="'$(Configuration)' == 'Release'" />
+      <None Include="..\Cooke.Gnissel.SourceGeneration\bin\Release\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="'$(Configuration)' == 'Release'"  />
       <None Include="..\Cooke.Gnissel.SourceGeneration\bin\Debug\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="'$(Configuration)' == 'Debug'" />
     </ItemGroup>
 

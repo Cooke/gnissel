@@ -70,6 +70,6 @@ public partial class MappingTests : IDisposable
         [property: DbName("the_city")] string City
     );
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

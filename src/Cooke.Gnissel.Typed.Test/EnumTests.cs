@@ -83,6 +83,9 @@ public partial class EnumTests : IDisposable
         User,
     }
 
-    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
+    [DbMappers(
+        EnumMappingTechnique = MappingTechnique.AsString,
+        NamingConvention = NamingConvention.SnakeCase
+    )]
     private partial class DbMappers;
 }

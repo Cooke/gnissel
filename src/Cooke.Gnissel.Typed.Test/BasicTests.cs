@@ -484,6 +484,6 @@ public partial class BasicTests : IDisposable
 
     private record PartialUser(int Id, string Name, int Age);
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }

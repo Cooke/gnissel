@@ -336,6 +336,6 @@ public partial class JoinTests : IDisposable
 
     private record DeviceKey(string DeviceId, string Key);
 
-    [DbMappers]
+    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
     private partial class DbMappers;
 }
