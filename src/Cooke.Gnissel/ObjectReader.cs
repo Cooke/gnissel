@@ -1,6 +1,5 @@
 using System.Collections.Immutable;
 using System.Data.Common;
-using System.Reflection;
 
 namespace Cooke.Gnissel;
 
@@ -64,5 +63,5 @@ public record NextOrdinalReadDescriptor : ReadDescriptor
 public record NameReadDescriptor(string Name) : ReadDescriptor
 {
     public override ReadDescriptor WithParent(string? parent) =>
-        string.IsNullOrEmpty(parent) ? this : new NameReadDescriptor(parent + "_" + Name);
+        string.IsNullOrEmpty(parent) ? this : new NameReadDescriptor(Name);
 }
