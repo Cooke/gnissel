@@ -10,7 +10,7 @@ internal partial class DbMappers
         public ObjectWriter<Address?> AddressWriter { get; init; }
 
         private ImmutableArray<WriteDescriptor> CreateWriteAddressDescriptors() =>
-            [.. StringWriter.WriteDescriptors.Select(x => x.WithParent("street", "Street"))];
+            [.. StringWriter.WriteDescriptors.Select(x => x.WithParent(NameProvider, "Street"))];
 
         private void WriteAddress(Address? value, IParameterWriter parameterWriter)
         {

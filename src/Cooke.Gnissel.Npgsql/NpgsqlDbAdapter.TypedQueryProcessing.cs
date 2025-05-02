@@ -345,6 +345,7 @@ public partial class NpgsqlDbAdapter
                 return;
 
             case NewExpression newExpression:
+
                 for (var index = 0; index < newExpression.Arguments.Count; index++)
                 {
                     var arg = newExpression.Arguments[index];
@@ -355,14 +356,7 @@ public partial class NpgsqlDbAdapter
 
                     RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
-                    sql.AppendLiteral(
-                        ToColumnName(
-                            [
-                                newExpression.Constructor!.GetParameters()[index].Name
-                                    ?? throw new InvalidOperationException(),
-                            ]
-                        )
-                    );
+                    sql.AppendLiteral(newExpression.Constructor!.GetParameters()[index].Name!);
                 }
 
                 return;

@@ -9,10 +9,6 @@ namespace Cooke.Gnissel.Services;
 
 public interface IDbAdapter
 {
-    string ToColumnName(IEnumerable<string> path);
-
-    string ToTableName(Type type);
-
     DbParameter CreateParameter<TValue>(TValue value, string? dbType = null);
 
     RenderedSql RenderSql(Sql sql, DbOptions options);
@@ -27,8 +23,6 @@ public interface IDbAdapter
         IReadOnlyCollection<Migration> migrations,
         CancellationToken cancellationToken
     );
-
-    bool IsDbMapped(Type type);
 
     Sql Generate(IInsertQuery query);
 

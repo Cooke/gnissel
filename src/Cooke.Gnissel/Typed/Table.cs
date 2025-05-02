@@ -44,7 +44,10 @@ public class Table<T> : ITable, IQuery<T>
         var dbOptions = options.DbOptions;
         _writer = dbOptions.GetWriter<T>();
         Columns = ColumnBuilder.CreateColumns<T>(options).ToImmutableArray();
-        Name = options.Name ?? dbOptions.DbAdapter.ToTableName(typeof(T));
+        Name =
+            options.Name
+            ?? options.DbOptions.MapperProvider.NameProvider.ToTableName(typeof(T).Name)
+            ?? throw new InvalidOperationException("Table name is not set and cannot be inferred");
         _options = dbOptions;
         var objectReader = dbOptions.GetReader<T>();
 

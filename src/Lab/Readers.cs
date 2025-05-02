@@ -6,23 +6,17 @@ namespace Gnissel.SourceGeneration;
 
 internal partial class DbMappers : IMapperProvider
 {
-    public DbReaders Readers { get; init; } = new DbReaders();
-
-    public IObjectReaderProvider ReaderProvider => Readers;
-
     internal partial class DbReaders : IObjectReaderProvider
     {
+        public IDbNameProvider NameProvider { get; }
+
         private IObjectReaderProvider? _readerProvider;
-        private readonly IEnumerable<IObjectReader> _additionalReaders;
 
-        public DbReaders()
-            : this([]) { }
-
-        public DbReaders(IEnumerable<IObjectReader> additionalReaders)
+        public DbReaders(IDbNameProvider nameProvider)
         {
-            _additionalReaders = additionalReaders;
+            NameProvider = nameProvider;
             UserReader = new ObjectReader<User?>(ReadUser, CreateReadUserDescriptors);
-            AddressReader = new ObjectReader<Address?>(ReadAddress, CreateReadAddressDescriptors);
+            AddressReader = CreateAddressReader();
         }
 
         public ObjectReader<string?> StringReader { get; }

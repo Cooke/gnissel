@@ -11,10 +11,12 @@ internal partial class DbMappers
 
         private ImmutableArray<WriteDescriptor> CreateWriteUserDescriptors() =>
             [
-                .. UserIdWriter.WriteDescriptors.Select(x => x.WithParent("id", "Id")),
-                .. StringWriter.WriteDescriptors.Select(x => x.WithParent("name", "Name")),
-                .. AddressWriter.WriteDescriptors.Select(x => x.WithParent("address", "Address")),
-                .. UserTypeWriter.WriteDescriptors.Select(x => x.WithParent("type", "Type")),
+                .. UserIdWriter.WriteDescriptors.Select(x => x.WithParent(NameProvider, "Id")),
+                .. StringWriter.WriteDescriptors.Select(x => x.WithParent(NameProvider, "Name")),
+                .. AddressWriter.WriteDescriptors.Select(x =>
+                    x.WithParent(NameProvider, "Address")
+                ),
+                .. UserTypeWriter.WriteDescriptors.Select(x => x.WithParent(NameProvider, "Type")),
             ];
 
         public void WriteUser(User? user, IParameterWriter parameterWriter)

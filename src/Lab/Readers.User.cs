@@ -12,8 +12,11 @@ internal partial class DbMappers
 
         private ImmutableArray<ReadDescriptor> CreateReadUserDescriptors() =>
             [
-                new NameReadDescriptor("name"),
-                .. AddressReader.ReadDescriptors.Select(d => d.WithParent("address")),
+                .. StringReader.ReadDescriptors.Select(d => d.WithParent(NameProvider, "Name")),
+                .. AddressReader.ReadDescriptors.Select(d => d.WithParent(NameProvider, "Address")),
+                .. UserTypeReader.ReadDescriptors.Select(d =>
+                    d.WithParent(NameProvider, "UserType")
+                ),
             ];
 
         private User? ReadUser(DbDataReader reader, OrdinalReader ordinalReader)

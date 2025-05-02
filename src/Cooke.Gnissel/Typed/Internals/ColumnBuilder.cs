@@ -14,9 +14,9 @@ internal static class ColumnBuilder
                 throw new NotSupportedException();
             }
 
-            var memberChain = new List<PropertyInfo>(columnDescriptor.PropertyChain.Length);
+            var memberChain = new List<PropertyInfo>(columnDescriptor.MemberChain.Length);
             var type = typeof(T);
-            foreach (var property in columnDescriptor.PropertyChain)
+            foreach (var property in columnDescriptor.MemberChain)
             {
                 var propertyInfo = type.GetProperty(property);
                 memberChain.Add(propertyInfo ?? throw new InvalidOperationException());

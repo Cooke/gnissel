@@ -19,7 +19,13 @@ internal partial class DbMappers : IMapperProvider
 
                         return new { Name = name };
                     },
-                    () => [new NameReadDescriptor("Name")]
+                    () =>
+
+                        [
+                            .. StringReader.ReadDescriptors.Select(d =>
+                                d.WithParent(NameProvider, "Name")
+                            ),
+                        ]
                 ),
             ];
     }

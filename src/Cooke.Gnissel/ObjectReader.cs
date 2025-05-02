@@ -52,16 +52,20 @@ public class ObjectReader<TOut>(
 
 public abstract record ReadDescriptor
 {
-    public abstract ReadDescriptor WithParent(string parent);
+    public abstract ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember);
 }
 
 public record NextOrdinalReadDescriptor : ReadDescriptor
 {
-    public override ReadDescriptor WithParent(string parent) => new NameReadDescriptor(parent);
+    public override ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember) =>
+        new NameReadDescriptor(nameProvider.ToColumnName([parentMember]), [parentMember]);
 }
 
-public record NameReadDescriptor(string Name) : ReadDescriptor
+public record NameReadDescriptor(string Name, ImmutableArray<string> MemberChain) : ReadDescriptor
 {
-    public override ReadDescriptor WithParent(string? parent) =>
-        string.IsNullOrEmpty(parent) ? this : new NameReadDescriptor(Name);
+    public override ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember)
+    {
+        ImmutableArray<string> newMemberChain = [parentMember, .. MemberChain];
+        return new NameReadDescriptor(nameProvider.ToColumnName(newMemberChain), newMemberChain);
+    }
 }

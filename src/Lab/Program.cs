@@ -1,11 +1,15 @@
-﻿using System.Linq.Expressions;
+﻿using System.Collections.Immutable;
+using System.Data.Common;
+using System.Linq.Expressions;
 using Cooke.Gnissel;
+using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Typed;
 using Gnissel.SourceGeneration;
 
-var mappers = new DbMappers
+var nameProvider = new DefaultDbNameProvider();
+var mappers = new DbMappers(nameProvider)
 {
-    Readers = new DbMappers.DbReaders { UserReader = new ObjectReader<User?>(null!, null!) },
+    ReaderProvider = new CustomDbReaders(nameProvider) { UserReader = null! },
 };
 
 var dbContext = new MyDbContext(new DbOptions(null!, mappers));
@@ -48,5 +52,24 @@ public enum UserType
 namespace Gnissel.SourceGeneration
 {
     [DbMappers(EnumMappingTechnique = MappingTechnique.AsIs)]
-    internal partial class DbMappers { }
+    internal partial class DbMappers;
+}
+
+class CustomDbReaders : DbMappers.DbReaders
+{
+    public CustomDbReaders(IDbNameProvider nameProvider)
+        : base(nameProvider)
+    {
+        AddressReader = new ObjectReader<Address?>(ReadAddress, CreateReadAddressDescriptors);
+    }
+
+    private ImmutableArray<ReadDescriptor> CreateReadAddressDescriptors()
+    {
+        throw new NotImplementedException();
+    }
+
+    private Address ReadAddress(DbDataReader datareader, OrdinalReader ordinalreader)
+    {
+        throw new NotImplementedException();
+    }
 }

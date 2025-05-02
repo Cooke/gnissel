@@ -7,40 +7,28 @@ using Cooke.Gnissel.Services;
 
 namespace Cooke.Gnissel;
 
-public partial class DbOptions(
-    IDbAdapter adapter,
-    IObjectReaderProvider objectReaderProvider,
-    IObjectWriterProvider objectWriterProvider,
-    IDbConnector connector
-)
+public class DbOptions(IDbAdapter adapter, IMapperProvider mapperProvider, IDbConnector connector)
 {
     public DbOptions(IDbAdapter adapter, IMapperProvider mapperProvider)
-        : this(adapter, mapperProvider.ReaderProvider, mapperProvider.WriterProvider) { }
-
-    public DbOptions(
-        IDbAdapter adapter,
-        IObjectReaderProvider objectReaderProvider,
-        IObjectWriterProvider objectWriterProvider
-    )
-        : this(adapter, objectReaderProvider, objectWriterProvider, adapter.CreateConnector()) { }
+        : this(adapter, mapperProvider, adapter.CreateConnector()) { }
 
     public DbOptions WithConnector(IDbConnector newConnector) =>
-        new(DbAdapter, objectReaderProvider, objectWriterProvider, newConnector);
+        new(DbAdapter, mapperProvider, newConnector);
 
     public IDbAdapter DbAdapter => adapter;
 
     public IDbConnector DbConnector => connector;
+
+    public IMapperProvider MapperProvider => mapperProvider;
 
     public DbParameter CreateParameter<T>(T value, string? dbType) =>
         adapter.CreateParameter(value, dbType);
 
     public RenderedSql RenderSql(Sql sql) => DbAdapter.RenderSql(sql, this);
 
-    public ObjectReader<T> GetReader<T>() => objectReaderProvider.Get<T>();
+    public ObjectReader<T> GetReader<T>() => mapperProvider.ReaderProvider.Get<T>();
 
-    public ObjectWriter<T> GetWriter<T>() => objectWriterProvider.Get<T>();
+    public ObjectWriter<T> GetWriter<T>() => mapperProvider.WriterProvider.Get<T>();
 
-    public IObjectWriter GetWriter(Type type) => objectWriterProvider.Get(type);
-
-    public bool IsDbMapped(Type type) => DbAdapter.IsDbMapped(type);
+    public IObjectWriter GetWriter(Type type) => mapperProvider.WriterProvider.Get(type);
 }

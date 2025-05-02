@@ -47,21 +47,24 @@ public class ObjectWriter<T>(
 
 public abstract record WriteDescriptor
 {
-    public abstract WriteDescriptor WithParent(string parent, string property);
+    public abstract WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember);
 }
 
 public record UnspecifiedColumnWriteDescriptor : WriteDescriptor
 {
-    public override WriteDescriptor WithParent(string parent, string property) =>
-        new ColumnWriteDescriptor(parent, [property]);
+    public override WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember) =>
+        new ColumnWriteDescriptor(nameProvider.ToColumnName([parentMember]), [parentMember]);
 }
 
-public record ColumnWriteDescriptor(string Name, ImmutableArray<string> PropertyChain)
+public record ColumnWriteDescriptor(string Name, ImmutableArray<string> MemberChain)
     : WriteDescriptor
 {
-    public override WriteDescriptor WithParent(string? parent, string property) =>
-        new ColumnWriteDescriptor(
-            string.IsNullOrEmpty(parent) ? Name : parent + "_" + Name,
-            [property, .. PropertyChain]
+    public override WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember)
+    {
+        ImmutableArray<string> newPropertyChain = [parentMember, .. MemberChain];
+        return new ColumnWriteDescriptor(
+            nameProvider.ToColumnName(newPropertyChain),
+            newPropertyChain
         );
+    }
 }

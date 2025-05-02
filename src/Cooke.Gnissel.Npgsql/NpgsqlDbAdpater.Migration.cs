@@ -24,8 +24,7 @@ public partial class NpgsqlDbAdapter
             var dbContext = new DbContext(
                 new DbOptions(
                     this,
-                    new FieldValueObjectReaderProvider(),
-                    new FieldValueObjectWriterProvider(),
+                    new MapperProvider(),
                     new FixedConnectionDbConnector(connection, this)
                 )
             );
@@ -62,11 +61,7 @@ public partial class NpgsqlDbAdapter
 
     private async Task CreateMigrationHistoryTableIfNotExist(CancellationToken cancellationToken)
     {
-        var initialOptions = new DbOptions(
-            this,
-            new FieldValueObjectReaderProvider(),
-            new FieldValueObjectWriterProvider()
-        );
+        var initialOptions = new DbOptions(this, new MapperProvider());
         var initialContext = new DbContext(initialOptions);
 
         await initialContext
@@ -100,5 +95,14 @@ public partial class NpgsqlDbAdapter
             );
 
         public IObjectWriter Get(Type type) => throw new NotSupportedException();
+    }
+
+    private class MapperProvider : IMapperProvider
+    {
+        public IObjectReaderProvider ReaderProvider { get; } = new FieldValueObjectReaderProvider();
+
+        public IObjectWriterProvider WriterProvider { get; } = new FieldValueObjectWriterProvider();
+
+        public NamingConvention NamingConvention { get; } = NamingConvention.AsIs;
     }
 }

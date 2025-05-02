@@ -1,7 +1,6 @@
 #region
 
 using System.Data.Common;
-using System.Reflection;
 using Cooke.Gnissel.Services;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Logging.Abstractions;
@@ -14,29 +13,14 @@ namespace Cooke.Gnissel.Npgsql;
 public sealed partial class NpgsqlDbAdapter(
     NpgsqlDataSource dataSource,
     ILogger? logger = null,
-    IGnisselNpgsqlNameProvider? nameProvider = null
+    IDbNameProvider? nameProvider = null
 ) : IDbAdapter
 {
-    private static readonly Type[] BuiltInTypes =
-    [
-        typeof(string),
-        typeof(DateTime),
-        typeof(DateTimeOffset),
-        typeof(TimeSpan),
-        typeof(Guid),
-        typeof(byte[]),
-    ];
-
     private readonly ILogger? _logger = logger ?? new NullLogger<NpgsqlDbAdapter>();
-    private readonly IGnisselNpgsqlNameProvider _nameProvider =
-        nameProvider ?? new GnisselNpgsqlSnakeCaseNameProvider();
+    private readonly IDbNameProvider _nameProvider = nameProvider ?? new SnakeCaseDbNameProvider();
 
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
         : this(dataSource, NullLogger.Instance) { }
-
-    public string ToColumnName(IEnumerable<string> path) => _nameProvider.ToColumnName(path);
-
-    public string ToTableName(Type type) => _nameProvider.ToTableName(type);
 
     public DbParameter CreateParameter<TValue>(TValue value, string? dbType) =>
         typeof(TValue) == typeof(object)
@@ -48,9 +32,4 @@ public sealed partial class NpgsqlDbAdapter(
     public DbCommand CreateCommand() => new NpgsqlCommand();
 
     public IDbConnector CreateConnector() => new NpgsqlDbConnector(dataSource);
-
-    public bool IsDbMapped(Type type) =>
-        type.GetCustomAttribute<DbTypeAttribute>() != null
-        || type.IsPrimitive
-        || BuiltInTypes.Contains(type);
 }

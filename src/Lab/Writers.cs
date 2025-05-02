@@ -5,16 +5,15 @@ namespace Gnissel.SourceGeneration;
 
 internal partial class DbMappers
 {
-    public DbWriters Writers { get; init; } = new DbWriters();
-
-    IObjectWriterProvider IMapperProvider.WriterProvider => Writers;
-
     internal partial class DbWriters : IObjectWriterProvider
     {
+        public IDbNameProvider NameProvider { get; init; }
+
         private DictionaryObjectWriterProvider? _provider;
 
-        public DbWriters()
+        public DbWriters(IDbNameProvider nameProvider)
         {
+            NameProvider = nameProvider;
             UserIdWriter = new ObjectWriter<UserId?>(WriteUserId, CreateWriteUserIdDescriptors);
             UserWriter = new ObjectWriter<User?>(WriteUser, CreateWriteUserDescriptors);
             UserTypeWriter = new ObjectWriter<UserType?>(
@@ -26,6 +25,7 @@ internal partial class DbMappers
                 CreateWriteUserTypeDescriptors
             );
             AddressWriter = new ObjectWriter<Address?>(WriteAddress, CreateWriteAddressDescriptors);
+            StringWriter = new ObjectWriter<string?>(WriteString, CreateWriteStringDescriptors);
         }
 
         private IEnumerable<IObjectWriter> GetAll() =>
