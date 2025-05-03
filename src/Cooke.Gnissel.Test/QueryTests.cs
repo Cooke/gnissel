@@ -18,7 +18,12 @@ public partial class MappingTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new TestDbContext(new DbOptions(new NpgsqlDbAdapter(_dataSource), new Mappers()));
+        _db = new TestDbContext(
+            new DbOptions(
+                new NpgsqlDbAdapter(_dataSource),
+                new Mappers(new SnakeCaseDbNameProvider())
+            )
+        );
 
         await _dataSource
             .CreateCommand(
@@ -217,9 +222,6 @@ public partial class MappingTests
         public Table<User> Users { get; } = new(options);
     }
 
-    [DbMappers(
-        EnumMappingTechnique = MappingTechnique.AsString,
-        NamingConvention = NamingConvention.SnakeCase
-    )]
+    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
     private partial class Mappers;
 }

@@ -16,7 +16,9 @@ public partial class NonQueryTests
     [OneTimeSetUp]
     public async Task Setup()
     {
-        _db = new DbContext(new(new NpgsqlDbAdapter(_dataSource), new DbMappers()));
+        _db = new DbContext(
+            new(new NpgsqlDbAdapter(_dataSource), new DbMappers(new SnakeCaseDbNameProvider()))
+        );
 
         await _dataSource
             .CreateCommand(
@@ -57,6 +59,6 @@ public partial class NonQueryTests
 
     private record User(int Id, string Name, int Age);
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

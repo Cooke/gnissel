@@ -2,7 +2,10 @@
 
 public interface IDbNameProvider
 {
-    string ToColumnName(IEnumerable<string> memberNameChain);
+    string ToColumnName(string memberName);
 
     string ToTableName(string typeName);
+
+    string CombineColumnNames(string parentMemberColumnName, string childMemberColumnName) =>
+        childMemberColumnName;
 }

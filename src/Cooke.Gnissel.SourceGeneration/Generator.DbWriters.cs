@@ -13,7 +13,9 @@ public partial class Generator
     {
         WritePartialMappersClassStart(mappersClass, sourceWriter);
 
-        sourceWriter.WriteLine("public DbWriters Writers { get; init; } = new DbWriters();");
+        sourceWriter.WriteLine(
+            "public DbWriters Writers { get; init; } = new DbWriters(nameProvider);"
+        );
         sourceWriter.WriteLine();
 
         sourceWriter.WriteLine("IObjectWriterProvider IMapperProvider.WriterProvider => Writers;");
@@ -25,8 +27,9 @@ public partial class Generator
         sourceWriter.WriteLine("private IObjectWriterProvider? _writerProvider;");
         sourceWriter.WriteLine();
 
-        sourceWriter.WriteLine("public DbWriters() {");
+        sourceWriter.WriteLine("public DbWriters(IDbNameProvider nameProvider) {");
         sourceWriter.Indent++;
+        sourceWriter.WriteLine("NameProvider = nameProvider;");
 
         for (var index = 0; index < types.Length; index++)
         {
@@ -56,6 +59,8 @@ public partial class Generator
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
         sourceWriter.WriteLine();
+
+        sourceWriter.WriteLine("protected IDbNameProvider NameProvider { get; }");
 
         sourceWriter.WriteLine("public ImmutableArray<IObjectWriter> GetAllWriters() => [");
         sourceWriter.Indent++;

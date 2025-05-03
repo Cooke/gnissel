@@ -57,7 +57,9 @@ public partial class Generator
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetReaderPropertyName(props[i].Type));
-            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(");
+            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(NameProvider, ");
+            sourceWriter.WriteStringOrNull(props[i].Name);
+            sourceWriter.Write(", ");
             sourceWriter.WriteStringOrNull(props[i].Name);
             sourceWriter.Write("))");
             if (i < props.Length - 1)

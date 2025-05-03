@@ -107,11 +107,15 @@ public partial class Generator
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetWriterPropertyName(typeSymbol));
-            sourceWriter.Write(".WriteDescriptors.Select(d => d.WithParent(");
-            sourceWriter.WriteStringOrNull(GetColumnName(mappersClass, property, parameter));
-            sourceWriter.Write(", \"");
-            sourceWriter.Write(property.Name);
-            sourceWriter.Write("\"))");
+            sourceWriter.Write(".WriteDescriptors.Select(d => d.WithParent(NameProvider, ");
+            var columnName = GetColumnName(mappersClass, property, parameter);
+            if (columnName != null)
+            {
+                sourceWriter.WriteStringOrNull(columnName);
+                sourceWriter.Write(", ");
+            }
+            sourceWriter.WriteStringOrNull(property.Name);
+            sourceWriter.Write("))");
         }
     }
 

@@ -10,14 +10,10 @@ using Npgsql;
 
 namespace Cooke.Gnissel.Npgsql;
 
-public sealed partial class NpgsqlDbAdapter(
-    NpgsqlDataSource dataSource,
-    ILogger? logger = null,
-    IDbNameProvider? nameProvider = null
-) : IDbAdapter
+public sealed partial class NpgsqlDbAdapter(NpgsqlDataSource dataSource, ILogger? logger = null)
+    : IDbAdapter
 {
     private readonly ILogger? _logger = logger ?? new NullLogger<NpgsqlDbAdapter>();
-    private readonly IDbNameProvider _nameProvider = nameProvider ?? new SnakeCaseDbNameProvider();
 
     public NpgsqlDbAdapter(NpgsqlDataSource dataSource)
         : this(dataSource, NullLogger.Instance) { }

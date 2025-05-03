@@ -8,16 +8,16 @@ internal partial class DbMappers : IMapperProvider
 {
     internal partial class DbReaders : IObjectReaderProvider
     {
-        public IDbNameProvider NameProvider { get; }
-
         private IObjectReaderProvider? _readerProvider;
 
         public DbReaders(IDbNameProvider nameProvider)
         {
             NameProvider = nameProvider;
             UserReader = new ObjectReader<User?>(ReadUser, CreateReadUserDescriptors);
-            AddressReader = CreateAddressReader();
+            AddressReader = new ObjectReader<Address?>(ReadAddress, CreateReadAddressDescriptors);
         }
+
+        private IDbNameProvider NameProvider { get; }
 
         public ObjectReader<string?> StringReader { get; }
         public ObjectReader<int> Int32Reader { get; }

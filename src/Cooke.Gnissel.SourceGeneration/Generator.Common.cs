@@ -272,15 +272,7 @@ public partial class Generator
             return nameAttribute.ConstructorArguments.First().Value as string;
         }
 
-        switch (mappersClass.NamingConvention)
-        {
-            case NamingConvention.SnakeCase:
-                return GetSnakeCaseName(symbol1.Name);
-            case NamingConvention.AsIs:
-                return symbol1.Name;
-            default:
-                throw new ArgumentOutOfRangeException();
-        }
+        return null;
     }
 
     private static string GetSnakeCaseName(string name)

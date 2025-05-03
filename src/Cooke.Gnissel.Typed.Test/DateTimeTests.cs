@@ -13,7 +13,10 @@ public partial class DateTimeTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()), new DbMappers())
+            new(
+                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
+                new DbMappers(new SnakeCaseDbNameProvider())
+            )
         );
         db.NonQuery(
                 $"""
@@ -68,6 +71,6 @@ public partial class DateTimeTests : IDisposable
 
     private record User(int Id, DateTime timestampTz, DateTime timestamp);
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

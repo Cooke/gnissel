@@ -4,8 +4,7 @@ namespace Cooke.Gnissel;
 
 public class SnakeCaseDbNameProvider : IDbNameProvider
 {
-    public string ToColumnName(IEnumerable<string> memberNameChain) =>
-        GetSnakeCaseName(memberNameChain.Last());
+    public string ToColumnName(string memberName) => GetSnakeCaseName(memberName);
 
     public string ToTableName(string typeName) => GetSnakeCaseName(typeName) + "s";
 

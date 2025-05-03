@@ -103,6 +103,6 @@ public partial class NpgsqlDbAdapter
 
         public IObjectWriterProvider WriterProvider { get; } = new FieldValueObjectWriterProvider();
 
-        public NamingConvention NamingConvention { get; } = NamingConvention.AsIs;
+        public IDbNameProvider NameProvider { get; } = new DefaultDbNameProvider();
     }
 }

@@ -15,7 +15,7 @@ public partial class JsonTests : IDisposable
         db = new TestDbContext(
             new(
                 new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.EnableDynamicJson().Build()),
-                new DbMappers()
+                new DbMappers(new SnakeCaseDbNameProvider())
             )
         );
         db.NonQuery(
@@ -58,6 +58,6 @@ public partial class JsonTests : IDisposable
     [DbMap(Technique = MappingTechnique.AsIs, DbTypeName = "jsonb")]
     private record UserData(string Username, int Level);
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

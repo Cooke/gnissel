@@ -14,7 +14,7 @@ public partial class MappingTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         _npgsqlDbAdapter = new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build());
-        var db = new DbContext(_npgsqlDbAdapter, new DbMappers());
+        var db = new DbContext(_npgsqlDbAdapter, new DbMappers(new SnakeCaseDbNameProvider()));
         db.NonQuery(
                 $"""
                     create table accounts
@@ -41,7 +41,12 @@ public partial class MappingTests : IDisposable
     public async Task Insert()
     {
         var usersTable = new Table<User>(
-            new TableOptions(new DbOptions(_npgsqlDbAdapter, new DbMappers())) { Name = "accounts" }
+            new TableOptions(
+                new DbOptions(_npgsqlDbAdapter, new DbMappers(new SnakeCaseDbNameProvider()))
+            )
+            {
+                Name = "accounts",
+            }
         );
         await usersTable.Insert(
             new User(1, "Bob", 25, new UserAddress("bob's street", "Bob town"))
@@ -59,7 +64,7 @@ public partial class MappingTests : IDisposable
         [DbName("identifier")] int Id,
         [property: DbName("UserName")] string Name,
         int Age,
-        [property: DbName(null)] UserAddress Address
+        UserAddress Address
     )
     {
         public int UnmappedAge => Age;
@@ -70,6 +75,6 @@ public partial class MappingTests : IDisposable
         [property: DbName("the_city")] string City
     );
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

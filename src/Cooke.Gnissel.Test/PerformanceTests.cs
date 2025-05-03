@@ -150,6 +150,6 @@ public partial class PerformanceTests
         int Int8
     );
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

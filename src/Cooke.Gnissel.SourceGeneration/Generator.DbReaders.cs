@@ -11,16 +11,24 @@ public partial class Generator
         ITypeSymbol[] types
     )
     {
-        WritePartialMappersClassStart(mappersClass, sourceWriter);
+        WritePartialMappersClassStart(mappersClass, sourceWriter, true);
+
+        sourceWriter.Write("public ");
+        sourceWriter.Write(mappersClass.Symbol.Name);
+        sourceWriter.WriteLine("() : this(new DefaultDbNameProvider()) { }");
+        sourceWriter.WriteLine();
 
         sourceWriter.WriteLine(
             types.Any(symbol => GetMapTechnique(symbol) == MappingTechnique.Custom)
                 ? "public required DbReaders Readers { get; init; }"
-                : "public DbReaders Readers { get; init; } = new DbReaders();"
+                : "public DbReaders Readers { get; init; } = new DbReaders(nameProvider);"
         );
         sourceWriter.WriteLine();
 
         sourceWriter.WriteLine("public IObjectReaderProvider ReaderProvider => Readers;");
+        sourceWriter.WriteLine();
+
+        sourceWriter.WriteLine("public IDbNameProvider NameProvider => nameProvider;");
         sourceWriter.WriteLine();
 
         sourceWriter.WriteLine("public partial class DbReaders : IObjectReaderProvider {");
@@ -29,8 +37,9 @@ public partial class Generator
         sourceWriter.WriteLine("private IObjectReaderProvider? _readerProvider;");
         sourceWriter.WriteLine();
 
-        sourceWriter.WriteLine("public DbReaders() { ");
+        sourceWriter.WriteLine("public DbReaders(IDbNameProvider nameProvider) { ");
         sourceWriter.Indent++;
+        sourceWriter.WriteLine("NameProvider = nameProvider;");
         foreach (var type in types.Where(t => !IsCustomMapped(t)))
         {
             sourceWriter.Write(GetReaderPropertyName(type));
@@ -66,6 +75,8 @@ public partial class Generator
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
         sourceWriter.WriteLine();
+
+        sourceWriter.WriteLine("protected IDbNameProvider NameProvider { get; }");
 
         sourceWriter.WriteLine("public ImmutableArray<IObjectReader> GetAllReaders() => [");
         sourceWriter.Indent++;

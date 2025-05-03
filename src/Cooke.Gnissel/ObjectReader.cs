@@ -53,19 +53,41 @@ public class ObjectReader<TOut>(
 public abstract record ReadDescriptor
 {
     public abstract ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember);
+
+    public abstract ReadDescriptor WithParent(
+        IDbNameProvider nameProvider,
+        string parentName,
+        string parentMember
+    );
 }
 
 public record NextOrdinalReadDescriptor : ReadDescriptor
 {
     public override ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember) =>
-        new NameReadDescriptor(nameProvider.ToColumnName([parentMember]), [parentMember]);
+        new NameReadDescriptor(nameProvider.ToColumnName(parentMember), [parentMember]);
+
+    public override ReadDescriptor WithParent(
+        IDbNameProvider nameProvider,
+        string parentName,
+        string parentMember
+    ) => new NameReadDescriptor(parentName, [parentMember]);
 }
 
 public record NameReadDescriptor(string Name, ImmutableArray<string> MemberChain) : ReadDescriptor
 {
-    public override ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember)
-    {
-        ImmutableArray<string> newMemberChain = [parentMember, .. MemberChain];
-        return new NameReadDescriptor(nameProvider.ToColumnName(newMemberChain), newMemberChain);
-    }
+    public override ReadDescriptor WithParent(IDbNameProvider nameProvider, string parentMember) =>
+        new NameReadDescriptor(
+            nameProvider.CombineColumnNames(nameProvider.ToColumnName(parentMember), Name),
+            [parentMember, .. MemberChain]
+        );
+
+    public override ReadDescriptor WithParent(
+        IDbNameProvider nameProvider,
+        string parentName,
+        string parentMember
+    ) =>
+        new NameReadDescriptor(
+            nameProvider.CombineColumnNames(parentName, Name),
+            [parentMember, .. MemberChain]
+        );
 }

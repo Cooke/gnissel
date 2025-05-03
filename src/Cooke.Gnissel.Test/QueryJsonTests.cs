@@ -109,6 +109,6 @@ public partial class ReadJsonTests
         User,
     }
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

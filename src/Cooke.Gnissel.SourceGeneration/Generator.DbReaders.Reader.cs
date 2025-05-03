@@ -107,19 +107,21 @@ public partial class Generator
                     {
                         Name = GetColumnName(mappersClass, x.Parameter, x.Property),
                         x.Parameter.Type,
+                        Member = x.Parameter.Name,
                     })
                     .Concat(
                         initializeProperties.Select(x => new
                         {
                             Name = GetColumnName(mappersClass, x),
                             x.Type,
+                            Member = x.Name,
                         })
                     )
                     .ToArray();
 
                 for (int i = 0; i < newArgs.Length; i++)
                 {
-                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name);
+                    WriteSubReaderDescriptor(newArgs[i].Type, newArgs[i].Name, newArgs[i].Member);
                     if (i < newArgs.Length - 1)
                     {
                         sourceWriter.WriteLine(",");
@@ -132,12 +134,17 @@ public partial class Generator
         sourceWriter.WriteLine("];");
         sourceWriter.WriteLine();
 
-        void WriteSubReaderDescriptor(ITypeSymbol typeSymbol, string name)
+        void WriteSubReaderDescriptor(ITypeSymbol typeSymbol, string? name, string member)
         {
             sourceWriter.Write("..");
             sourceWriter.Write(GetReaderPropertyName(typeSymbol));
-            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(");
-            sourceWriter.WriteStringOrNull(name);
+            sourceWriter.Write(".ReadDescriptors.Select(d => d.WithParent(NameProvider, ");
+            if (name != null)
+            {
+                sourceWriter.WriteStringOrNull(name);
+                sourceWriter.Write(", ");
+            }
+            sourceWriter.WriteStringOrNull(member);
             sourceWriter.Write("))");
         }
     }
@@ -295,7 +302,8 @@ public partial class Generator
 
     private static void WritePartialMappersClassStart(
         MappersClass mappersClass,
-        IndentedTextWriter sourceWriter
+        IndentedTextWriter sourceWriter,
+        bool withPrimaryConstructor = false
     )
     {
         sourceWriter.WriteLine("using System.Data.Common;");
@@ -306,6 +314,10 @@ public partial class Generator
         sourceWriter.WriteLine();
         WriteNamespace(mappersClass.Symbol.ContainingNamespace, sourceWriter);
         WritePartialClassStart(sourceWriter, mappersClass.Symbol);
+        if (withPrimaryConstructor)
+        {
+            sourceWriter.WriteLine("(IDbNameProvider nameProvider)");
+        }
         sourceWriter.Write(" : IMapperProvider ");
         sourceWriter.WriteLine(" {");
         sourceWriter.Indent++;

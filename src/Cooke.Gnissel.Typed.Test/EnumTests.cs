@@ -14,7 +14,10 @@ public partial class EnumTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()), new DbMappers())
+            new(
+                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
+                new DbMappers(new SnakeCaseDbNameProvider())
+            )
         );
         db.NonQuery(
                 $"""
@@ -83,9 +86,6 @@ public partial class EnumTests : IDisposable
         User,
     }
 
-    [DbMappers(
-        EnumMappingTechnique = MappingTechnique.AsString,
-        NamingConvention = NamingConvention.SnakeCase
-    )]
+    [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
     private partial class DbMappers;
 }

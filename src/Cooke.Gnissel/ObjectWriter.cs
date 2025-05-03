@@ -48,23 +48,42 @@ public class ObjectWriter<T>(
 public abstract record WriteDescriptor
 {
     public abstract WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember);
+
+    public abstract WriteDescriptor WithParent(
+        IDbNameProvider nameProvider,
+        string parentName,
+        string parentMember
+    );
 }
 
 public record UnspecifiedColumnWriteDescriptor : WriteDescriptor
 {
     public override WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember) =>
-        new ColumnWriteDescriptor(nameProvider.ToColumnName([parentMember]), [parentMember]);
+        new ColumnWriteDescriptor(nameProvider.ToColumnName(parentMember), [parentMember]);
+
+    public override WriteDescriptor WithParent(
+        IDbNameProvider nameProvider,
+        string parentName,
+        string parentMember
+    ) => new ColumnWriteDescriptor(parentName, [parentMember]);
 }
 
 public record ColumnWriteDescriptor(string Name, ImmutableArray<string> MemberChain)
     : WriteDescriptor
 {
-    public override WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember)
-    {
-        ImmutableArray<string> newPropertyChain = [parentMember, .. MemberChain];
-        return new ColumnWriteDescriptor(
-            nameProvider.ToColumnName(newPropertyChain),
-            newPropertyChain
+    public override WriteDescriptor WithParent(IDbNameProvider nameProvider, string parentMember) =>
+        new ColumnWriteDescriptor(
+            nameProvider.CombineColumnNames(nameProvider.ToColumnName(parentMember), Name),
+            [parentMember, .. MemberChain]
         );
-    }
+
+    public override WriteDescriptor WithParent(
+        IDbNameProvider nameProvider,
+        string parentName,
+        string parentMember
+    ) =>
+        new ColumnWriteDescriptor(
+            nameProvider.CombineColumnNames(parentName, Name),
+            [parentMember, .. MemberChain]
+        );
 }

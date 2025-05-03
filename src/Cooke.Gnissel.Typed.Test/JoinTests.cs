@@ -14,7 +14,10 @@ public partial class JoinTests : IDisposable
     {
         databaseFixture.SetOutputHelper(testOutputHelper);
         db = new TestDbContext(
-            new(new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()), new DbMappers())
+            new(
+                new NpgsqlDbAdapter(databaseFixture.DataSourceBuilder.Build()),
+                new DbMappers(new SnakeCaseDbNameProvider())
+            )
         );
         db.NonQuery(
                 $"""
@@ -336,6 +339,6 @@ public partial class JoinTests : IDisposable
 
     private record DeviceKey(string DeviceId, string Key);
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

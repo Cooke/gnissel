@@ -18,12 +18,13 @@ public partial class CustomRequiredReaderTest
     {
         _dataSource = Fixture.DataSourceBuilder.Build();
         var adapter = new NpgsqlDbAdapter(_dataSource);
+        var nameProvider = new SnakeCaseDbNameProvider();
         _db = new DbContext(
             new(
                 adapter,
-                new DbMappers()
+                new DbMappers(nameProvider)
                 {
-                    Readers = new DbMappers.DbReaders()
+                    Readers = new DbMappers.DbReaders(nameProvider)
                     {
                         CustomRequiredReaderTestGameClassReader = new ObjectReader<GameClass?>(
                             (reader, ordinalReader) =>
@@ -66,6 +67,6 @@ public partial class CustomRequiredReaderTest
             };
     }
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

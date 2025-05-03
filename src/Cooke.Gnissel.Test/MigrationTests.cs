@@ -17,7 +17,7 @@ public partial class MigrationTests
     public void Setup()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new DbContext(new(adapter, new DbMappers()));
+        _db = new DbContext(new(adapter, new DbMappers(new SnakeCaseDbNameProvider())));
     }
 
     [OneTimeTearDown]
@@ -68,6 +68,6 @@ public partial class MigrationTests
         );
     }
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

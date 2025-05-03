@@ -20,7 +20,7 @@ public partial class LongRunningTransactionTests
     public async Task Setup()
     {
         var adapter = new NpgsqlDbAdapter(_dataSource);
-        _db = new TestDbContext(new(adapter, new DbMappers()));
+        _db = new TestDbContext(new(adapter, new DbMappers(new SnakeCaseDbNameProvider())));
 
         await _dataSource
             .CreateCommand(
@@ -155,6 +155,6 @@ public partial class LongRunningTransactionTests
 
     public record User(int Id, string Name, int Age);
 
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+    [DbMappers]
     private partial class DbMappers;
 }

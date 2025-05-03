@@ -19,7 +19,7 @@ public partial class NamingConventionTests
     [Test]
     public async Task ReadAsIs()
     {
-        var db = new DbContext(new(_adapter, new AsIsMapper()));
+        var db = new DbContext(new(_adapter, new Mapper(new DefaultDbNameProvider())));
         var user = await db.QuerySingle<User>(
             $"SELECT '1' as \"Id\", 'Joe' as \"FirstName\", 25 as \"Age\", 'Queenstreet' as \"StreetName\", 'New York' as \"City\""
         );
@@ -36,7 +36,7 @@ public partial class NamingConventionTests
     [Test]
     public async Task ReadSnakeCase()
     {
-        var db = new DbContext(new(_adapter, new SnakeCaseMapper()));
+        var db = new DbContext(new(_adapter, new Mapper(new SnakeCaseDbNameProvider())));
         var user = await db.QuerySingle<User>(
             $"SELECT '1' as \"id\", 'Joe' as \"first_name\", 25 as \"age\", 'Queenstreet' as \"street_name\", 'New York' as \"city\""
         );
@@ -54,9 +54,6 @@ public partial class NamingConventionTests
 
     private record UserAddress(string StreetName, string City);
 
-    [DbMappers(NamingConvention = NamingConvention.AsIs)]
-    private partial class AsIsMapper;
-
-    [DbMappers(NamingConvention = NamingConvention.SnakeCase)]
-    private partial class SnakeCaseMapper;
+    [DbMappers]
+    private partial class Mapper;
 }

@@ -4,7 +4,7 @@ using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed;
 
 var adapter = new NpgsqlDbAdapter(null!);
-var dbContext = new MyDbContext(new DbOptions(adapter, new Mappers()));
+var dbContext = new MyDbContext(new DbOptions(adapter, new Mappers(new SnakeCaseDbNameProvider())));
 dbContext.Query<User>($"");
 dbContext.Query<User?>($"");
 dbContext.Query<(User, Device)>($"");
@@ -63,5 +63,5 @@ public class MyDbContext(DbOptions dbOptions) : DbContext(dbOptions)
     public Table<User> Users { get; } = new(dbOptions);
 }
 
-[DbMappers(NamingConvention = NamingConvention.SnakeCase)]
+[DbMappers]
 public partial class Mappers;
