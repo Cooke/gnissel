@@ -189,18 +189,19 @@ public partial class Generator
 
     private static bool IsNullableValueType(ITypeSymbol type) => type is { Name: "Nullable" };
 
-    private static readonly IImmutableSet<string> BuildInDirectlyMappedTypes =
-        ImmutableHashSet.Create("Int32", "String");
+    private static bool IsBuildIn(ITypeSymbol type) =>
+        GetRootNamespace(type)?.StartsWith("System") == true && !type.IsTupleType;
 
-    private static readonly IImmutableSet<string> BuildInIndirectlyMappedTypes =
-        ImmutableHashSet.Create("DateTime", "TimeSpan");
+    private static string? GetRootNamespace(ITypeSymbol typeSymbol)
+    {
+        var containingNamespace = typeSymbol.ContainingNamespace;
+        while (containingNamespace.ContainingNamespace is { IsGlobalNamespace: false })
+        {
+            containingNamespace = containingNamespace.ContainingNamespace;
+        }
 
-    private static readonly IImmutableSet<string> BuildInTypes = BuildInDirectlyMappedTypes
-        .Union(BuildInIndirectlyMappedTypes)
-        .ToImmutableHashSet();
-
-    private static bool IsBuildIn(ITypeSymbol readTypeType) =>
-        BuildInTypes.Contains(readTypeType.Name);
+        return containingNamespace?.Name;
+    }
 
     private class MappersClass
     {

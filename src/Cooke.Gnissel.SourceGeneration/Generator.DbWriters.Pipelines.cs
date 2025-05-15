@@ -86,6 +86,9 @@ public partial class Generator
                                 .Select(x => context.SemanticModel.GetTypeInfo(x.Expression))
                                 .Where(writeTypeInfo => writeTypeInfo.Type != null)
                                 .Select(x => x.Type!)
+                                .Where(type =>
+                                    type.ContainingType?.Name != "Sql" && type.Name != "Raw"
+                                )
                                 .ToArray();
                         }
                         default:
@@ -93,7 +96,8 @@ public partial class Generator
                     }
                 }
             )
-            .SelectMany((x, _) => x);
+            .SelectMany((x, _) => x)
+            .Where(x => x.Name != "Object");
 
         var mappersClassWithQueryWriteTypesPipeline = mappersPipeline
             .Combine(queryWriteTypesPipeline.Collect())

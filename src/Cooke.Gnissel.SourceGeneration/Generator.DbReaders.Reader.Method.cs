@@ -192,6 +192,25 @@ public partial class Generator
                     sourceWriter.Write(" = ");
                     sourceWriter.Write(property.Name);
 
+                    if (
+                        property.Type is
+                        {
+                            IsReferenceType: true,
+                            NullableAnnotation: NullableAnnotation.NotAnnotated
+                        }
+                    )
+                    {
+                        sourceWriter.Write(
+                            " ?? throw new InvalidOperationException(\"Expected non-null value\")"
+                        );
+                    }
+                    else if (property.Type.IsValueType && !IsNullableValueType(property.Type))
+                    {
+                        sourceWriter.Write(
+                            " ?? throw new InvalidOperationException(\"Expected non-null value\")"
+                        );
+                    }
+
                     if (index < initializeProperties.Length - 1)
                     {
                         sourceWriter.WriteLine(",");

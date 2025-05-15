@@ -49,7 +49,10 @@ public partial class Generator
                 {
                     switch (context.Node)
                     {
-                        case InvocationExpressionSyntax invocation:
+                        case InvocationExpressionSyntax
+                        {
+                            Expression: MemberAccessExpressionSyntax memberAccessExpression
+                        } invocation:
                         {
                             var operation = context.SemanticModel.GetOperation(invocation, ct);
                             if (
@@ -58,6 +61,28 @@ public partial class Generator
                                 {
                                     TargetMethod.TypeArguments: { Length: 1 } typeArguments
                                 }
+                            )
+                            {
+                                return null;
+                            }
+
+                            if (
+                                context
+                                    .SemanticModel.GetTypeInfo(
+                                        memberAccessExpression.Expression,
+                                        ct
+                                    )
+                                    .Type
+                                is not INamedTypeSymbol objectType
+                            )
+                            {
+                                return null;
+                            }
+
+                            if (
+                                objectType.Name != "DbContext"
+                                && objectType.BaseType?.Name != "DbContext"
+                                && objectType.AllInterfaces.All(i => i.Name != "IQuery")
                             )
                             {
                                 return null;

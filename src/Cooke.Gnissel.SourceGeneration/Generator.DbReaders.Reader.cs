@@ -306,8 +306,10 @@ public partial class Generator
         bool withPrimaryConstructor = false
     )
     {
+        sourceWriter.WriteLine("using System;");
         sourceWriter.WriteLine("using System.Data.Common;");
         sourceWriter.WriteLine("using System.Collections.Immutable;");
+        sourceWriter.WriteLine("using System.Linq;");
         sourceWriter.WriteLine("using Cooke.Gnissel;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services;");
         sourceWriter.WriteLine("using Cooke.Gnissel.Services.Implementations;");

@@ -14,7 +14,9 @@ public partial class Generator
         WritePartialReadMappersClassStart(mappersClass, sourceWriter);
         sourceWriter.WriteLine();
 
-        sourceWriter.WriteLine("public IEnumerable<IObjectReader> CreateAnonymousReaders() => [");
+        sourceWriter.WriteLine(
+            "public ImmutableArray<IObjectReader> CreateAnonymousReaders() => ["
+        );
         sourceWriter.Indent++;
 
         for (var index = 0; index < types.Length; index++)

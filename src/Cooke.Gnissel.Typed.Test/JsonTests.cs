@@ -39,7 +39,7 @@ public partial class JsonTests : IDisposable
     [Fact]
     public async Task Insert()
     {
-        var data = new UserData("Bob", 25);
+        var data = new UserData(new Username("Bob"), 25);
         var user = new User(1, data);
         await db.Users.Insert(user);
 
@@ -56,7 +56,9 @@ public partial class JsonTests : IDisposable
     private record User(int Id, UserData Data);
 
     [DbMap(Technique = MappingTechnique.AsIs, DbTypeName = "jsonb")]
-    private record UserData(string Username, int Level);
+    private record UserData(Username Username, int Level);
+
+    private record Username(string Value);
 
     [DbMappers]
     private partial class DbMappers;

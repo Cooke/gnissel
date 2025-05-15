@@ -187,13 +187,20 @@ public partial class MappingTests
     [Test]
     public async Task MapPropertyInAdditionToConstructor()
     {
-        var user = await _db.QuerySingle<UserWithProp>($"SELECT 1 as id, 'Bob' as desc");
-        Assert.That(user, Is.EqualTo(new UserWithProp(1) { Desc = "Bob" }));
+        var user = await _db.QuerySingle<UserWithProp>($"SELECT 1 as id, 30 as age");
+        Assert.That(user, Is.EqualTo(new UserWithProp(1) { Age = 30 }));
+    }
+
+    [Test]
+    public async Task RawShouldNotBeMapped()
+    {
+        var value = await _db.QuerySingle<int>($"SELECT {Sql.Inject("1")}");
+        Assert.That(value, Is.EqualTo(1));
     }
 
     private record UserWithProp(int Id)
     {
-        public required string Desc { get; init; }
+        public required int Age { get; init; }
     }
 
     private enum UserName
