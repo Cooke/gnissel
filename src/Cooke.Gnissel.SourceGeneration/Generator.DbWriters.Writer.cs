@@ -121,16 +121,22 @@ public partial class Generator
 
     private static IPropertySymbol[] GetWriteProperties(ITypeSymbol type)
     {
+        var ctorParameters = GetCtorParametersOrNull(type);
         var props = type.GetMembers()
             .OfType<IPropertySymbol>()
             .Where(x =>
                 x.DeclaredAccessibility == Accessibility.Public
-                && x
-                    is {
-                        IsStatic: false,
-                        IsReadOnly: false,
-                        SetMethod.DeclaredAccessibility: Accessibility.Public
-                    }
+                && !x.IsStatic
+                && (
+                    x
+                        is {
+                            IsReadOnly: false,
+                            SetMethod.DeclaredAccessibility: Accessibility.Public
+                        }
+                    || ctorParameters?.Any(ctorParam =>
+                        SymbolEqualityComparer.Default.Equals(ctorParam.Property, x)
+                    ) == true
+                )
             )
             .ToArray();
         return props;

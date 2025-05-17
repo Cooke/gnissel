@@ -80,7 +80,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task ReadClassWithConstructor()
+    public async Task ReadRecordWithConstructor()
     {
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<User>($"SELECT * FROM users").ToArrayAsync();
@@ -88,7 +88,7 @@ public partial class MappingTests
     }
 
     [Test]
-    public async Task ReadClassWithConstructorParameterColumnOrderMismatch()
+    public async Task ReadRecordWithConstructorParameterColumnOrderMismatch()
     {
         await _db.Users.Insert(new User(1, "Bob", 25));
         var results = await _db.Query<UserWithParametersInDifferentOrder>($"SELECT * FROM users")
@@ -97,6 +97,19 @@ public partial class MappingTests
             new[] { new UserWithParametersInDifferentOrder(25, 1, "Bob") },
             results
         );
+    }
+
+    [Test]
+    public async Task ReadClass()
+    {
+        await _db.UsersWithClass.Insert(
+            new UserClass(2, "Bob") { Age = 25, Description = "Description" }
+        );
+        var user = await _db.QuerySingle<UserClass>($"SELECT * FROM users");
+        Assert.That(user.Id, Is.EqualTo(2));
+        Assert.That(user.Name, Is.EqualTo("Bob"));
+        Assert.That(user.Age, Is.EqualTo(25));
+        Assert.That(user.Description, Is.EqualTo("Description"));
     }
 
     [Test]
@@ -224,9 +237,23 @@ public partial class MappingTests
 
     private record Name(string Value);
 
+    public class UserClass(int id, string name)
+    {
+        public int Id { get; private set; } = id;
+
+        public string Name { get; } = name;
+
+        public required int Age { get; init; }
+
+        public required string Description { get; set; }
+    }
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
+
+        public Table<UserClass> UsersWithClass { get; } =
+            new(new TableOptions(options) { Name = "users" });
     }
 
     [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
