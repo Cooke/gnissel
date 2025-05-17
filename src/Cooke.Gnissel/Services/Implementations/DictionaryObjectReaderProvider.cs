@@ -5,10 +5,12 @@ namespace Cooke.Gnissel.Services.Implementations;
 public class DictionaryObjectReaderProvider(IImmutableDictionary<Type, IObjectReader> readers)
     : IObjectReaderProvider
 {
-    public ObjectReader<TOut> Get<TOut>() =>
-        readers.TryGetValue(typeof(TOut), out var reader)
-            ? (ObjectReader<TOut>)reader
-            : throw new InvalidOperationException($"No reader found for type {typeof(TOut)}");
+    public ObjectReader<TOut> Get<TOut>() => (ObjectReader<TOut>)Get(typeof(TOut));
+
+    public IObjectReader Get(Type type) =>
+        readers.TryGetValue(type, out var reader)
+            ? reader
+            : throw new InvalidOperationException($"No reader found for type {type}");
 
     public static IObjectReaderProvider From(IEnumerable<IObjectReader> objectReaders)
     {

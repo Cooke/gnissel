@@ -18,7 +18,7 @@ public enum JoinType
     Left,
     Right,
     Full,
-    Cross
+    Cross,
 }
 
 public record OrderBy(Expression Expression, bool Descending);
@@ -40,13 +40,13 @@ public record ExpressionQuery(
     public ExpressionQuery Where(LambdaExpression predicate) =>
         this with
         {
-            Conditions = [.. Conditions, Transform(predicate)]
+            Conditions = [.. Conditions, Transform(predicate)],
         };
 
     public ExpressionQuery Select(LambdaExpression selector) =>
         this with
         {
-            Selector = Transform(selector)
+            Selector = Transform(selector),
         };
 
     public ExpressionQuery Join(ITable joinTable, LambdaExpression predicate) =>
@@ -91,32 +91,32 @@ public record ExpressionQuery(
                                 .ToArray()
                         )
                     )
-                )
-            ]
+                ),
+            ],
         };
     }
 
     public ExpressionQuery OrderBy(LambdaExpression propSelector) =>
         this with
         {
-            OrderBys = [.. this.OrderBys, new(Transform(propSelector), false)]
+            OrderBys = [.. this.OrderBys, new(Transform(propSelector), false)],
         };
 
     public ExpressionQuery OrderByDesc(LambdaExpression propSelector) =>
         this with
         {
-            OrderBys = [.. this.OrderBys, new(Transform(propSelector), true)]
+            OrderBys = [.. this.OrderBys, new(Transform(propSelector), true)],
         };
 
     public ExpressionQuery GroupBy(LambdaExpression propSelector) =>
         this with
         {
-            Groupings = [.. this.Groupings, Transform(propSelector)]
+            Groupings = [.. this.Groupings, Transform(propSelector)],
         };
 
     public Query<T> ToQuery<T>() =>
         new(
-            Options.RenderSql(Options.DbAdapter.Generate(this)),
+            Options.RenderSql(Options.DbAdapter.Generate(this, Options)),
             (reader, cancellationToken) =>
                 reader.ReadRows(Options.GetReader<T>(), cancellationToken),
             Options.DbConnector
@@ -133,7 +133,7 @@ public record ExpressionQuery(
                 this with
                 {
                     Limit = 1,
-                    Conditions = [.. this.Conditions, Transform(predicate)]
+                    Conditions = [.. this.Conditions, Transform(predicate)],
                 }
             ).ToQuery<T>()
         );
@@ -144,7 +144,7 @@ public record ExpressionQuery(
                 this with
                 {
                     Limit = 1,
-                    Conditions = [.. this.Conditions, Transform(predicate)]
+                    Conditions = [.. this.Conditions, Transform(predicate)],
                 }
             ).ToQuery<T>()
         );

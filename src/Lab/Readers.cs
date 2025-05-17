@@ -32,5 +32,11 @@ internal partial class DbMappers : IMapperProvider
             _readerProvider ??= DictionaryObjectReaderProvider.From(GetAllReaders());
             return _readerProvider.Get<TOut>();
         }
+
+        public IObjectReader Get(Type type)
+        {
+            _readerProvider ??= DictionaryObjectReaderProvider.From(GetAllReaders());
+            return _readerProvider.Get(type);
+        }
     }
 }

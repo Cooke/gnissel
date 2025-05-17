@@ -46,7 +46,7 @@ public partial class ReadJsonTests
     public async Task ReadJsonAsIsInsideClass()
     {
         var result = await _db.QuerySingle<User>(
-            $$"""SELECT 1 as id, '{"Username": "bob", "Level": 1, "Role": 1, "PlayTime": "01:00:00", "Class": "Warrior"}'::jsonb as data"""
+            $$"""SELECT 1 as "Id", '{"Username": "bob", "Level": 1, "Role": 1, "PlayTime": "01:00:00", "Class": "Warrior"}'::jsonb as "Data" """
         );
         Assert.That(
             result,

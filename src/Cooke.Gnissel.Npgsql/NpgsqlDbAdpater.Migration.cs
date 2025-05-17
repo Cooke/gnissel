@@ -84,6 +84,11 @@ public partial class NpgsqlDbAdapter
                 (reader, ordinalReader) => reader.GetFieldValue<TOut>(ordinalReader.Read()),
                 () => [new NextOrdinalReadDescriptor()]
             );
+
+        public IObjectReader Get(Type type)
+        {
+            throw new NotImplementedException();
+        }
     }
 
     private class FieldValueObjectWriterProvider : IObjectWriterProvider

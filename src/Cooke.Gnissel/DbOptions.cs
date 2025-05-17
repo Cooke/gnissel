@@ -28,6 +28,8 @@ public class DbOptions(IDbAdapter adapter, IMapperProvider mapperProvider, IDbCo
 
     public ObjectReader<T> GetReader<T>() => mapperProvider.ReaderProvider.Get<T>();
 
+    public IObjectReader GetReader(Type type) => mapperProvider.ReaderProvider.Get(type);
+
     public ObjectWriter<T> GetWriter<T>() => mapperProvider.WriterProvider.Get<T>();
 
     public IObjectWriter GetWriter(Type type) => mapperProvider.WriterProvider.Get(type);

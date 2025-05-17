@@ -52,7 +52,7 @@ public class Table<T> : ITable, IQuery<T>
         var objectReader = dbOptions.GetReader<T>();
 
         _query = new Query<T>(
-            dbOptions.RenderSql(dbOptions.DbAdapter.Generate(CreateExpressionQuery())),
+            dbOptions.RenderSql(dbOptions.DbAdapter.Generate(CreateExpressionQuery(), dbOptions)),
             (reader, cancellationToken) => reader.ReadRows(objectReader, cancellationToken),
             dbOptions.DbConnector
         );

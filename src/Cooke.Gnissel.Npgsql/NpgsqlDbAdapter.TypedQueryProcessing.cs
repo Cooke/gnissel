@@ -52,7 +52,7 @@ public partial class NpgsqlDbAdapter
         return sql;
     }
 
-    public Sql Generate(IDeleteQuery query)
+    public Sql Generate(IDeleteQuery query, DbOptions dbOptions)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral($"DELETE FROM ");
@@ -61,13 +61,13 @@ public partial class NpgsqlDbAdapter
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql, new RenderOptions());
+            RenderExpression(query.Condition, sql, new RenderOptions { DbOptions = dbOptions });
         }
 
         return sql;
     }
 
-    public Sql Generate(IUpdateQuery query)
+    public Sql Generate(IUpdateQuery query, DbOptions dbOptions)
     {
         var sql = new Sql(100, 2);
         sql.AppendLiteral("UPDATE ");
@@ -92,7 +92,7 @@ public partial class NpgsqlDbAdapter
                     RenderExpression(
                         expressionSetter.Value,
                         sql,
-                        new RenderOptions() { ConstantsAsParameters = true }
+                        new RenderOptions { ConstantsAsParameters = true, DbOptions = dbOptions }
                     );
                     break;
                 case ValueSetter valueSetter:
@@ -108,18 +108,22 @@ public partial class NpgsqlDbAdapter
         if (query.Condition != null)
         {
             sql.AppendLiteral(" WHERE ");
-            RenderExpression(query.Condition, sql, new RenderOptions());
+            RenderExpression(query.Condition, sql, new RenderOptions { DbOptions = dbOptions });
         }
 
         return sql;
     }
 
-    public Sql Generate(ExpressionQuery query)
+    public Sql Generate(ExpressionQuery query, DbOptions dbOptions)
     {
         var tableSource = query.TableSource;
         var joins = query.Joins;
         var selector = query.Selector;
-        var options = new RenderOptions() { QualifyColumns = query.Joins.Any() };
+        var options = new RenderOptions()
+        {
+            QualifyColumns = query.Joins.Any(),
+            DbOptions = dbOptions,
+        };
 
         var sql = new Sql(100, 2);
 
@@ -274,6 +278,8 @@ public partial class NpgsqlDbAdapter
         public bool ConstantsAsParameters { get; init; }
 
         public bool QualifyColumns { get; init; }
+
+        public required DbOptions DbOptions { get; init; }
     }
 
     private void RenderExpression(Expression expression, Sql sql, RenderOptions options)
@@ -346,6 +352,14 @@ public partial class NpgsqlDbAdapter
 
             case NewExpression newExpression:
 
+                var newTypeReader = options.DbOptions.GetReader(newExpression.Type);
+                if (newTypeReader.ReadDescriptors.Length < newExpression.Arguments.Count)
+                {
+                    throw new InvalidOperationException(
+                        $"The reader for {newExpression.Type} cannot be used together with the constructor with {newExpression.Arguments.Count} arguments."
+                    );
+                }
+
                 for (var index = 0; index < newExpression.Arguments.Count; index++)
                 {
                     var arg = newExpression.Arguments[index];
@@ -356,7 +370,15 @@ public partial class NpgsqlDbAdapter
 
                     RenderExpression(arg, sql, options);
                     sql.AppendLiteral(" AS ");
-                    sql.AppendLiteral(newExpression.Constructor!.GetParameters()[index].Name!);
+
+                    var asName = newTypeReader.ReadDescriptors[index] switch
+                    {
+                        NameReadDescriptor nameReadDescriptor => nameReadDescriptor.Name,
+                        NextOrdinalReadDescriptor nextOrdinalReadDescriptor => "Value",
+                        _ => throw new ArgumentOutOfRangeException(),
+                    };
+
+                    sql.AppendIdentifier(asName);
                 }
 
                 return;

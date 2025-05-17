@@ -40,5 +40,5 @@ public class DeleteQuery<T>(Table<T> table, DbOptions options, Expression? condi
     public ValueTask<int> ExecuteAsync(CancellationToken cancellationToken = default) =>
         new NonQuery(options.DbConnector, RenderedSql).ExecuteAsync(cancellationToken);
 
-    public RenderedSql RenderedSql => options.RenderSql(options.DbAdapter.Generate(this));
+    public RenderedSql RenderedSql => options.RenderSql(options.DbAdapter.Generate(this, options));
 }

@@ -107,7 +107,7 @@ public partial class Generator
                     {
                         Name = GetColumnName(mappersClass, x.Parameter, x.Property),
                         x.Parameter.Type,
-                        Member = x.Parameter.Name,
+                        Member = x.Property?.Name ?? x.Parameter.Name,
                     })
                     .Concat(
                         initializeProperties.Select(x => new
@@ -221,7 +221,7 @@ public partial class Generator
 
     private static IPropertySymbol[] GetInitializeProperties(
         ITypeSymbol type,
-        MappedParameter[]? ctorParameters
+        ReadParameter[]? ctorParameters
     ) =>
         type.GetMembers()
             .OfType<IPropertySymbol>()
@@ -240,20 +240,20 @@ public partial class Generator
         public IParameterSymbol? Parameter { get; } = Parameter;
     }
 
-    private record MappedParameter(IParameterSymbol Parameter, IPropertySymbol? Property)
+    private record ReadParameter(IParameterSymbol Parameter, IPropertySymbol? Property)
     {
         public IParameterSymbol Parameter { get; } = Parameter;
 
         public IPropertySymbol? Property { get; } = Property;
     }
 
-    private static MappedParameter[]? GetCtorParametersOrNull(ITypeSymbol type) =>
+    private static ReadParameter[]? GetCtorParametersOrNull(ITypeSymbol type) =>
         type.GetMembers(".ctor")
             .Where(x => x.DeclaredAccessibility != Accessibility.Private)
             .Cast<IMethodSymbol>()
             .OrderByDescending(x => x.Parameters.Length)
             .FirstOrDefault()
-            ?.Parameters.Select(p => new MappedParameter(
+            ?.Parameters.Select(p => new ReadParameter(
                 p,
                 type.GetMembers()
                     .OfType<IPropertySymbol>()
@@ -263,7 +263,7 @@ public partial class Generator
             ))
             .ToArray();
 
-    private static MappedParameter[] GetCtorParameters(ITypeSymbol type) =>
+    private static ReadParameter[] GetCtorParameters(ITypeSymbol type) =>
         GetCtorParametersOrNull(type) ?? throw new InvalidOperationException();
 
     private static void WritePartialReadMappersClassStart(

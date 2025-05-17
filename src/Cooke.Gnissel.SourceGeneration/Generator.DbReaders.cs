@@ -112,6 +112,16 @@ public partial class Generator
         sourceWriter.Indent--;
         sourceWriter.WriteLine("}");
 
+        sourceWriter.WriteLine("public IObjectReader Get(Type type)");
+        sourceWriter.WriteLine("{");
+        sourceWriter.Indent++;
+        sourceWriter.WriteLine(
+            "_readerProvider ??= DictionaryObjectReaderProvider.From(GetAllReaders());"
+        );
+        sourceWriter.WriteLine("return _readerProvider.Get(type);");
+        sourceWriter.Indent--;
+        sourceWriter.WriteLine("}");
+
         WritePartialReadMappersClassEnd(mappersClass, sourceWriter);
     }
 }

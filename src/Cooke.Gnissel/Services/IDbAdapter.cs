@@ -26,9 +26,9 @@ public interface IDbAdapter
 
     Sql Generate(IInsertQuery query);
 
-    Sql Generate(IDeleteQuery query);
+    Sql Generate(IDeleteQuery query, DbOptions options);
 
-    Sql Generate(IUpdateQuery query);
+    Sql Generate(IUpdateQuery query, DbOptions options);
 
-    Sql Generate(ExpressionQuery query);
+    Sql Generate(ExpressionQuery query, DbOptions options);
 }

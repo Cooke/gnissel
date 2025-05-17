@@ -58,12 +58,7 @@ internal static class DbReaderUtils
                 var foundOrdinal = false;
                 for (var ordinal = 0; ordinal < reader.FieldCount; ordinal++)
                 {
-                    if (
-                        !consumedOrdinals[ordinal]
-                        && reader
-                            .GetName(ordinal)
-                            .Equals(ordinalName, StringComparison.OrdinalIgnoreCase)
-                    )
+                    if (!consumedOrdinals[ordinal] && reader.GetName(ordinal) == ordinalName)
                     {
                         ordinalsByReadIndex[readIndex] = ordinal;
                         consumedOrdinals[ordinal] = true;
