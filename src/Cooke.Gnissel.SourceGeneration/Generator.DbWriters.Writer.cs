@@ -8,9 +8,10 @@ public partial class Generator
     private static void GenerateWriter(
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter,
-        ITypeSymbol type
+        Mapping mapping
     )
     {
+        var type = mapping.Type;
         GenerateWriteMappersClassStart(mappersClass, sourceWriter);
 
         GenerateWriteMapperProperty(sourceWriter, type);
@@ -143,7 +144,7 @@ public partial class Generator
     }
 
     private static string GetCreateWriterDescriptorsName(ITypeSymbol type) =>
-        $"Create{GetTypeIdentifierName(AdjustNulls(type))}Descriptors";
+        $"Create{GetTypeIdentifierName(AdjustNull(type))}Descriptors";
 
     private static void GenerateNullableWriterProperty(
         IndentedTextWriter sourceWriter,

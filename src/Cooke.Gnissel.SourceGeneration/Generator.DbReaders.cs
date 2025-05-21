@@ -8,7 +8,7 @@ public partial class Generator
     private static void GenerateDbReaders(
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter,
-        ITypeSymbol[] types
+        Mapping[] mappings
     )
     {
         WritePartialMappersClassStart(mappersClass, sourceWriter, true);
@@ -19,7 +19,7 @@ public partial class Generator
         sourceWriter.WriteLine();
 
         sourceWriter.WriteLine(
-            types.Any(symbol => GetMapTechnique(symbol) == MappingTechnique.Custom)
+            mappings.Any(m => m.Technique == MappingTechnique.Custom)
                 ? "public required DbReaders Readers { get; init; }"
                 : "public DbReaders Readers { get; init; } = new DbReaders(nameProvider);"
         );
@@ -40,8 +40,9 @@ public partial class Generator
         sourceWriter.WriteLine("public DbReaders(IDbNameProvider nameProvider) { ");
         sourceWriter.Indent++;
         sourceWriter.WriteLine("NameProvider = nameProvider;");
-        foreach (var type in types.Where(t => !IsCustomMapped(t)))
+        foreach (var mapping in mappings.Where(m => m.Technique != MappingTechnique.Custom))
         {
+            var type = mapping.Type;
             sourceWriter.Write(GetReaderPropertyName(type));
             sourceWriter.Write(" = new ObjectReader<");
             sourceWriter.Write(type.ToDisplayString());
@@ -82,9 +83,9 @@ public partial class Generator
         sourceWriter.Indent++;
         sourceWriter.WriteLine(".. CreateAnonymousReaders(),");
 
-        for (var index = 0; index < types.Length; index++)
+        for (var index = 0; index < mappings.Length; index++)
         {
-            var type = types[index];
+            var type = mappings[index].Type;
             sourceWriter.Write(GetReaderPropertyName(type));
             if (type.IsValueType)
             {
@@ -92,7 +93,7 @@ public partial class Generator
                 sourceWriter.Write(GetNullableReaderPropertyName(type));
             }
 
-            if (index < types.Length - 1)
+            if (index < mappings.Length - 1)
             {
                 sourceWriter.WriteLine(",");
             }

@@ -1,6 +1,7 @@
 using System.Data;
 using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed;
 using Npgsql;
 
@@ -211,6 +212,28 @@ public partial class MappingTests
         Assert.That(value, Is.EqualTo(1));
     }
 
+    [Test]
+    public async Task ReadTypeMappedWithAttributeOnType()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+
+        var user = await GetUser<UserMappedWithAttributeOnType>();
+        Assert.That(new UserMappedWithAttributeOnType(0, "Bob", 25, null), Is.EqualTo(user));
+
+        SingleQuery<T> GetUser<T>() => _db.QuerySingle<T>($"SELECT * FROM users");
+    }
+
+    [Test]
+    public async Task ReadTypeMappedWithAttributeOnDbMappersType()
+    {
+        await _db.Users.Insert(new User(0, "Bob", 25));
+
+        var user = await GetUser<UserMappedWithAttributeMappersType>();
+        Assert.That(new UserMappedWithAttributeMappersType(0, "Bob", 25, null), Is.EqualTo(user));
+
+        SingleQuery<T> GetUser<T>() => _db.QuerySingle<T>($"SELECT * FROM users");
+    }
+
     private record UserWithProp(int Id)
     {
         public required int Age { get; init; }
@@ -248,6 +271,16 @@ public partial class MappingTests
         public required string Description { get; set; }
     }
 
+    [DbMap]
+    private record UserMappedWithAttributeOnType(int Id, string Name, int Age, string? Description);
+
+    private record UserMappedWithAttributeMappersType(
+        int Id,
+        string Name,
+        int Age,
+        string? Description
+    );
+
     private class TestDbContext(DbOptions options) : DbContext(options)
     {
         public Table<User> Users { get; } = new(options);
@@ -257,5 +290,6 @@ public partial class MappingTests
     }
 
     [DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
+    [DbMap(typeof(UserMappedWithAttributeMappersType))]
     private partial class Mappers;
 }

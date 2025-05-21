@@ -66,7 +66,7 @@ public partial class Generator
             sourceWriter.WriteLine(");");
         }
         else if (
-            GetMapOptions(type) is { Technique: MappingTechnique.AsIs, DbDataType: var dbDataType }
+            CreateMapping(type) is { Technique: MappingTechnique.AsIs, DbDataType: var dbDataType }
         )
         {
             sourceWriter.Write("parameterWriter.Write(value");

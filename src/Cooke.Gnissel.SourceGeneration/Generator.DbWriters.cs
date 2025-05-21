@@ -1,5 +1,4 @@
 using System.CodeDom.Compiler;
-using Microsoft.CodeAnalysis;
 
 namespace Cooke.Gnissel.SourceGeneration;
 
@@ -8,7 +7,7 @@ public partial class Generator
     private static void GenerateDbWriters(
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter,
-        ITypeSymbol[] types
+        Mapping[] mappings
     )
     {
         WritePartialMappersClassStart(mappersClass, sourceWriter);
@@ -31,9 +30,9 @@ public partial class Generator
         sourceWriter.Indent++;
         sourceWriter.WriteLine("NameProvider = nameProvider;");
 
-        for (var index = 0; index < types.Length; index++)
+        for (var index = 0; index < mappings.Length; index++)
         {
-            var type = types[index];
+            var type = mappings[index].Type;
             sourceWriter.Write(GetWriterPropertyName(type));
             sourceWriter.Write(" = new ObjectWriter<");
             sourceWriter.Write(type.ToDisplayString());
@@ -65,9 +64,9 @@ public partial class Generator
         sourceWriter.WriteLine("public ImmutableArray<IObjectWriter> GetAllWriters() => [");
         sourceWriter.Indent++;
 
-        for (var index = 0; index < types.Length; index++)
+        for (var index = 0; index < mappings.Length; index++)
         {
-            var type = types[index];
+            var type = mappings[index].Type;
             sourceWriter.Write(GetWriterPropertyName(type));
             if (type.IsValueType)
             {
@@ -75,7 +74,7 @@ public partial class Generator
                 sourceWriter.Write(GetNullableWriterPropertyName(type));
             }
 
-            if (index < types.Length - 1)
+            if (index < mappings.Length - 1)
             {
                 sourceWriter.WriteLine(",");
             }

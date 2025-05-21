@@ -55,8 +55,8 @@ public partial class Generator
         }
     }
 
-    private static bool IsAccessibleDeep(ITypeSymbol typeSymbol, MappersClass mappersClass) =>
-        FindAllTypes(typeSymbol).All(t => IsAccessible(t, mappersClass.Symbol));
+    private static bool IsAccessibleDeep(Mapping mapping, MappersClass mappersClass) =>
+        FindAllMappings(mapping).All(t => IsAccessible(t.Type, mappersClass.Symbol));
 
     private static bool IsAccessible(ITypeSymbol typeSymbol, INamedTypeSymbol mappersClass)
     {
@@ -67,14 +67,7 @@ public partial class Generator
             );
     }
 
-    private record ReadTypeWithMappersClass(ITypeSymbol Type, MappersClass MappersClass)
-    {
-        public ITypeSymbol Type { get; } = Type;
-
-        public MappersClass MappersClass { get; } = MappersClass;
-    }
-
-    private static ITypeSymbol AdjustNulls(ITypeSymbol type)
+    private static ITypeSymbol AdjustNull(ITypeSymbol type)
     {
         return type switch
         {
@@ -83,9 +76,7 @@ public partial class Generator
 
             INamedTypeSymbol { IsTupleType: true } tupleType => tupleType.ConstructedFrom.Construct(
                 tupleType
-                    .TupleElements.Select(x =>
-                        x.Type.IsReferenceType ? AdjustNulls(x.Type) : x.Type
-                    )
+                    .TupleElements.Select(x => x.Type.IsReferenceType ? AdjustNull(x.Type) : x.Type)
                     .ToArray()
             ),
 
@@ -96,21 +87,21 @@ public partial class Generator
         };
     }
 
-    private static IEnumerable<ITypeSymbol> FindAllTypes(ITypeSymbol type)
+    private static IEnumerable<Mapping> FindAllMappings(Mapping mapping)
     {
-        yield return type;
+        yield return mapping;
 
-        if (IsBuildIn(type))
+        if (IsBuildIn(mapping.Type))
         {
             yield break;
         }
 
-        if (GetMapTechnique(type) != MappingTechnique.Default)
+        if (mapping.Technique != MappingTechnique.Default)
         {
             yield break;
         }
 
-        var ctorParameters = GetCtorParametersOrNull(type);
+        var ctorParameters = GetCtorParametersOrNull(mapping.Type);
         if (ctorParameters == null)
         {
             yield break;
@@ -118,7 +109,7 @@ public partial class Generator
 
         foreach (var t in ctorParameters)
         {
-            foreach (var innerType in FindAllTypes(t.Parameter.Type))
+            foreach (var innerType in FindAllMappings(CreateMapping(t.Parameter.Type)))
             {
                 yield return innerType;
             }
@@ -126,15 +117,21 @@ public partial class Generator
     }
 
     private static MappingTechnique GetMapTechnique(ITypeSymbol type) =>
-        GetMapOptions(type).Technique;
+        CreateMapping(type).Technique;
 
-    private static MappingOptions GetMapOptions(ITypeSymbol type)
+    private static Mapping CreateMapping(ITypeSymbol type)
     {
-        MappingTechnique technique = MappingTechnique.Default;
-        string? dbDataType = null;
-
         var mapAttribute = type.GetAttributes()
             .FirstOrDefault(x => x.AttributeClass?.Name == "DbMapAttribute");
+
+        return CreateMapping(type, mapAttribute);
+    }
+
+    private static Mapping CreateMapping(ITypeSymbol type, AttributeData? mapAttribute)
+    {
+        var technique = MappingTechnique.Default;
+        string? dbDataType = null;
+
         if (mapAttribute != null)
         {
             foreach (var argument in mapAttribute.NamedArguments)
@@ -165,11 +162,11 @@ public partial class Generator
             technique = MappingTechnique.Default;
         }
 
-        return new MappingOptions(technique, dbDataType);
+        return new Mapping(AdjustNull(type), technique, dbDataType);
     }
 
     private static string GetCreateReaderDescriptorsName(ITypeSymbol type) =>
-        $"Create{GetTypeIdentifierName(AdjustNulls(type))}Descriptors";
+        $"Create{GetTypeIdentifierName(AdjustNull(type))}Descriptors";
 
     private static string? GetSourceName(ITypeSymbol? type)
     {
@@ -226,7 +223,21 @@ public partial class Generator
                         break;
                 }
             }
+
+            MappingsByAttributes = symbol
+                .GetAttributes()
+                .Where(x =>
+                    x.AttributeClass?.Name == "DbMapAttribute" && x.ConstructorArguments.Length == 1
+                )
+                .Select(attribute =>
+                {
+                    var type = (INamedTypeSymbol)attribute.ConstructorArguments.First().Value!;
+                    return CreateMapping(type, attribute);
+                })
+                .ToImmutableArray();
         }
+
+        public ImmutableArray<Mapping> MappingsByAttributes { get; }
 
         public INamedTypeSymbol Symbol { get; }
 
@@ -241,11 +252,48 @@ public partial class Generator
         SnakeCase,
     }
 
-    private record MappingOptions(MappingTechnique Technique, string? DbDataType)
+    private record Mapping(ITypeSymbol Type, MappingTechnique Technique, string? DbDataType)
     {
         public MappingTechnique Technique { get; } = Technique;
 
         public string? DbDataType { get; } = DbDataType;
+
+        public ITypeSymbol Type { get; } = Type;
+
+        private sealed class TechniqueDbDataTypeTypeEqualityComparer : IEqualityComparer<Mapping>
+        {
+            public bool Equals(Mapping? x, Mapping? y)
+            {
+                if (ReferenceEquals(x, y))
+                    return true;
+                if (x is null)
+                    return false;
+                if (y is null)
+                    return false;
+                if (x.GetType() != y.GetType())
+                    return false;
+                return x.Technique == y.Technique
+                    && x.DbDataType == y.DbDataType
+                    && SymbolEqualityComparer.Default.Equals(x.Type, y.Type);
+            }
+
+            public int GetHashCode(Mapping obj)
+            {
+                unchecked
+                {
+                    var hashCode = (int)obj.Technique;
+                    hashCode =
+                        (hashCode * 397)
+                        ^ (obj.DbDataType != null ? obj.DbDataType.GetHashCode() : 0);
+                    hashCode =
+                        (hashCode * 397) ^ SymbolEqualityComparer.Default.GetHashCode(obj.Type);
+                    return hashCode;
+                }
+            }
+        }
+
+        public static IEqualityComparer<Mapping> TechniqueDbDataTypeTypeComparer { get; } =
+            new TechniqueDbDataTypeTypeEqualityComparer();
     }
 
     private enum MappingTechnique

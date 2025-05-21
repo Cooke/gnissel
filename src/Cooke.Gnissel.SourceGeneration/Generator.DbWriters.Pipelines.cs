@@ -44,6 +44,12 @@ public partial class Generator
                                     Identifier.ValueText: "Table",
                                     TypeArgumentList.Arguments.Count: 1
                                 }
+                            }
+                            or AttributeSyntax
+                            {
+                                Name: SimpleNameSyntax { Identifier.Text: "DbMap" },
+                                ArgumentList: null or { Arguments.Count: 0 },
+                                Parent: AttributeListSyntax { Parent: TypeDeclarationSyntax }
                             },
                 (context, ct) =>
                 {
@@ -91,6 +97,21 @@ public partial class Generator
                                 )
                                 .ToArray();
                         }
+
+                        case AttributeSyntax
+                        {
+                            Parent: AttributeListSyntax
+                            {
+                                Parent: TypeDeclarationSyntax typeDeclarationSyntax
+                            }
+                        }:
+                        {
+                            return
+                            [
+                                context.SemanticModel.GetDeclaredSymbol(typeDeclarationSyntax, ct)
+                                    as ITypeSymbol,
+                            ];
+                        }
                         default:
                             throw new InvalidOperationException("Unexpected node type");
                     }
@@ -109,11 +130,11 @@ public partial class Generator
                     return (
                         mappersClass,
                         types: types
+                            .Select(CreateMapping)
+                            .Concat(mappersClass.MappingsByAttributes)
                             .Where(t => IsAccessibleDeep(t, mappersClass))
-                            .SelectMany(FindAllTypes)
-                            .Select(AdjustNulls)
-                            .Distinct(SymbolEqualityComparer.Default)
-                            .Cast<ITypeSymbol>()
+                            .SelectMany(FindAllMappings)
+                            .Distinct(Mapping.TechniqueDbDataTypeTypeComparer)
                             .ToArray()
                     );
                 }
@@ -121,20 +142,20 @@ public partial class Generator
 
         initContext.RegisterImplementationSourceOutput(
             mappersClassWithQueryWriteTypesPipeline.SelectMany(
-                (x, _) => x.types.Select(t => (type: t, x.mappersClass))
+                (x, _) => x.types.Select(t => (mapping: t, x.mappersClass))
             ),
             (context, mappersClassWithWriteType) =>
             {
                 var mappersClass = mappersClassWithWriteType.mappersClass;
-                var type = mappersClassWithWriteType.type;
+                var mapping = mappersClassWithWriteType.mapping;
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
 
-                GenerateWriter(mappersClass, sourceWriter, type);
+                GenerateWriter(mappersClass, sourceWriter, mapping);
                 sourceWriter.Flush();
 
                 context.AddSource(
-                    $"{GetSourceName(mappersClass.Symbol)}.WriteMappers.{GetTypeIdentifierName(type)}.cs",
+                    $"{GetSourceName(mappersClass.Symbol)}.WriteMappers.{GetTypeIdentifierName(mapping.Type)}.cs",
                     stringWriter.ToString()
                 );
             }

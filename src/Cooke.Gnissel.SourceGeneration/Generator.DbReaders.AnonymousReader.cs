@@ -8,7 +8,7 @@ public partial class Generator
     private void GenerateAnonymousReaders(
         MappersClass mappersClass,
         IndentedTextWriter sourceWriter,
-        ITypeSymbol[] types
+        Mapping[] mappings
     )
     {
         WritePartialReadMappersClassStart(mappersClass, sourceWriter);
@@ -19,9 +19,9 @@ public partial class Generator
         );
         sourceWriter.Indent++;
 
-        for (var index = 0; index < types.Length; index++)
+        for (var index = 0; index < mappings.Length; index++)
         {
-            var type = types[index];
+            var type = mappings[index].Type;
             sourceWriter.WriteLine("IObjectReader.Create((reader, ordinalReader) => {");
             sourceWriter.Indent++;
 
@@ -34,7 +34,7 @@ public partial class Generator
             GenerateAnonymousMetadata(type, sourceWriter, mappersClass);
             sourceWriter.WriteLine(")");
 
-            if (index < types.Length - 1)
+            if (index < mappings.Length - 1)
             {
                 sourceWriter.WriteLine(",");
             }

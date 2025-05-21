@@ -44,6 +44,11 @@ public partial class Generator
                                     Identifier.ValueText: "Table",
                                     TypeArgumentList.Arguments.Count: 1
                                 }
+                            }
+                            or AttributeSyntax
+                            {
+                                Name: SimpleNameSyntax { Identifier.Text: "DbMap" },
+                                Parent: AttributeListSyntax { Parent: TypeDeclarationSyntax }
                             },
                 (context, ct) =>
                 {
@@ -97,11 +102,26 @@ public partial class Generator
                             Type: GenericNameSyntax genericNameSyntax
                         }:
                         {
-                            var typeInfo = context.SemanticModel.GetTypeInfo(
-                                genericNameSyntax.TypeArgumentList.Arguments[0],
-                                ct
-                            );
-                            return typeInfo.Type ?? null;
+                            return context
+                                .SemanticModel.GetTypeInfo(
+                                    genericNameSyntax.TypeArgumentList.Arguments[0],
+                                    ct
+                                )
+                                .Type;
+                        }
+
+                        case AttributeSyntax
+                        {
+                            Parent: AttributeListSyntax
+                            {
+                                Parent: TypeDeclarationSyntax typeDeclarationSyntax
+                            }
+                        }:
+                        {
+                            return context.SemanticModel.GetDeclaredSymbol(
+                                    typeDeclarationSyntax,
+                                    ct
+                                ) as ITypeSymbol;
                         }
 
                         default:
@@ -125,11 +145,11 @@ public partial class Generator
                     return (
                         mappersClass,
                         types: types
-                            .Where(t => IsAccessibleDeep(t, mappersClass))
-                            .SelectMany(FindAllTypes)
-                            .Select(AdjustNulls)
-                            .Distinct(SymbolEqualityComparer.Default)
-                            .Cast<ITypeSymbol>()
+                            .Select(CreateMapping)
+                            .Concat(mappersClass.MappingsByAttributes)
+                            .Where(m => IsAccessibleDeep(m, mappersClass))
+                            .SelectMany(FindAllMappings)
+                            .Distinct(Mapping.TechniqueDbDataTypeTypeComparer)
                             .ToArray()
                     );
                 }
@@ -138,15 +158,14 @@ public partial class Generator
         initContext.RegisterImplementationSourceOutput(
             mapperClassesWithTypesPipeline.SelectMany(
                 (mappersClassWithTypes, _) =>
-                    mappersClassWithTypes.types.Select(t => new ReadTypeWithMappersClass(
-                        t,
-                        mappersClassWithTypes.mappersClass
-                    ))
+                    mappersClassWithTypes.types.Select(mapping =>
+                        (mapping: mapping, mappersClassWithTypes.mappersClass)
+                    )
             ),
-            (context, readTypeWithMappersClass) =>
+            (context, mappingWithMappersClass) =>
             {
-                var type = readTypeWithMappersClass.Type;
-                var mappersClass = readTypeWithMappersClass.MappersClass;
+                var type = mappingWithMappersClass.mapping.Type;
+                var mappersClass = mappingWithMappersClass.mappersClass;
 
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
@@ -236,10 +255,9 @@ public partial class Generator
                     return (
                         mappersClass,
                         types: types
+                            .Select(CreateMapping)
                             .Where(t => IsAccessibleDeep(t, mappersClass))
-                            .Select(AdjustNulls)
-                            .Distinct(SymbolEqualityComparer.Default)
-                            .Cast<ITypeSymbol>()
+                            .Distinct(Mapping.TechniqueDbDataTypeTypeComparer)
                             .ToArray()
                     );
                 }
