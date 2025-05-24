@@ -377,7 +377,10 @@ public partial class Generator
             Accessibility.Private => "private",
             Accessibility.Protected => "protected",
             Accessibility.ProtectedAndInternal => "protected internal",
-            _ => throw new ArgumentOutOfRangeException(),
+            _ => throw new ArgumentOutOfRangeException(
+                nameof(accessibility),
+                $"invalid value {accessibility}"
+            ),
         };
 
     private static string GetNullableReaderPropertyName(ITypeSymbol type) =>

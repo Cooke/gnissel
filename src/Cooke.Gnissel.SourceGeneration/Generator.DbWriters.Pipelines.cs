@@ -48,7 +48,6 @@ public partial class Generator
                             or AttributeSyntax
                             {
                                 Name: SimpleNameSyntax { Identifier.Text: "DbMap" },
-                                ArgumentList: null or { Arguments.Count: 0 },
                                 Parent: AttributeListSyntax { Parent: TypeDeclarationSyntax }
                             },
                 (context, ct) =>
@@ -118,7 +117,8 @@ public partial class Generator
                 }
             )
             .SelectMany((x, _) => x)
-            .Where(x => x.Name != "Object");
+            .Where(x => x.Name != "Object")
+            .Where(type => type is not ITypeParameterSymbol);
 
         var mappersClassWithQueryWriteTypesPipeline = mappersPipeline
             .Combine(queryWriteTypesPipeline.Collect())
@@ -151,7 +151,18 @@ public partial class Generator
                 var stringWriter = new StringWriter();
                 var sourceWriter = new IndentedTextWriter(stringWriter);
 
-                GenerateWriter(mappersClass, sourceWriter, mapping);
+                try
+                {
+                    GenerateWriter(mappersClass, sourceWriter, mapping);
+                }
+                catch (Exception e)
+                {
+                    throw new Exception(
+                        $"Error generating writer for {mapping.Type} in {mappersClass.Symbol}",
+                        e
+                    );
+                }
+
                 sourceWriter.Flush();
 
                 context.AddSource(
