@@ -172,7 +172,10 @@ public partial class MappingTests
         await _db.Users.Insert(new User(0, "Bob", 25));
         var results = await _db.Query<UserWithTypedPrimitives>($"SELECT name, age FROM users")
             .ToArrayAsync();
-        CollectionAssert.AreEqual(new[] { new UserWithTypedPrimitives(new("Bob"), 25) }, results);
+        CollectionAssert.AreEqual(
+            new[] { new UserWithTypedPrimitives(new("Bob")) { Age = new(25) } },
+            results
+        );
     }
 
     [Test]
@@ -256,9 +259,14 @@ public partial class MappingTests
 
     private record UserWithParametersInDifferentOrder(int Age, int Id, string Name);
 
-    private record UserWithTypedPrimitives(Name Name, int Age);
+    private record UserWithTypedPrimitives(Name Name)
+    {
+        public Age Age { get; init; } = new Age(0);
+    };
 
     private record Name(string Value);
+
+    private record Age(int Value);
 
     public class UserClass(int id, string name)
     {
