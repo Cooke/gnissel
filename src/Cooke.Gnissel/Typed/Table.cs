@@ -157,6 +157,6 @@ public class Table<T> : ITable, IQuery<T>
 
     public RenderedSql RenderedSql => _query.RenderedSql;
 
-    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default) =>
-        _query.ExecuteAsync(cancellationToken);
+    public IAsyncEnumerable<T> ToAsyncEnumerable(CancellationToken cancellationToken = default) =>
+        _query.ToAsyncEnumerable(cancellationToken);
 }

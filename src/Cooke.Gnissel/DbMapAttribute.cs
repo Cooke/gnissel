@@ -1,6 +1,6 @@
 ﻿namespace Cooke.Gnissel;
 
-[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Enum, AllowMultiple = true)]
 public class DbMapAttribute : Attribute
 {
     public DbMapAttribute() { }

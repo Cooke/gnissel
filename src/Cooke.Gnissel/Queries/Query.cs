@@ -19,7 +19,7 @@ public class Query<
 {
     public RenderedSql RenderedSql => renderedSql;
 
-    public async IAsyncEnumerable<TOut> ExecuteAsync(
+    public async IAsyncEnumerable<TOut> ToAsyncEnumerable(
         [EnumeratorCancellation] CancellationToken cancellationToken = default
     )
     {
@@ -35,5 +35,5 @@ public class Query<
 
     public IAsyncEnumerator<TOut> GetAsyncEnumerator(
         CancellationToken cancellationToken = default
-    ) => ExecuteAsync(cancellationToken).GetAsyncEnumerator(cancellationToken);
+    ) => ToAsyncEnumerable(cancellationToken).GetAsyncEnumerator(cancellationToken);
 }

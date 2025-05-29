@@ -10,9 +10,9 @@ public class TypedQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IQuery<(T
 
     public RenderedSql RenderedSql => LazyQuery.RenderedSql;
 
-    public IAsyncEnumerable<(T1, T2, T3)> ExecuteAsync(
+    public IAsyncEnumerable<(T1, T2, T3)> ToAsyncEnumerable(
         CancellationToken cancellationToken = default
-    ) => LazyQuery.ExecuteAsync(cancellationToken);
+    ) => LazyQuery.ToAsyncEnumerable(cancellationToken);
 
     public TypedQuery<T1, T2, T3> Where(Expression<Func<T1, bool>> predicate) =>
         new(expressionQuery.Where(predicate));

@@ -10,8 +10,8 @@ public class OrderByQuery<T>(ExpressionQuery expressionQuery) : IQuery<T>
 
     public RenderedSql RenderedSql => LazyQuery.RenderedSql;
 
-    public IAsyncEnumerable<T> ExecuteAsync(CancellationToken cancellationToken = default) =>
-        LazyQuery.ExecuteAsync(cancellationToken);
+    public IAsyncEnumerable<T> ToAsyncEnumerable(CancellationToken cancellationToken = default) =>
+        LazyQuery.ToAsyncEnumerable(cancellationToken);
 
     public OrderByQuery<T> ThenBy<TProp>(Expression<Func<T, TProp>> propSelector) =>
         new(expressionQuery.OrderBy(propSelector));

@@ -10,9 +10,9 @@ public class GroupByQuery<T1, T2, T3>(ExpressionQuery expressionQuery) : IQuery<
 
     public RenderedSql RenderedSql => LazyQuery.RenderedSql;
 
-    public IAsyncEnumerable<(T1, T2, T3)> ExecuteAsync(
+    public IAsyncEnumerable<(T1, T2, T3)> ToAsyncEnumerable(
         CancellationToken cancellationToken = default
-    ) => LazyQuery.ExecuteAsync(cancellationToken);
+    ) => LazyQuery.ToAsyncEnumerable(cancellationToken);
 
     public GroupByQuery<T1, T2, T3> ThenBy<TProp>(
         Expression<Func<T1, T2, T3, TProp>> propSelector

@@ -1,5 +1,5 @@
 using System.Diagnostics;
-using Cooke.Gnissel.AsyncEnumerable;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Services;
 using Cooke.Gnissel.Services.Implementations;
 using Microsoft.Extensions.Logging;

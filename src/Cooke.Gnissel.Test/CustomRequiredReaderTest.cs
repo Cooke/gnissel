@@ -1,7 +1,7 @@
 ﻿#region
 
-using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Queries;
 using Npgsql;
 
 #endregion

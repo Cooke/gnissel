@@ -11,9 +11,9 @@ public class TypedQuery<T1, T2, T3, T4>(ExpressionQuery expressionQuery) : IQuer
 
     public RenderedSql RenderedSql => LazyQuery.RenderedSql;
 
-    public IAsyncEnumerable<(T1, T2, T3, T4)> ExecuteAsync(
+    public IAsyncEnumerable<(T1, T2, T3, T4)> ToAsyncEnumerable(
         CancellationToken cancellationToken = default
-    ) => LazyQuery.ExecuteAsync(cancellationToken);
+    ) => LazyQuery.ToAsyncEnumerable(cancellationToken);
 
     public TypedQuery<T1, T2, T3, T4> Where(Expression<Func<T1, bool>> predicate) =>
         new(expressionQuery.Where(predicate));

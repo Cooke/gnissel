@@ -1,5 +1,5 @@
-﻿using Cooke.Gnissel.AsyncEnumerable;
-using Cooke.Gnissel.Npgsql;
+﻿using Cooke.Gnissel.Npgsql;
+using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed.Test.Fixtures;
 using Xunit.Abstractions;
 
