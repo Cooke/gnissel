@@ -1,5 +1,6 @@
 ﻿namespace Cooke.Gnissel;
 
+[AttributeUsage(AttributeTargets.Class, AllowMultiple = true)]
 public class DbMapAttribute : Attribute
 {
     public DbMapAttribute() { }
