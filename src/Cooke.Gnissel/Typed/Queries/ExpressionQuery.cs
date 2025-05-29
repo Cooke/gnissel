@@ -65,7 +65,7 @@ public record ExpressionQuery(
 
     private ExpressionQuery Join(JoinType type, ITable joinTable, LambdaExpression? predicate)
     {
-        var sameTableCount = Sources.Count(x => x.Table.Equals(joinTable));
+        var sameTableCount = Sources.Count(x => x.Table.Name.Equals(joinTable.Name));
         var joinAlias = sameTableCount > 0 ? joinTable.Name + "j" + sameTableCount : null;
         var joinSource = new TableSource(joinTable, joinAlias);
         return this with

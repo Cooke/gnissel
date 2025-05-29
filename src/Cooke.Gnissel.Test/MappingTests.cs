@@ -1,5 +1,4 @@
 using System.Data;
-using Cooke.Gnissel.AsyncEnumerable;
 using Cooke.Gnissel.Npgsql;
 using Cooke.Gnissel.Queries;
 using Cooke.Gnissel.Typed;
@@ -237,6 +236,24 @@ public partial class MappingTests
         SingleQuery<T> GetUser<T>() => _db.QuerySingle<T>($"SELECT * FROM users");
     }
 
+    [Test]
+    public async Task ReadTypeViaToAsyncEnumerable()
+    {
+        var bob = new User(0, "Bob", 25);
+        await _db.Users.Insert(bob);
+
+        var userPair = _db
+            .Users.Join(_db.UsersWithClass, (user1, user2) => user1.Id == user2.Id)
+            .ToAsyncEnumerable()
+            .ToBlockingEnumerable()
+            .First();
+
+        Assert.That(
+            userPair,
+            Is.EqualTo((bob, new UserClass(0, "Bob") { Age = 25, Description = null }))
+        );
+    }
+
     private record UserWithProp(int Id)
     {
         public required int Age { get; init; }
@@ -276,7 +293,31 @@ public partial class MappingTests
 
         public required int Age { get; init; }
 
-        public required string Description { get; set; }
+        public required string? Description { get; set; }
+
+        protected bool Equals(UserClass other)
+        {
+            return Id == other.Id
+                && Name == other.Name
+                && Age == other.Age
+                && Description == other.Description;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            if (obj is null)
+                return false;
+            if (ReferenceEquals(this, obj))
+                return true;
+            if (obj.GetType() != GetType())
+                return false;
+            return Equals((UserClass)obj);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine(Id, Name, Age, Description);
+        }
     }
 
     [DbMap]

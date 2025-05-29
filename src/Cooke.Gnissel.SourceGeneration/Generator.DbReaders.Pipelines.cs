@@ -35,6 +35,7 @@ public partial class Generator
                                         or "QuerySingle"
                                         or "QuerySingleOrDefault"
                                         or "Select"
+                                        or "ToAsyncEnumerable",
                                 },
                             }
                             or PropertyDeclarationSyntax
@@ -54,6 +55,27 @@ public partial class Generator
                 {
                     switch (context.Node)
                     {
+                        case InvocationExpressionSyntax
+                        {
+                            Expression: MemberAccessExpressionSyntax
+                            {
+                                Name.Identifier.ValueText: "ToAsyncEnumerable"
+                            }
+                        } invocation
+                            when context.SemanticModel.GetOperation(invocation, ct)
+                                is IInvocationOperation
+                                {
+                                    Instance.Type: { Name: "Query" or "IQuery" or "TypedQuery" },
+                                    Type: INamedTypeSymbol
+                                    {
+                                        Name: "IAsyncEnumerable",
+                                        TypeArguments: { Length: 1 } typeArguments
+                                    }
+                                }:
+                        {
+                            return typeArguments.Single();
+                        }
+
                         case InvocationExpressionSyntax
                         {
                             Expression: MemberAccessExpressionSyntax memberAccessExpression
