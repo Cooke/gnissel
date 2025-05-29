@@ -114,6 +114,15 @@ public partial class Generator
                 yield return innerType;
             }
         }
+
+        var initializeProperties = GetInitializeProperties(mapping.Type, ctorParameters);
+        foreach (var t in initializeProperties)
+        {
+            foreach (var innerType in FindAllMappings(CreateMapping(t.Type)))
+            {
+                yield return innerType;
+            }
+        }
     }
 
     private static MappingTechnique GetMapTechnique(ITypeSymbol type) =>
