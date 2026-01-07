@@ -24,17 +24,20 @@ Postgres adapter:
 
 ## Setup
 
-Setup adapter (provider specific):
+Define a "mappers" class to hold source generated code for mapping to and from the database:
+
+```csharp
+[DbMappers]
+public partial class Mappers;
+```
+
+Create DbContext:
 
 ```csharp
 var connectionString = "...";
-var adapter = new NpgsqlDbAdapter(NpgsqlDataSource.Create(connectionString));
-```
-
-Setup DbContext (general)
-
-```csharp
-var dbContext = new DbContext(new DbOptions(adapter));
+var adapter = new NpgsqlDbAdapter(NpgsqlDataSource.Create(connectionString)); // Provider specific code
+var mappers = new Mappers(new SnakeCaseDbNameProvider());
+var dbContext = new DbContext(new DbOptions(adapter, mappers));
 ```
 
 ## Usage examples
@@ -146,29 +149,9 @@ usersWithDevices // Type: IAsyncEnumerable<(User user, Device device)>
         (u, device) => device, // Element selector
         (u, devices) => (u, devices.ToArray()), // Result selector
         u => u.id // Group by key selector
-    ); 
+    );
 
 ```
-
-#### Converters (API is experimental)
-Converters can be used for custom data mapping of single values. 
-
-Create a subclass of `ConcreteDbConverter<T>` to create a converter for the specific type `T` and override the abstract methods. 
-
-Create a subclass of `ConcreteDbConverterFactory` to create a factory for concrete db converters that can be produces during runtime.
-
-Converters (including converter factories) are enabled either via the DbOptions instace passed into the DbContext constructor or by applying the `DbConverterAttribute` to a type.
-
-##### Optional built in converters
-The following converters are included in the library and can be enabled:
-
-* EnumStringDbConverter - converts enum to/from strings  
-* NestedValueDbConverter -  converts wrapper objects to the inner wrapped value. Example:
-  ```
-  [DbConverter(typeof(NestedValueDbConverter))]
-  public record DeviceId(string Value);
-  ```
-  
 
 #### Database migration
 ```csharp
@@ -197,10 +180,81 @@ await dbContext.Query<User>($"SELECT * FROM users").ToArrayAsync(cancellationTok
 await dbContext.NonQuery($"INSERT INTO users(name) VALUES('Foo')").ExecuteAsync(cancellationToken);
 ```
 
+# Source Generation & Mapping
+
+## Automatic Type Discovery
+
+Gnissel uses Roslyn source generators to automatically discover types that need mapping. The generator finds types from:
+- `Table<T>` property declarations
+- `.Query<T>()`, `.QuerySingle<T>()`, `.QuerySingleOrDefault<T>()` method calls
+- `.Select()` projections (including anonymous types)
+- `.ToAsyncEnumerable()` calls
+- Types marked with `[DbMap]` attribute
+- Types specified on the `[DbMappers]` class with `[DbMap(typeof(T))]`
+
+This means you typically don't need to manually specify which types to map - just use them in your queries!
+
+## Name Providers
+
+Name providers control how C# property names are mapped to database column names:
+
+- **`DefaultDbNameProvider`**: Maps property names as-is (e.g., `UserName` → `UserName`)
+- **`SnakeCaseDbNameProvider`**: Converts PascalCase to snake_case (e.g., `UserName` → `user_name`)
+
+```csharp
+// Use snake_case for PostgreSQL convention
+var mappers = new Mappers(new SnakeCaseDbNameProvider());
+
+// Or keep C# naming in database
+var mappers = new Mappers(new DefaultDbNameProvider());
+```
+
+### Custom Column Names
+
+Override individual property mappings with the `[DbName]` attribute:
+
+```csharp
+public record User(
+    [property: DbName("user_id")] int Id,
+    [property: DbName("full_name")] string Name
+);
+```
+
+## Explicit Type Mapping
+
+While the source generator automatically discovers types, you can explicitly mark types for mapping:
+
+```csharp
+// Mark a specific type for mapping
+[DbMap]
+public record CustomType(int Id, string Value);
+
+// Or specify types on the mappers class
+[DbMappers]
+[DbMap(typeof(CustomType))]
+public partial class Mappers;
+```
+
+## Enum Mapping
+
+By default, enums are mapped as integers. To map enums as strings:
+
+```csharp
+[DbMappers(EnumMappingTechnique = MappingTechnique.AsString)]
+public partial class Mappers;
+```
+
+For custom mapping of specific types, use the `[DbMap]` attribute:
+
+```csharp
+// Map as JSONB in PostgreSQL
+[DbMap(Technique = MappingTechnique.AsIs, DbTypeName = "jsonb")]
+public record UserData(string Username, int Level);
+```
 
 # Typed namespace
 
-The Typed namespace includes support for typed quries.
+The Typed namespace includes support for typed queries.
 
 ## Setup
 
@@ -210,7 +264,10 @@ Create a custom DbContext (which may inherit from DbContext but is not required 
 public record User(int Id, string Name);
 public record Device(int Id, string Name, int UserId);
 
-public class AppDbContext(DbOptions options) : DbContext
+[DbMappers]
+public partial class Mappers;
+
+public class AppDbContext(DbOptions options) : DbContext(options)
 {
     public Table<User> Users { get; } = new Table<User>(options);
 
@@ -219,7 +276,9 @@ public class AppDbContext(DbOptions options) : DbContext
 ```
 
 ```csharp
-var dbContext = new AppDbContext(new DbOptions(adapter));
+var adapter = new NpgsqlDbAdapter(NpgsqlDataSource.Create(connectionString));
+var mappers = new Mappers(new SnakeCaseDbNameProvider());
+var dbContext = new AppDbContext(new DbOptions(adapter, mappers));
 ```
 
 ## Usage examples
