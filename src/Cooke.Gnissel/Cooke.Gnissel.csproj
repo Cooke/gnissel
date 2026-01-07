@@ -4,17 +4,27 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Henrik Cooke</Authors>
-        <Version>0.12.0-beta-0</Version>
+        <Version>0.13.0</Version>
         <Description>An alternative database mapper for .NET, instead of Dapper or Entity Framework.</Description>
         <Copyright>Cooke Software Solutions AB</Copyright>
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/Cooke/gnissel?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <PackageTags>ORM, SQL, database</PackageTags>
         <Company>Cooke Software Solutions AB</Company>
         <LangVersion>latestmajor</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
         <TargetFramework>net9.0</TargetFramework>
         <IsPackable>true</IsPackable>
+        <RepositoryUrl>https://github.com/Cooke/gnissel</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageReleaseNotes>Version 0.13.0:
+- Runtime name providers (DefaultDbNameProvider, SnakeCaseDbNameProvider)
+- Automatic type discovery from queries and Table&lt;T&gt; declarations
+- Improved source generation with better nested object support
+- Method rename: ExecuteAsync() → ToAsyncEnumerable()
+- Breaking: Case-sensitive column matching
+- Breaking: NamingConvention attribute removed in favor of IDbNameProvider</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -29,5 +39,8 @@
       <None Include="..\Cooke.Gnissel.SourceGeneration\bin\Debug\netstandard2.0\*.dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" Condition="'$(Configuration)' == 'Debug'" />
     </ItemGroup>
 
-    
+    <ItemGroup>
+      <None Include="..\..\README.md" Pack="true" PackagePath="\" />
+    </ItemGroup>
+
 </Project>

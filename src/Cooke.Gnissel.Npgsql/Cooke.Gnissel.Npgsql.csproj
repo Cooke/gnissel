@@ -5,14 +5,22 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <Authors>Henrik Cooke</Authors>
-        <Description>Postgres/Npgsql adapter for Cooke.Gnissel ORM.  </Description>
+        <Description>Postgres/Npgsql adapter for Cooke.Gnissel ORM.</Description>
         <Copyright>Cooke Software Solutions AB</Copyright>
         <PackageProjectUrl>https://github.com/Cooke/gnissel</PackageProjectUrl>
-        <PackageLicenseUrl>https://github.com/Cooke/gnissel?tab=MIT-1-ov-file#readme</PackageLicenseUrl>
+        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
         <Company>Cooke Software Solutions AB</Company>
-        <Version>0.9.0</Version>
+        <Version>0.13.0</Version>
         <LangVersion>latestmajor</LangVersion>
         <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+        <RepositoryUrl>https://github.com/Cooke/gnissel</RepositoryUrl>
+        <RepositoryType>git</RepositoryType>
+        <PackageTags>ORM, SQL, database, PostgreSQL, Npgsql</PackageTags>
+        <PackageReleaseNotes>Version 0.13.0:
+- Updated to match Cooke.Gnissel 0.13.0
+- Runtime name providers support
+- Improved expression-to-SQL translation</PackageReleaseNotes>
     </PropertyGroup>
 
     <ItemGroup>
@@ -21,6 +29,10 @@
 
     <ItemGroup>
       <ProjectReference Include="..\Cooke.Gnissel\Cooke.Gnissel.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="..\..\README.md" Pack="true" PackagePath="\" />
     </ItemGroup>
 
 </Project>
