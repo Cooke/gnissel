@@ -22,6 +22,11 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lab", "Lab\Lab.csproj", "{B
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TestOtherSourceGenerators", "TestOtherSourceGenerators\TestOtherSourceGenerators.csproj", "{BB6A0AFB-58C4-4F1C-9F38-A4680FA084B1}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Scripts", "Scripts", "{780B2E4D-C5EE-408C-9487-3EC69B305FB2}"
+	ProjectSection(SolutionItems) = preProject
+		publish.ts = publish.ts
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

@@ -4,3 +4,4 @@ obj/
 .user
 *.user
 *.received.*
+node_modules/
