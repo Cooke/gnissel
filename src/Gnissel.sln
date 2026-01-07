@@ -11,6 +11,7 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Docs", "Docs", "{91622000-456A-4347-BC78-E9F523BF9D6B}"
 	ProjectSection(SolutionItems) = preProject
 		..\README.md = ..\README.md
+		..\CLAUDE.md = ..\CLAUDE.md
 	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Cooke.Gnissel.SourceGeneration", "Cooke.Gnissel.SourceGeneration\Cooke.Gnissel.SourceGeneration.csproj", "{E30745BF-3855-424B-A491-07C089E76C52}"
